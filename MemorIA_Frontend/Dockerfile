@@ -1,5 +1,8 @@
 # Stage 1 — build the Angular app
-FROM node:20-alpine AS build
+# Using Debian (glibc) instead of Alpine (musl): Angular 18's @angular/build
+# pulls in `lmdb` as a native dep whose musl prebuilt is broken; falling back
+# to local compile would need python3 + g++. glibc has working prebuilts.
+FROM node:20-bullseye-slim AS build
 WORKDIR /app
 # Give Node up to 4 GB heap so Angular 18's bundler doesn't OOM on a small VM
 ENV NODE_OPTIONS=--max_old_space_size=4096
