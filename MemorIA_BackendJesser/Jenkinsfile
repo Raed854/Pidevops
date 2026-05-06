@@ -1,4 +1,4 @@
-// CI pipeline — MemorIA_Backend (user/auth service, port 8082)
+// CI pipeline — MemorIA_BackendJesser (Security / OAuth2, port 8084)
 pipeline {
   agent any
 
@@ -9,24 +9,22 @@ pipeline {
   }
 
   environment {
-    MS_NAME      = 'MemorIA_Backend'
-    IMAGE_NAME   = 'nefziraed/memoria-backend'
+    MS_NAME      = 'MemorIA_BackendJesser'
+    IMAGE_NAME   = 'nefziraed/memoria-jesser'
     IMAGE_TAG    = 'latest'
     DOCKER_CREDS = credentials('docker-hub-credentials')
   }
 
   stages {
     stage('1 — Checkout') {
-      steps {
-        checkout scm
-      }
+      steps { checkout scm }
     }
 
     stage('2 — Build') {
       steps {
         dir("${MS_NAME}") {
-          sh 'chmod +x ./mvnw || true'
-          sh './mvnw -B clean package -DskipTests'
+          // Use system mvn — Jesser folder has no mvnw wrapper
+          sh 'mvn -B clean package -DskipTests'
         }
       }
     }
@@ -34,7 +32,7 @@ pipeline {
     stage('3 — Tests') {
       steps {
         dir("${MS_NAME}") {
-          sh './mvnw -B test || true'
+          sh 'mvn -B test || true'
         }
       }
       post {
@@ -44,24 +42,6 @@ pipeline {
         }
       }
     }
-
-    // Phase 6 will re-enable SonarQube + Quality Gate stages here.
-    // stage('SonarQube Analysis') {
-    //   steps {
-    //     dir("${MS_NAME}") {
-    //       withSonarQubeEnv('SonarQube') {
-    //         sh './mvnw -B sonar:sonar'
-    //       }
-    //     }
-    //   }
-    // }
-    // stage('Quality Gate') {
-    //   steps {
-    //     timeout(time: 5, unit: 'MINUTES') {
-    //       waitForQualityGate abortPipeline: true
-    //     }
-    //   }
-    // }
 
     stage('4 — Docker Build') {
       steps {

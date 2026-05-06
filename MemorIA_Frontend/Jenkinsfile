@@ -1,4 +1,4 @@
-// CI pipeline — MemorIA_Backend2 (GPS / geofencing, port 8081)
+// CI pipeline — MemorIA_Frontend (Angular 18 → Nginx, port 80)
 pipeline {
   agent any
 
@@ -9,8 +9,8 @@ pipeline {
   }
 
   environment {
-    MS_NAME      = 'MemorIA_Backend2'
-    IMAGE_NAME   = 'nefziraed/memoria-backend2'
+    MS_NAME      = 'MemorIA_Frontend'
+    IMAGE_NAME   = 'nefziraed/memoria-frontend'
     IMAGE_TAG    = 'latest'
     DOCKER_CREDS = credentials('docker-hub-credentials')
   }
@@ -20,30 +20,10 @@ pipeline {
       steps { checkout scm }
     }
 
-    stage('2 — Build') {
-      steps {
-        dir("${MS_NAME}") {
-          sh 'chmod +x ./mvnw || true'
-          sh './mvnw -B clean package -DskipTests'
-        }
-      }
-    }
-
-    stage('3 — Tests') {
-      steps {
-        dir("${MS_NAME}") {
-          sh './mvnw -B test || true'
-        }
-      }
-      post {
-        always {
-          junit allowEmptyResults: true,
-                testResults: "${MS_NAME}/target/surefire-reports/*.xml"
-        }
-      }
-    }
-
-    stage('4 — Docker Build') {
+    // The npm build runs INSIDE the Dockerfile (multi-stage), so the Jenkins
+    // host doesn't need Node installed. We rely on `docker build` to produce
+    // the artifact. This keeps Jenkins lean and the pipeline portable.
+    stage('2 — Docker Build') {
       steps {
         dir("${MS_NAME}") {
           sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
@@ -51,18 +31,10 @@ pipeline {
       }
     }
 
-    stage('5 — Docker Push') {
+    stage('3 — Docker Push') {
       steps {
         sh "echo \$DOCKER_CREDS_PSW | docker login -u \$DOCKER_CREDS_USR --password-stdin"
         sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-      }
-    }
-
-    stage('Archive JAR') {
-      steps {
-        archiveArtifacts artifacts: "${MS_NAME}/target/*.jar",
-                         fingerprint: true,
-                         allowEmptyArchive: true
       }
     }
   }
