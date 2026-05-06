@@ -1,0 +1,515 @@
+<!-- ★ CAREGIVER PLANNING - DESIGN OPTIMISÉ ★ -->
+<div class="caregiver-planning-container">
+
+  <!-- NAVBAR -->
+  <app-navbar></app-navbar>
+
+  <!-- MAIN LAYOUT WITH SIDEBAR -->
+  <div class="main-layout">
+    <app-sidebar-diagnostic></app-sidebar-diagnostic>
+
+    <!-- CONTENT AREA -->
+    <div class="content-wrapper">
+
+      <!-- ── HEADER BAR ── -->
+      <header class="header-bar">
+        <div class="header-inner">
+
+          <!-- Brand -->
+          <div class="header-brand">
+            <div class="brand-icon">
+              <i class="fas fa-heart-pulse"></i>
+            </div>
+            <div class="brand-text">
+              <h1>Suivi Accompagnant</h1>
+              <p class="subtitle">Planning & Rappels du proche</p>
+            </div>
+          </div>
+
+          <!-- Right controls -->
+          <div class="header-right">
+
+            <!-- Multi-patient dropdown -->
+            <div class="patient-select-wrapper" *ngIf="myPatients.length > 1">
+              <select [(ngModel)]="selectedPatient" (change)="selectPatient(selectedPatient!)">
+                <option *ngFor="let p of myPatients" [ngValue]="p">
+                  {{ p.patientPrenom }} {{ p.patientName }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Single patient badge -->
+            <div class="patient-badge" *ngIf="myPatients.length === 1 && selectedPatient">
+              <div class="patient-avatar">
+                {{ selectedPatient.patientPrenom.charAt(0) }}{{ selectedPatient.patientName.charAt(0) }}
+              </div>
+              <span class="patient-name">{{ selectedPatient.patientPrenom }} {{ selectedPatient.patientName }}</span>
+            </div>
+
+            <!-- Create reminder -->
+            <!-- PDF Export -->
+
+          </div>
+        </div>
+      </header>
+
+      <!-- ── MAIN CONTENT ── -->
+      <div class="main-content">
+
+        <!-- LOADING STATE -->
+        <div *ngIf="isLoading" class="loading-container">
+          <div class="loader-ring"></div>
+          <p>Chargement des données du proche…</p>
+        </div>
+
+        <!-- ERROR STATE -->
+        <div *ngIf="!isLoading && hasError" class="state-container">
+          <div class="state-icon error">
+            <i class="fas fa-triangle-exclamation"></i>
+          </div>
+          <h2 class="state-title">Erreur de connexion</h2>
+          <p class="state-text">{{ errorMessage }}</p>
+          <button class="btn-retry" (click)="loadMyPatients()">
+            <i class="fas fa-rotate-right"></i>
+            Réessayer
+          </button>
+        </div>
+
+        <!-- EMPTY STATE (no patient assigned) -->
+        <div *ngIf="!isLoading && !hasError && myPatients.length === 0" class="state-container">
+          <div class="state-icon empty">
+            <i class="fas fa-user-plus"></i>
+          </div>
+          <h2 class="state-title">Aucun proche assigné</h2>
+          <p class="state-text">
+            Vous n'avez pas encore de patient assigné. Contactez votre médecin ou l'administrateur pour être associé à un proche.
+          </p>
+          <div class="hint-box">
+            <p><strong>💡 Comment être associé ?</strong></p>
+            <p style="margin-top:6px; color:#92400E;">Demandez au médecin responsable de créer le lien accompagnant-patient depuis l'interface médecin.</p>
+          </div>
+        </div>
+
+        <!-- MAIN CONTENT (patient selected) -->
+        <ng-container *ngIf="!isLoading && selectedPatient">
+
+          <!-- ── STATS ROW ── -->
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-ico green"><i class="fas fa-check-circle" style="color:#166534"></i></div>
+              <div>
+                <div class="stat-value">{{ getConfirmedCount() }}</div>
+                <div class="stat-label">Confirmés</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-ico orange"><i class="fas fa-clock" style="color:#C05621"></i></div>
+              <div>
+                <div class="stat-value">{{ getPendingCount() }}</div>
+                <div class="stat-label">En attente</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-ico red"><i class="fas fa-circle-xmark" style="color:#CB1527"></i></div>
+              <div>
+                <div class="stat-value">{{ stats?.missedCount || 0 }}</div>
+                <div class="stat-label">Manqués (7j)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ALERT LOW ADHERENCE -->
+          <div class="alert-card" *ngIf="stats && (stats.medicationAdherence < 70 || stats.activityAdherence < 70)">
+            <i class="fas fa-triangle-exclamation"></i>
+            <div>
+              <h4>Alerte observance faible</h4>
+              <p>L'adhérence aux rappels est en baisse. Envisagez un contact ou un aménagement du planning.</p>
+            </div>
+          </div>
+
+          <!-- ── TWO-COLUMN: TIMELINE + CHARTS ── -->
+          <div class="two-col-grid">
+
+            <!-- LEFT: PIPELINE DU JOUR -->
+            <div class="panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <i class="fas fa-list-check"></i>
+                  Pipeline du jour
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <!-- Nav period -->
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <button class="nav-arrow" (click)="previousPeriod()">
+                      <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="period-label">{{ formatDate(currentDate.toISOString()) }}</span>
+                    <button class="nav-arrow" (click)="nextPeriod()">
+                      <i class="fas fa-chevron-right"></i>
+                    </button>
+                  </div>
+                  <!-- View mode -->
+                  <div class="view-controls">
+                    <button class="view-btn" [class.active]="viewMode==='month'" (click)="viewMode='month'">
+                      <i class="fas fa-calendar"></i> Mois
+                    </button>
+                    <button class="view-btn" [class.active]="viewMode==='week'" (click)="viewMode='week'">
+                      <i class="fas fa-calendar-week"></i> Semaine
+                    </button>
+                    <button class="view-btn" [class.active]="viewMode==='day'" (click)="viewMode='day'">
+                      <i class="fas fa-calendar-day"></i> Jour
+                    </button>
+                  </div>
+                  <!-- Badges -->
+                  <span class="panel-badge badge-pending">{{ getPendingCount() }} en attente</span>
+                  <span class="panel-badge badge-success">{{ getConfirmedCount() }} confirmés</span>
+                </div>
+              </div>
+
+              <div class="panel-body">
+
+                <!-- Empty -->
+                <div *ngIf="reminders.length === 0" class="empty-pipeline">
+                  <div><i class="fas fa-calendar-xmark"></i></div>
+                  <p style="font-weight:600; margin-top:8px;">Aucun rappel pour cette période</p>
+                  <p style="margin-top:4px; font-size:0.8rem;">Aucune activité programmée pour cette date</p>
+                </div>
+
+                <!-- Timeline -->
+                <div *ngIf="reminders.length > 0" class="timeline">
+                  <div
+                    *ngFor="let reminder of reminders"
+                    class="reminder-row"
+                    [ngClass]="'status-' + reminder.status"
+                    (click)="openDetailModal(reminder)"
+                  >
+                    <!-- Time -->
+                    <div class="r-time">{{ formatTime(reminder.scheduledTime) }}</div>
+
+                    <!-- Icon -->
+                    <div class="r-icon">{{ getTypeIcon(reminder.type) }}</div>
+
+                    <!-- Info -->
+                    <div class="r-info">
+                      <div class="r-title">{{ reminder.title }}</div>
+                      <div class="r-desc" *ngIf="reminder.description">{{ reminder.description }}</div>
+                    </div>
+
+                    <!-- Status pill -->
+                    <div class="r-status">
+                      <span class="status-pill" [ngClass]="'pill-' + reminder.status">
+                        {{ getStatusLabel(reminder.status) }}
+                      </span>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="r-actions" (click)="$event.stopPropagation()">
+                      <!-- Confirm -->
+                      <button
+                        *ngIf="reminder.status === 'pending' || reminder.status === 'planned'"
+                        class="act-btn confirm"
+                        (click)="confirmReminder(reminder)"
+                        title="Confirmer"
+                      >
+                        <i class="fas fa-check"></i>
+                      </button>
+                      <!-- Delay -->
+                      <button
+                        *ngIf="reminder.status === 'pending' || reminder.status === 'missed'"
+                        class="act-btn delay"
+                        (click)="openDelayModal(reminder)"
+                        title="Reporter"
+                      >
+                        <i class="fas fa-clock-rotate-left"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- RIGHT: CHARTS / STATS -->
+            <div class="charts-grid">
+
+              <!-- Médicaments -->
+              <div class="chart-card">
+                <div class="chart-title">
+                  <i class="fas fa-pills" style="color:#00635D"></i>
+                  Adhérence Médicaments (7j)
+                </div>
+                <canvas id="medicationChartContainer" style="max-height:160px;"></canvas>
+                <div class="chart-value-row">
+                  <div>
+                    <div class="chart-big-value">{{ stats?.medicationAdherence || 0 }}%</div>
+                    <div class="chart-sub">de conformité</div>
+                  </div>
+                  <span class="panel-badge" [class]="(stats?.medicationAdherence || 0) >= 70 ? 'badge-success' : 'badge-pending'">
+                    {{ (stats?.medicationAdherence || 0) >= 70 ? '✓ Bon' : '⚠ Faible' }}
+                  </span>
+                </div>
+                <div class="progress-bar-wrap">
+                  <div class="progress-fill" [style.width.%]="stats?.medicationAdherence || 0" style="background:#00635D;"></div>
+                </div>
+              </div>
+
+              <!-- Activités -->
+              <div class="chart-card">
+                <div class="chart-title">
+                  <i class="fas fa-dumbbell" style="color:#7C3AED"></i>
+                  Adhérence Activités (7j)
+                </div>
+                <canvas id="activityChartContainer" style="max-height:160px;"></canvas>
+                <div class="chart-value-row">
+                  <div>
+                    <div class="chart-big-value" style="color:#7C3AED;">{{ stats?.activityAdherence || 0 }}%</div>
+                    <div class="chart-sub">de conformité</div>
+                  </div>
+                  <span class="panel-badge" [class]="(stats?.activityAdherence || 0) >= 70 ? 'badge-success' : 'badge-pending'">
+                    {{ (stats?.activityAdherence || 0) >= 70 ? '✓ Bon' : '⚠ Faible' }}
+                  </span>
+                </div>
+                <div class="progress-bar-wrap">
+                  <div class="progress-fill" [style.width.%]="stats?.activityAdherence || 0" style="background:#7C3AED;"></div>
+                </div>
+              </div>
+
+              <!-- Oublis -->
+              <div class="chart-card">
+                <div class="chart-title">
+                  <i class="fas fa-chart-column" style="color:#CB1527"></i>
+                  Tendance Oublis (7j)
+                </div>
+                <canvas id="forgetfulnessChartContainer" style="max-height:160px;"></canvas>
+                <div class="chart-value-row">
+                  <div>
+                    <div class="chart-big-value" style="color:#CB1527;">{{ stats?.missedCount || 0 }}</div>
+                    <div class="chart-sub">oublis totaux sur 7j</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </ng-container>
+
+      </div>
+      <!-- /main-content -->
+
+    </div>
+    <!-- /content-wrapper -->
+  </div>
+  <!-- /main-layout -->
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- MODAL: DÉTAIL RAPPEL                          -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="modal-backdrop" *ngIf="showDetailModal && selectedReminder" (click)="closeDetailModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+
+
+      <div class="modal-header">
+        <div class="modal-title">
+          <span style="font-size:1.5rem;">{{ getTypeIcon(selectedReminder.type) }}</span>
+          {{ selectedReminder.title }}
+        </div>
+        <button class="modal-close" (click)="closeDetailModal()">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>Heure</label>
+            <p>{{ formatTime(selectedReminder.scheduledTime) }}</p>
+          </div>
+          <div class="detail-item">
+            <label>Type</label>
+            <p style="text-transform:capitalize;">{{ selectedReminder.type }}</p>
+          </div>
+          <div class="detail-item">
+            <label>Priorité</label>
+            <p style="text-transform:capitalize;">{{ selectedReminder.priority }}</p>
+          </div>
+          <div class="detail-item">
+            <label>Statut</label>
+            <span class="status-pill" [ngClass]="'pill-' + selectedReminder.status">
+              {{ getStatusLabel(selectedReminder.status) }}
+            </span>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;" *ngIf="selectedReminder.description">
+          <label class="form-label">Description</label>
+          <p style="color:#374151; font-size:0.9rem; line-height:1.5; background:#F9FAFB; padding:12px; border-radius:8px; border:1px solid #E8E0F0; margin:0;">
+            {{ selectedReminder.description }}
+          </p>
+        </div>
+
+        <div style="margin-top:16px;" *ngIf="selectedReminder.notes">
+          <label class="form-label">Notes</label>
+          <p style="color:#374151; font-size:0.9rem; line-height:1.5; background:#F9FAFB; padding:12px; border-radius:8px; border:1px solid #E8E0F0; margin:0;">
+            {{ selectedReminder.notes }}
+          </p>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          *ngIf="selectedReminder.status === 'pending' || selectedReminder.status === 'planned'"
+          class="btn btn-success"
+          (click)="confirmReminder(selectedReminder)"
+        >
+          <i class="fas fa-check"></i> Confirmer
+        </button>
+        <button
+          *ngIf="selectedReminder.status === 'pending' || selectedReminder.status === 'missed'"
+          class="btn btn-warning"
+          (click)="openDelayModal(selectedReminder)"
+        >
+          <i class="fas fa-clock-rotate-left"></i> Reporter
+        </button>
+        <button class="btn btn-outline" (click)="closeDetailModal()">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- MODAL: REPORTER RAPPEL                        -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="modal-backdrop" *ngIf="showDelayModal && delayReminderPreview" (click)="showDelayModal = false">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fas fa-clock-rotate-left"></i>
+          Reporter le rappel
+        </div>
+        <button class="modal-close" (click)="showDelayModal = false">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Rappel</label>
+          <p style="font-weight:600; color:#1F2937; margin:0;">{{ delayReminderPreview.reminder.title }}</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nouvelle date/heure *</label>
+          <input
+            type="datetime-local"
+            class="form-control"
+            [(ngModel)]="delayReminderPreview.suggestedTime"
+          />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-warning" (click)="delayReminder(delayReminderPreview.suggestedTime)">
+          <i class="fas fa-check"></i> Valider
+        </button>
+        <button class="btn btn-outline" (click)="showDelayModal = false">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- MODAL: CRÉER RAPPEL                           -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="modal-backdrop" *ngIf="showCreateModal" (click)="showCreateModal = false">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fas fa-plus-circle"></i>
+          Créer un rappel
+        </div>
+        <button class="modal-close" (click)="showCreateModal = false">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form (ngSubmit)="createNewReminder()">
+
+          <div class="form-group">
+            <label class="form-label">Type *</label>
+            <select class="form-control" [(ngModel)]="newReminder.type" name="type">
+              <option value="medication">💊 Médicament</option>
+              <option value="appointment">🏥 Rendez-vous</option>
+              <option value="activity">🎯 Activité</option>
+              <option value="meal">🍽 Repas</option>
+              <option value="hygiene">🧼 Hygiène</option>
+              <option value="walk">🚶 Promenade</option>
+              <option value="test">🔬 Test médical</option>
+              <option value="other">📋 Autre</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Titre *</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="newReminder.title"
+              name="title"
+              placeholder="Ex : Prendre Aricept 10mg"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea
+              class="form-control"
+              [(ngModel)]="newReminder.description"
+              name="description"
+              placeholder="Détails supplémentaires…"
+              style="height:80px; resize:vertical;"
+            ></textarea>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div class="form-group">
+              <label class="form-label">Date & Heure *</label>
+              <input
+                type="datetime-local"
+                class="form-control"
+                [(ngModel)]="newReminder.scheduledTime"
+                name="scheduledTime"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Priorité</label>
+              <select class="form-control" [(ngModel)]="newReminder.priority" name="priority">
+                <option value="low">🟢 Basse</option>
+                <option value="normal">🔵 Normale</option>
+                <option value="high">🟠 Haute</option>
+                <option value="urgent">🔴 Urgente</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-footer" style="padding:0; margin-top:4px;">
+            <button type="submit" class="btn btn-success">
+              <i class="fas fa-check"></i> Créer le rappel
+            </button>
+            <button type="button" class="btn btn-outline" (click)="showCreateModal = false">
+              Annuler
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>

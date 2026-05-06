@@ -1,0 +1,88 @@
+<div class="test-container" [class.complete]="isComplete()">
+    @if (!isComplete()) {
+    <!-- Header -->
+    <div class="test-header">
+        <div class="header-left">
+            <h1 class="test-title">RECONNAISSANCE DES PROCHES</h1>
+            <div class="progress-dots">
+                @for (p of proches; track p.id; let i = $index) {
+                <span class="dot" [class.active]="currentIndex() === i" [class.done]="currentIndex() > i">●</span>
+                }
+            </div>
+        </div>
+        <div class="timer-box">
+            <span class="timer-icon">⏱️</span>
+            <span class="timer-text">{{ formattedTime() }}</span>
+        </div>
+    </div>
+
+    <!-- Patient + Score -->
+    <div class="patient-row">
+        <span class="patient-label">Patient : <strong>{{ patientName() }}</strong></span>
+        <span class="score-badge">Score : {{ currentScore() }} / 12</span>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-section">
+        <div class="progress-labels">
+            <span>Photo {{ currentIndex() + 1 }} / {{ totalProches() }}</span>
+            <span>{{ progressPercentage() }}% complété</span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" [style.width.%]="progressPercentage()"></div>
+        </div>
+    </div>
+
+    <!-- Photo Card -->
+    <div class="photo-card">
+        <div class="photo-frame">
+            <div class="photo-avatar">{{ currentProche().emoji }}</div>
+        </div>
+        <div class="photo-label">Qui est cette personne ?</div>
+
+        <div class="answer-fields">
+            <div class="field-group">
+                <label class="field-label">Prénom et Nom :</label>
+                <input type="text" class="text-input" placeholder="Ex : Marie Dupont"
+                    [(ngModel)]="proches[currentIndex()].userAnswerName" />
+            </div>
+            <div class="field-group">
+                <label class="field-label">Lien de parenté :</label>
+                <input type="text" class="text-input" placeholder="Ex : Ma fille, Mon mari..."
+                    [(ngModel)]="proches[currentIndex()].userAnswerRelation" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Thumbnail Row -->
+    <div class="thumbnails-row">
+        @for (p of proches; track p.id; let i = $index) {
+        <button class="thumb-btn" [class.active]="currentIndex() === i" (click)="currentIndex.set(i)">
+            <span class="thumb-emoji">{{ p.emoji }}</span>
+        </button>
+        }
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation">
+        <button class="btn-prev" [disabled]="currentIndex() === 0" (click)="goPrev()">← Précédent</button>
+        <button class="btn-next" (click)="goNext()">
+            {{ isLastProche() ? 'Terminer' : 'Suivant →' }}
+        </button>
+    </div>
+
+    } @else {
+    <!-- Results -->
+    <div class="results-card">
+        <div class="results-icon">👨‍👩‍👧‍👦</div>
+        <h2 class="results-title">Test Terminé !</h2>
+        <div class="score-circle" [class.high]="finalScore() >= 10"
+            [class.medium]="finalScore() >= 6 && finalScore() < 10" [class.low]="finalScore() < 6">
+            <span class="score-value">{{ finalScore() }}</span>
+            <span class="score-max">/ 12</span>
+        </div>
+        <p class="results-time">Durée : {{ formattedTime() }}</p>
+        <button class="btn-next" (click)="returnToDashboard()">Retour aux tests</button>
+    </div>
+    }
+</div>

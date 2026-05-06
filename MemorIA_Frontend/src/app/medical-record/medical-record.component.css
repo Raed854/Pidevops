@@ -1,0 +1,670 @@
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS — matches home page palette
+   ═══════════════════════════════════════════ */
+:host {
+  --purple:       #6C2EB9;
+  --purple-dark:  #2E1A47;
+  --purple-deep:  #1a0a3c;
+  --purple-light: #CFC6E6;
+  --purple-soft:  #f3f0ff;
+  --sky:          #0ea5e9;
+  --sky-light:    #38bdf8;
+  --green:        #10b981;
+  --amber:        #f59e0b;
+  --red:          #ef4444;
+
+  --text-primary:   #1e1b4b;
+  --text-secondary: #4b5563;
+  --text-muted:     #6b7280;
+  --text-light:     #9ca3af;
+
+  --bg-page:    #f8f7ff;
+  --bg-card:    #ffffff;
+  --bg-soft:    #fafaff;
+  --border:     #e8e0ff;
+  --border-soft:#f0ecff;
+
+  --shadow-sm: 0 1px 3px rgba(46, 26, 71, 0.06);
+  --shadow-md: 0 8px 24px rgba(46, 26, 71, 0.08);
+  --shadow-lg: 0 16px 40px rgba(108, 46, 185, 0.12);
+
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --radius-full:9999px;
+
+  --t-fast: 0.15s ease;
+  --t-base: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --gradient-primary: linear-gradient(135deg, #6C2EB9, #0ea5e9);
+  --gradient-dark:    linear-gradient(135deg, #2E1A47, #1a0a3c);
+  --gradient-text:    linear-gradient(90deg, #a78bfa, #38bdf8);
+  --gradient-soft:    linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);
+
+  display: block;
+  min-height: 100vh;
+  background: var(--bg-page);
+  font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text-primary);
+  position: relative;
+  overflow-x: hidden;
+}
+
+* { box-sizing: border-box; }
+
+::selection      { background: var(--purple); color: #fff; }
+::-moz-selection { background: var(--purple); color: #fff; }
+
+*:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+/* Ambient decorative orbs */
+:host::before,
+:host::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+  animation: pulse 9s ease-in-out infinite;
+}
+
+:host::before {
+  width: 420px; height: 420px;
+  background: var(--purple);
+  top: -180px; right: -140px;
+}
+
+:host::after {
+  width: 320px; height: 320px;
+  background: var(--sky);
+  bottom: -120px; left: -100px;
+  animation-delay: -4s;
+}
+
+/* ═══════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════ */
+@keyframes fadeIn    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp   { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse     { 0%, 100% { transform: scale(1); opacity: 0.18; } 50% { transform: scale(1.1); opacity: 0.28; } }
+@keyframes spin      { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════
+   WRAPPER
+   ═══════════════════════════════════════════ */
+.medical-record-wrapper {
+  position: relative;
+  z-index: 1;
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 0 1.25rem 3rem;
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* ═══════════════════════════════════════════
+   STATE BOXES — loading / error
+   ═══════════════════════════════════════════ */
+.state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-secondary);
+  animation: fadeIn 0.35s ease-out;
+  text-align: center;
+}
+
+.state-box p {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 500;
+  max-width: 520px;
+  line-height: 1.55;
+}
+
+.state-icon {
+  font-size: 2.4rem;
+  color: var(--purple);
+  width: 72px;
+  height: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--primary-light, rgba(108, 46, 185, 0.12));
+  background: rgba(108, 46, 185, 0.12);
+}
+
+.state-box.error { border-color: rgba(239, 68, 68, 0.25); }
+.state-box.error .state-icon {
+  color: var(--red);
+  background: rgba(239, 68, 68, 0.12);
+}
+.state-box.error p { color: var(--red); font-weight: 600; }
+
+.state-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════
+   HEADER BAR — gradient banner
+   ═══════════════════════════════════════════ */
+.record-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+  padding: 1.5rem 2rem;
+  background: var(--gradient-dark);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 12px 32px rgba(46, 26, 71, 0.25);
+  overflow: hidden;
+  animation: slideDown 0.45s ease-out;
+}
+
+.record-header::before,
+.record-header::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  pointer-events: none;
+}
+.record-header::before {
+  top: -80px; left: -60px;
+  width: 280px; height: 280px;
+  background: var(--purple);
+  opacity: 0.35;
+}
+.record-header::after {
+  bottom: -60px; right: -40px;
+  width: 220px; height: 220px;
+  background: var(--sky);
+  opacity: 0.22;
+}
+
+.record-title {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.record-title i {
+  font-size: 1.4rem;
+  color: #fff;
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+}
+
+.record-title h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.record-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Header outlined button — readable on dark banner */
+:host ::ng-deep .record-actions .p-button.p-button-outlined {
+  color: #fff !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(6px);
+}
+
+:host ::ng-deep .record-actions .p-button.p-button-outlined:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: #fff !important;
+}
+
+/* ═══════════════════════════════════════════
+   CARDS — top accent bar
+   ═══════════════════════════════════════════ */
+.record-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+:host ::ng-deep .record-card.p-card,
+:host ::ng-deep .record-card .p-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform var(--t-base), box-shadow var(--t-base), border-color var(--t-base);
+  animation: slideUp 0.5s ease-out;
+}
+
+:host ::ng-deep .record-card.p-card::before,
+:host ::ng-deep .record-card .p-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gradient-primary);
+  z-index: 1;
+}
+
+:host ::ng-deep .record-card.p-card:hover,
+:host ::ng-deep .record-card .p-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--purple-light);
+}
+
+:host ::ng-deep .record-card .p-card-body { padding: 0; }
+:host ::ng-deep .record-card .p-card-content { padding: 1.25rem 1.5rem 1.5rem; }
+
+.card-header-label {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1rem 1.5rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--purple-dark);
+  background: var(--gradient-soft);
+  border-bottom: 1px solid var(--border-soft);
+  letter-spacing: -0.2px;
+}
+
+.card-header-label i {
+  font-size: 1rem;
+  color: var(--purple);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: rgba(108, 46, 185, 0.12);
+}
+
+/* ═══════════════════════════════════════════
+   INFO GRID
+   ═══════════════════════════════════════════ */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.1rem 2rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.info-item.full-width { grid-column: 1 / -1; }
+
+.info-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.info-value {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.info-value.multiline {
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.notes-text {
+  display: block;
+  padding: 0.9rem 1.1rem;
+  background: var(--gradient-soft);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--purple);
+  border-radius: var(--radius-md);
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+/* ═══════════════════════════════════════════
+   PRIMENG TAG
+   ═══════════════════════════════════════════ */
+:host ::ng-deep .p-tag {
+  border-radius: var(--radius-full) !important;
+  font-weight: 600 !important;
+  font-size: 0.78rem !important;
+  padding: 0.3rem 0.75rem !important;
+  letter-spacing: 0.02em;
+  width: fit-content;
+}
+
+/* ═══════════════════════════════════════════
+   PRIMENG BUTTONS
+   ═══════════════════════════════════════════ */
+:host ::ng-deep .p-button {
+  border-radius: var(--radius-sm) !important;
+  font-weight: 600 !important;
+  transition: transform var(--t-base), box-shadow var(--t-base) !important;
+}
+
+:host ::ng-deep .p-button:hover {
+  transform: translateY(-2px) !important;
+}
+
+:host ::ng-deep .state-actions .p-button.p-button-primary,
+:host ::ng-deep .p-button.p-button-primary {
+  background: var(--gradient-primary) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(108, 46, 185, 0.3);
+}
+
+:host ::ng-deep .state-actions .p-button.p-button-outlined {
+  border: 1.5px solid var(--purple-light) !important;
+  color: var(--purple-dark) !important;
+  background: transparent !important;
+}
+
+:host ::ng-deep .state-actions .p-button.p-button-outlined:hover {
+  background: var(--purple-soft) !important;
+  border-color: var(--purple) !important;
+}
+
+/* ═══════════════════════════════════════════
+   QR CODE & SHARE SECTION
+   ═══════════════════════════════════════════ */
+.qr-section {
+  display: flex;
+  gap: 2.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.qr-code-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  flex-shrink: 0;
+  padding: 1rem;
+  background: var(--gradient-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+}
+
+.qr-code-img {
+  width: 220px;
+  height: 220px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--t-base), box-shadow var(--t-base);
+}
+
+.qr-code-img:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-md);
+}
+
+.qr-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 220px;
+  line-height: 1.5;
+}
+
+.qr-hint i { color: var(--purple); }
+
+.share-panel {
+  flex: 1;
+  min-width: 240px;
+}
+
+.share-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--purple-dark);
+  letter-spacing: -0.2px;
+}
+
+.share-title i { color: var(--purple); }
+
+.share-desc {
+  margin: 0 0 1.2rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.share-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+/* Base share button — restyle, keep brand accents */
+:host ::ng-deep .share-btn {
+  width: 100%;
+  justify-content: flex-start !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 600 !important;
+  padding: 0.75rem 1.1rem !important;
+  border: none !important;
+  transition: transform var(--t-base), box-shadow var(--t-base), filter var(--t-base) !important;
+}
+
+:host ::ng-deep .share-btn:hover {
+  transform: translateY(-2px) !important;
+  filter: brightness(1.05);
+}
+
+/* WhatsApp — keeps its brand green */
+:host ::ng-deep .share-btn.share-whatsapp {
+  background: linear-gradient(135deg, #25d366, #128c7e) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+}
+
+:host ::ng-deep .share-btn.share-whatsapp:hover {
+  box-shadow: 0 8px 20px rgba(37, 211, 102, 0.4) !important;
+}
+
+/* Email — tied to the site palette (purple → sky) */
+:host ::ng-deep .share-btn.share-email {
+  background: var(--gradient-primary) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(108, 46, 185, 0.3);
+}
+
+:host ::ng-deep .share-btn.share-email:hover {
+  box-shadow: 0 8px 20px rgba(108, 46, 185, 0.4) !important;
+}
+
+/* Copy — neutral until confirmed */
+:host ::ng-deep .share-btn.share-copy {
+  background: linear-gradient(135deg, #475569, #1e293b) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(30, 41, 59, 0.25);
+}
+
+:host ::ng-deep .share-btn.share-copy:hover {
+  box-shadow: 0 8px 20px rgba(30, 41, 59, 0.35) !important;
+}
+
+:host ::ng-deep .share-btn.share-copy.copy-done {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* ═══════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════ */
+:host ::ng-deep .p-toast .p-toast-message {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* ═══════════════════════════════════════════
+   ACCESSIBILITY
+   ═══════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .qr-section { gap: 1.75rem; }
+}
+
+@media (max-width: 768px) {
+  .medical-record-wrapper {
+    margin: 1rem auto;
+    padding: 0 0.75rem 2rem;
+  }
+
+  .record-header {
+    padding: 1.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .record-title i { width: 42px; height: 42px; font-size: 1.2rem; }
+  .record-title h1 { font-size: 1.35rem; }
+
+  .record-actions { width: 100%; }
+
+  .card-header-label {
+    padding: 0.85rem 1.1rem;
+    font-size: 0.88rem;
+  }
+
+  :host ::ng-deep .record-card .p-card-content { padding: 1rem 1.1rem 1.15rem; }
+
+  .info-grid { gap: 1rem 1.25rem; }
+}
+
+@media (max-width: 600px) {
+  .info-grid { grid-template-columns: 1fr; }
+  .info-item.full-width { grid-column: 1; }
+
+  .qr-section {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .qr-code-wrapper { width: 100%; max-width: 320px; }
+  .share-panel { width: 100%; }
+
+  .state-box { padding: 2.5rem 1.25rem; }
+}
+
+@media (max-width: 420px) {
+  .record-title { flex-direction: row; }
+  .record-title h1 { font-size: 1.2rem; }
+  :host::before, :host::after { opacity: 0.1; }
+
+  .qr-code-img { width: 190px; height: 190px; }
+}
+
+/* ═══════════════════════════════════════════
+   PRINT
+   ═══════════════════════════════════════════ */
+@media print {
+  :host { background: #fff; }
+  :host::before, :host::after { display: none; }
+
+  .record-header {
+    background: #fff;
+    color: #000;
+    box-shadow: none;
+    border: 1px solid #999;
+  }
+  .record-header::before, .record-header::after { display: none; }
+  .record-title i {
+    background: #f3f0ff;
+    color: var(--purple);
+    border-color: var(--purple-light);
+  }
+  .record-title h1 {
+    background: none;
+    -webkit-text-fill-color: var(--purple-dark);
+    color: var(--purple-dark);
+  }
+
+  .record-actions,
+  .share-actions,
+  button { display: none; }
+
+  :host ::ng-deep .record-card .p-card {
+    box-shadow: none;
+    border: 1px solid #999;
+    page-break-inside: avoid;
+  }
+}

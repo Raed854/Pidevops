@@ -1,0 +1,148 @@
+<div class="test-visages-container">
+
+  <!-- Header -->
+  <header class="test-header">
+    <div class="header-content">
+      <div class="test-info">
+        <h1 class="test-title">Test de Reconnaissance des Visages</h1>
+      </div>
+      <div>
+        <div class="phase-label">IDENTIFICATION</div>
+        <div class="phase-sub">Phase {{ currentVisageIndex() + 1 }}/{{ totalVisages() }}</div>
+      </div>
+    </div>
+
+    <!-- Dots progress bar -->
+    <div class="progress-info" style="max-width: 680px; margin: 0.75rem auto 0; padding: 0;">
+      @for (v of visages(); track v.id; let i = $index) {
+        <div class="dot" [class.active]="i <= currentVisageIndex()"></div>
+      }
+    </div>
+
+    <hr class="header-divider" />
+  </header>
+
+  <!-- Main Content -->
+  <main class="test-main">
+
+    @if (!testCompleted()) {
+
+      <section class="visage-section">
+
+        <!-- Image card -->
+        <div class="visage-container"
+             [class.correct]="isCurrentVisageCorrect()"
+             [class.incorrect]="isCurrentVisageIncorrect()">
+
+          <img
+            [src]="getImageUrl(currentVisage())"
+            [alt]="'Visage ' + (currentVisageIndex() + 1)"
+            class="visage-image"
+            (load)="onImageLoad()"
+            (error)="onImageError()"
+          />
+
+          <!-- Feedback Overlay -->
+          @if (currentVisage().answered) {
+            <div class="feedback-overlay"
+                 [class.correct-feedback]="isCurrentVisageCorrect()"
+                 [class.incorrect-feedback]="isCurrentVisageIncorrect()">
+              @if (isCurrentVisageCorrect()) {
+                <div class="feedback-icon">✓</div>
+                <div class="feedback-text">Correct !</div>
+              } @else {
+                <div class="feedback-icon">✗</div>
+                <div class="feedback-text">Incorrect</div>
+              }
+            </div>
+          }
+
+        </div>
+
+        <!-- Question -->
+        <div class="question-container">
+          <h2 class="question-text">{{ currentVisage().questionText }}</h2>
+        </div>
+
+        <!-- Counter -->
+        <div class="visage-counter">Visage {{ currentVisageIndex() + 1 }} / {{ totalVisages() }}</div>
+
+        <!-- Answer Buttons -->
+        <div class="answer-buttons" [class.disabled]="isAnswering()">
+          <button
+            class="btn-answer btn-true"
+            (click)="answerVisage(true)"
+            [disabled]="isAnswering() || currentVisage().answered">
+            OUI
+          </button>
+          <button
+            class="btn-answer btn-false"
+            (click)="answerVisage(false)"
+            [disabled]="isAnswering() || currentVisage().answered">
+            NON
+          </button>
+        </div>
+
+      </section>
+
+    } @else {
+
+      <!-- Results -->
+      <section class="results-section">
+        <div class="results-container">
+
+          <div class="results-header">
+            <h1 class="results-title">Test Terminé !</h1>
+            <div class="final-score">
+              <div class="score-circle">
+                <span class="score-percentage">{{ getScorePercentage() }}%</span>
+              </div>
+              <div class="score-details">
+                <span class="score-main">{{ getScoreText() }}</span>
+                <span class="score-label">visages reconnus</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recap -->
+          <div class="recap-grid">
+            <h3 class="recap-title">Récapitulatif</h3>
+            <div class="visages-recap">
+              @for (visage of visages(); track visage.id) {
+                <div class="recap-item"
+                     [class.correct-recap]="visage.isCorrect"
+                     [class.incorrect-recap]="!visage.isCorrect">
+                  <img [src]="getImageUrl(visage)" [alt]="'Visage ' + visage.id" class="recap-image" />
+                  <div class="recap-feedback">
+                    @if (visage.isCorrect) {
+                      <div class="recap-icon correct-recap-icon">✓</div>
+                    } @else {
+                      <div class="recap-icon incorrect-recap-icon">✗</div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="results-actions">
+            <button class="btn-restart" (click)="restartTest()">Recommencer le test</button>
+            <button class="btn-return" (click)="returnToDashboard()">Retour au tableau de bord</button>
+          </div>
+
+        </div>
+      </section>
+
+    }
+
+  </main>
+</div>
+
+<!-- Loading Overlay -->
+@if (isAnswering()) {
+  <div class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <span class="loading-text">Enregistrement de la réponse...</span>
+  </div>
+}

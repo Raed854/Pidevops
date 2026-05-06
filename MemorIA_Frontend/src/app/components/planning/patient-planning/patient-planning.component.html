@@ -1,0 +1,304 @@
+<!-- Erreur -->
+<div *ngIf="error" class="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-6 animate-fade-in">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md text-center animate-slide-in">
+    <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-soft">
+      <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+    </div>
+    <h3 class="text-2xl font-bold text-gray-800 mb-2">Erreur d'accès</h3>
+    <p class="text-gray-600 text-lg">{{ error }}</p>
+  </div>
+</div>
+
+<!-- Interface Patient Optimisée -->
+<div *ngIf="!error" class="min-h-screen bg-gradient-to-br from-[#C0E0DE] via-[#E8F4F3] to-[#C0E0DE]">
+  <!-- Header avec date et heure en temps réel -->
+  <div class="bg-white shadow-lg border-b-4 border-[#541A75] sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <!-- Titre et date -->
+        <div class="flex-1 min-w-[280px] animate-slide-in">
+          <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-[#541A75] mb-2 flex items-center gap-2 sm:gap-3">
+            <svg class="w-8 h-8 sm:w-10 sm:h-10 text-[#00635D] animate-pulse-gentle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="text-extra-large">Mon Planning du Jour</span>
+          </h1>
+          <p class="text-lg sm:text-xl text-gray-700 font-medium">
+            {{ currentDate | date:'EEEE d MMMM y':'':'fr' }}
+          </p>
+          <div class="flex items-center gap-2 mt-2">
+            <svg class="w-5 h-5 text-[#541A75] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-2xl sm:text-3xl font-bold text-[#541A75] tabular-nums">
+              {{ currentTime }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Actions principales -->
+        <div class="flex gap-2 sm:gap-3 flex-wrap animate-slide-in-right">
+          <!-- Bouton Lecture vocale -->
+          <button
+            (click)="speakAll()"
+            [disabled]="reminders.length === 0"
+            class="bg-gradient-to-r from-[#541A75] to-[#6B2A95] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200 flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none focus-ring"
+            aria-label="Lire tous les rappels à voix haute">
+            <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m0-7.072a5 5 0 00-1.414 1.414M3.05 3.05a13 13 0 0017.9 0"/>
+            </svg>
+            <span class="hidden lg:inline">Lire à voix haute</span>
+            <span class="lg:hidden">🔊</span>
+          </button>
+
+          <!-- Bouton Commande vocale -->
+          <button
+            *ngIf="recognition"
+            (click)="startListening()"
+            class="bg-gradient-to-r from-[#6B2A95] to-[#8B3AAA] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200 flex items-center gap-2 text-base sm:text-lg font-semibold focus-ring"
+            aria-label="Commande vocale">
+            <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+            </svg>
+            <span class="hidden sm:inline">🎤</span>
+          </button>
+
+          <!-- Bouton Taille texte -->
+          <div class="flex gap-1 bg-white rounded-xl sm:rounded-2xl shadow-lg p-1">
+            <button
+              (click)="decreaseTextSize()"
+              [disabled]="textSizeMultiplier <= 0.8"
+              class="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-ring"
+              aria-label="Diminuer la taille du texte"
+              title="Diminuer">
+              <span class="text-xl font-bold text-gray-700">A-</span>
+            </button>
+            <button
+              (click)="resetTextSize()"
+              class="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors focus-ring"
+              aria-label="Taille normale"
+              title="Réinitialiser">
+              <span class="text-lg font-bold text-gray-700">A</span>
+            </button>
+            <button
+              (click)="increaseTextSize()"
+              [disabled]="textSizeMultiplier >= 1.5"
+              class="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-ring"
+              aria-label="Augmenter la taille du texte"
+              title="Augmenter">
+              <span class="text-xl font-bold text-gray-700">A+</span>
+            </button>
+          </div>
+
+          <!-- Bouton Rafraîchir -->
+          <button
+            (click)="refreshReminders()"
+            class="bg-gradient-to-r from-[#00635D] to-[#007A73] text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200 flex items-center gap-2 text-base sm:text-lg font-semibold focus-ring"
+            aria-label="Rafraîchir la liste">
+            <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span class="hidden sm:inline">Actualiser</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Statistiques rapides -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-4 sm:mt-6">
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border-l-4 border-blue-500 hover-lift animate-card-enter" style="animation-delay: 0.1s">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-blue-600 text-sm font-medium uppercase tracking-wide">Total</p>
+              <p class="text-3xl sm:text-4xl font-bold text-blue-700 tabular-nums">{{ reminders.length }}</p>
+            </div>
+            <svg class="w-10 h-10 sm:w-12 sm:h-12 text-blue-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border-l-4 border-green-500 hover-lift animate-card-enter" style="animation-delay: 0.2s">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-green-600 text-sm font-medium uppercase tracking-wide">Confirmés</p>
+              <p class="text-3xl sm:text-4xl font-bold text-green-700 tabular-nums">{{ getConfirmedCount() }}</p>
+            </div>
+            <svg class="w-10 h-10 sm:w-12 sm:h-12 text-green-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-4 border-l-4 border-orange-500 hover-lift animate-card-enter" style="animation-delay: 0.3s">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-orange-600 text-sm font-medium uppercase tracking-wide">En attente</p>
+              <p class="text-3xl sm:text-4xl font-bold text-orange-700 tabular-nums">{{ getPendingCount() }}</p>
+            </div>
+            <svg class="w-10 h-10 sm:w-12 sm:h-12 text-orange-400 opacity-50 animate-pulse-gentle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des rappels -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <!-- Indicateur de chargement -->
+    <div *ngIf="isLoading" class="text-center py-12 sm:py-16 animate-fade-in">
+      <div class="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-8 sm:p-12 max-w-2xl mx-auto">
+        <div class="loading-spinner mx-auto mb-4"></div>
+        <h3 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">Chargement en cours...</h3>
+        <p class="text-lg sm:text-xl text-gray-600">Récupération de vos rappels</p>
+      </div>
+    </div>
+
+    <!-- Message si aucun rappel -->
+    <div *ngIf="!isLoading && reminders.length === 0" class="text-center py-12 sm:py-16 animate-fade-in">
+      <div class="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-8 sm:p-12 max-w-2xl mx-auto hover-lift">
+        <div class="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-[#C0E0DE] to-[#00635D] rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-soft">
+          <svg class="w-12 h-12 sm:w-16 sm:h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
+          </svg>
+        </div>
+        <h3 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">Aucun rappel aujourd'hui</h3>
+        <p class="text-lg sm:text-xl text-gray-600">Profitez de votre journée ! 😊</p>
+      </div>
+    </div>
+
+    <!-- Grille de rappels -->
+    <div *ngIf="!isLoading" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      <div
+        *ngFor="let r of reminders; let i = index"
+        class="bg-white rounded-xl sm:rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border-l-8 reminder-card animate-card-enter"
+        [class.border-green-500]="r.status === 'confirmed'"
+        [class.border-orange-500]="r.status !== 'confirmed'"
+        [class.opacity-75]="r.status === 'confirmed'"
+        [style.animation-delay.s]="i * 0.05">
+
+        <div class="p-4 sm:p-6">
+          <!-- En-tête du rappel -->
+          <div class="flex items-start justify-between mb-4 gap-3">
+            <!-- Numéro et heure -->
+            <div class="flex items-center gap-3 sm:gap-4 flex-1">
+              <div class="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-[#541A75] to-[#6B2A95] rounded-xl sm:rounded-2xl flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow-lg flex-shrink-0">
+                {{ i + 1 }}
+              </div>
+              <div class="min-w-0">
+                <p class="text-2xl sm:text-3xl font-bold text-[#541A75] tabular-nums">{{ r.time }}</p>
+                <p class="text-xs sm:text-sm font-medium mt-1"
+                   [class.text-red-600]="getTimeStatus(r.time) === 'Maintenant !'"
+                   [class.text-orange-600]="getTimeStatus(r.time).includes('min') || getTimeStatus(r.time) === 'Bientôt'"
+                   [class.text-gray-500]="getTimeStatus(r.time).includes('h') || getTimeStatus(r.time) === 'Passé'"
+                   [class.animate-pulse-gentle]="getTimeStatus(r.time) === 'Maintenant !'">
+                  {{ getTimeStatus(r.time) }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Badge de statut -->
+            <div
+              class="px-3 py-2 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-2 status-badge flex-shrink-0"
+              [class.bg-green-100]="r.status === 'confirmed'"
+              [class.text-green-700]="r.status === 'confirmed'"
+              [class.bg-orange-100]="r.status !== 'confirmed'"
+              [class.text-orange-700]="r.status !== 'confirmed'"
+              [class.animate-pulse-gentle]="r.status !== 'confirmed'">
+              <svg *ngIf="r.status === 'confirmed'" class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <svg *ngIf="r.status !== 'confirmed'" class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+              </svg>
+              <span class="hidden sm:inline">{{ r.status === 'confirmed' ? 'Confirmé' : 'En attente' }}</span>
+              <span class="sm:hidden">{{ r.status === 'confirmed' ? '✓' : '⏱' }}</span>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="mb-4">
+            <p class="text-lg sm:text-xl font-semibold text-gray-800 leading-relaxed text-readable">{{ r.label }}</p>
+            <p *ngIf="r.notes" class="text-gray-600 mt-2 text-sm sm:text-base text-readable">{{ r.notes }}</p>
+          </div>
+
+          <!-- Type et priorité -->
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span
+              class="px-3 py-1 rounded-full text-xs sm:text-sm font-medium"
+              [class]="getTypeClass(r.type)">
+              {{ getTypeLabel(r.type) }}
+            </span>
+            <span
+              *ngIf="r.priority"
+              class="px-3 py-1 rounded-full text-xs sm:text-sm font-medium"
+              [class]="getPriorityClass(r.priority)">
+              {{ getPriorityLabel(r.priority) }}
+            </span>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-2 sm:gap-3 pt-4 border-t border-gray-200">
+            <!-- Bouton confirmer -->
+            <button
+              *ngIf="r.status !== 'confirmed'"
+              (click)="confirm(r)"
+              class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 sm:px-6 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 focus-ring"
+              aria-label="Confirmer ce rappel">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span class="hidden sm:inline">Confirmer</span>
+              <span class="sm:hidden">✓</span>
+            </button>
+
+            <!-- Message confirmé -->
+            <div
+              *ngIf="r.status === 'confirmed'"
+              class="flex-1 bg-green-50 text-green-700 py-3 px-4 sm:px-6 rounded-xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 border-2 border-green-200">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span class="hidden sm:inline">Confirmé ✓</span>
+              <span class="sm:hidden">✓</span>
+            </div>
+
+            <!-- Bouton Lire -->
+            <button
+              (click)="speakOne(r)"
+              class="bg-[#541A75] hover:bg-[#6B2A95] text-white py-3 px-4 sm:px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center gap-2 focus-ring"
+              aria-label="Lire ce rappel à voix haute">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m0-7.072a5 5 0 00-1.414 1.414"/>
+              </svg>
+              <span class="hidden lg:inline">Lire</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer avec aide -->
+  <div class="bg-white border-t-4 border-[#00635D] mt-12">
+    <div class="max-w-7xl mx-auto px-6 py-6">
+      <div class="flex items-center justify-center gap-6 flex-wrap">
+        <div class="flex items-center gap-3 text-gray-600">
+          <svg class="w-6 h-6 text-[#541A75]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span class="text-lg">Besoin d'aide ?</span>
+        </div>
+        <button class="bg-[#00635D] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#007A73] transition-colors">
+          Contacter un proche
+        </button>
+        <button class="bg-[#541A75] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#6B2A95] transition-colors">
+          Appeler l'aide
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

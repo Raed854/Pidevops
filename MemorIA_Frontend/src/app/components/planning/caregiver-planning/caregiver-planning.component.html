@@ -1,0 +1,91 @@
+<div *ngIf="error" class="text-red-600 p-4">{{ error }}</div>
+<div *ngIf="!error" class="p-4 bg-[#C0E0DE] min-h-screen">
+  <!-- Sélection patient -->
+  <div class="mb-4">
+    <label class="font-bold text-[#541A75]">Patient :</label>
+    <select class="ml-2 p-2 rounded border" [(ngModel)]="selectedPatient" (change)="onPatientChange(selectedPatient.id)">
+      <option *ngFor="let p of patients" [ngValue]="p">{{p.name}}</option>
+    </select>
+  </div>
+
+  <!-- Zone 1 : Calendrier (stub FullCalendar) -->
+  <div class="mb-6">
+    <h2 class="text-lg font-semibold text-[#541A75] mb-2">Planning complet</h2>
+    <!-- Intégration FullCalendar ici (stub) -->
+    <div class="bg-white rounded shadow p-4 min-h-[200px] flex items-center justify-center text-[#7E7F9A]">
+      [Calendrier interactif à intégrer]
+    </div>
+  </div>
+
+  <!-- Zone 2 : Pipeline du jour -->
+  <div class="mb-6">
+    <h2 class="text-lg font-semibold text-[#541A75] mb-2">Rappels du jour</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white rounded shadow">
+        <thead>
+          <tr class="bg-[#541A75] text-white">
+            <th class="p-2">Heure</th>
+            <th class="p-2">Activité</th>
+            <th class="p-2">Détail</th>
+            <th class="p-2">Statut</th>
+            <th class="p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of reminders" [ngClass]="{
+            'bg-[#C0E0DE]': r.status==='confirmed',
+            'bg-[#CB1527]/10': r.type==='medicament',
+            'bg-[#00635D]/10': r.type==='activite',
+            'bg-blue-100': r.type==='rdv'
+          }">
+            <td class="p-2">{{r.time}}</td>
+            <td class="p-2">{{r.type | titlecase}}</td>
+            <td class="p-2">{{r.label}}</td>
+            <td class="p-2">
+              <span [ngClass]="{
+                'text-[#00635D]': r.status==='confirmed',
+                'text-[#CB1527]': r.status!=='confirmed'
+              }">
+                {{r.status==='confirmed' ? 'Confirmé' : 'À faire'}}
+              </span>
+            </td>
+            <td class="p-2 flex gap-2">
+              <button *ngIf="r.status!=='confirmed'" (click)="confirm(r)" class="bg-[#00635D] text-white px-2 py-1 rounded hover:bg-[#541A75]">Confirmer</button>
+              <button (click)="delay(r)" class="bg-[#7E7F9A] text-white px-2 py-1 rounded hover:bg-[#541A75]">Reporter</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Zone 3 : Statistiques -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-white rounded shadow p-4">
+      <h3 class="font-bold text-[#541A75] mb-2">Taux prise médicaments</h3>
+      <canvas baseChart
+        [data]="medRateData"
+        [type]="doughnutType"
+        [options]="{responsive:true, plugins:{legend:{display:true}}}">
+      </canvas>
+      <div class="text-[#7E7F9A] mt-2">{{stats?.medRate}} %</div>
+    </div>
+    <div class="bg-white rounded shadow p-4">
+      <h3 class="font-bold text-[#541A75] mb-2">Taux activités</h3>
+      <canvas baseChart
+        [data]="actRateData"
+        [type]="doughnutType"
+        [options]="{responsive:true, plugins:{legend:{display:true}}}">
+      </canvas>
+      <div class="text-[#7E7F9A] mt-2">{{stats?.actRate}} %</div>
+    </div>
+    <div class="bg-white rounded shadow p-4">
+      <h3 class="font-bold text-[#541A75] mb-2">Oublis (7j)</h3>
+      <canvas baseChart
+        [data]="forgetData"
+        [type]="barType"
+        [options]="{responsive:true, plugins:{legend:{display:false}}}">
+      </canvas>
+    </div>
+  </div>
+</div>

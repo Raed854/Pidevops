@@ -1,0 +1,315 @@
+<app-navbar></app-navbar>
+
+<div class="doctor-alerts-layout flex min-h-screen bg-gradient-to-br from-[#f8f7fb] via-[#f5f3fb] to-[#f0f7f7]">
+  <app-sidebar-diagnostic></app-sidebar-diagnostic>
+
+  <main class="flex-1 p-4 md:p-6 xl:p-8 w-full overflow-x-hidden">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[320px_1fr]">
+
+      <!-- Left Sidebar: Followed Patients -->
+      <aside class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-[#C0E0DE]/40 h-fit xl:sticky xl:top-[100px]">
+        <h2 class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[#541A75] mb-4">
+          <span>👥</span> Followed Patients
+        </h2>
+
+        <div class="relative mb-4">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#C0E0DE]">🔍</span>
+          <input
+            type="text"
+            [(ngModel)]="patientSearchTerm"
+            placeholder="Search patient..."
+            class="w-full rounded-lg border border-[#C0E0DE] bg-[#f8fbfb] py-2 pl-10 pr-3 text-sm outline-none focus:border-[#541A75] focus:ring-2 focus:ring-[#541A75]/30" />
+        </div>
+
+        <div class="space-y-2 max-h-[600px] overflow-y-auto">
+          <button
+            *ngFor="let patient of filteredPatients"
+            type="button"
+            (click)="selectPatient(patient)"
+            class="w-full rounded-lg border px-3 py-3 text-left transition-all duration-200"
+            [ngClass]="selectedPatient?.id === patient.id
+              ? 'border-[#541A75] bg-[#541A75]/5 ring-2 ring-[#541A75]/20'
+              : 'border-[#C0E0DE]/50 bg-white hover:border-[#541A75]/30'">
+
+            <div class="flex items-center gap-3">
+              <div 
+                class="h-9 w-9 flex items-center justify-center rounded-full text-xs font-bold text-white shrink-0"
+                [ngClass]="{
+                  'bg-[#C0E0DE]': patient.stage === 'Early',
+                  'bg-[#541A75]': patient.stage === 'Moderate',
+                  'bg-[#CB1527]': patient.stage === 'Advanced'
+                }">
+                {{ patient.initials }}
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <p class="font-semibold text-[#541A75] text-sm truncate">
+                  {{ patient.firstName }} {{ patient.lastName }}
+                </p>
+                <p class="text-xs text-[#7E7F9A]">
+                  {{ patient.age }} years • {{ patient.stage }}
+                </p>
+              </div>
+
+              <div class="h-6 w-6 flex items-center justify-center rounded-full text-xs font-bold text-white bg-[#CB1527]">
+                {{ patient.unresolvedAlerts }}
+              </div>
+            </div>
+
+            <div class="mt-2 h-1 bg-[#C0E0DE]/20 rounded-full overflow-hidden">
+              <div 
+                class="h-full bg-[#00635D] transition-all"
+                [style.width.%]="patient.adherence">
+              </div>
+            </div>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Right Content: Doctor Alerts Center -->
+      <section *ngIf="selectedPatient" class="space-y-6">
+        
+        <!-- Header with Title -->
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h1 class="text-3xl font-bold text-[#541A75]">
+              Doctor Alerts Center
+            </h1>
+            <p class="text-sm text-[#7E7F9A] mt-1">
+              {{ selectedPatient.firstName }} {{ selectedPatient.lastName }} • Updated <span class="text-[#00635D]">● Live</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            (click)="exportAlertsToPdf()"
+            [disabled]="isExportingPdf"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#541A75] text-white hover:bg-[#7E7F9A] disabled:opacity-50 transition-colors font-medium text-sm">
+            <span>📄</span>
+            {{ isExportingPdf ? 'Exporting...' : 'Export PDF' }}
+          </button>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="rounded-xl border border-[#00635D]/25 bg-[#f0fffe] p-4 text-sm text-[#00635D] flex items-center gap-2">
+          <span>✅</span> {{ successMessage }}
+        </div>
+        <div *ngIf="errorMessage" class="rounded-xl border border-[#CB1527]/25 bg-[#fff5f7] p-4 text-sm text-[#CB1527] flex items-center gap-2">
+          <span>⚠️</span> {{ errorMessage }}
+        </div>
+
+        <!-- KPI Metrics Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="rounded-2xl border border-[#C0E0DE]/40 bg-white p-6 shadow-sm ring-1 ring-[#C0E0DE]/20">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-[#7E7F9A]">Unresolved Alerts</p>
+                <p class="text-3xl font-bold text-[#CB1527] mt-2">{{ unresolvedAlerts }}</p>
+              </div>
+              <div class="text-4xl">🚨</div>
+            </div>
+            <div class="mt-4 h-1 bg-[#C0E0DE]/20 rounded-full overflow-hidden">
+              <div class="h-full bg-[#CB1527] w-1/3"></div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-[#C0E0DE]/40 bg-white p-6 shadow-sm ring-1 ring-[#C0E0DE]/20">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-[#7E7F9A]">Resolution Rate (24h)</p>
+                <p class="text-3xl font-bold text-[#00635D] mt-2">{{ resolutionRate24h.toFixed(0) }}%</p>
+              </div>
+              <div class="text-4xl">📈</div>
+            </div>
+            <div class="mt-4 h-1 bg-[#C0E0DE]/20 rounded-full overflow-hidden">
+              <div class="h-full bg-[#00635D] transition-all" [style.width.%]="resolutionRate24h"></div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-[#C0E0DE]/40 bg-white p-6 shadow-sm ring-1 ring-[#C0E0DE]/20">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-[#7E7F9A]">Overall Resolution Rate</p>
+                <p class="text-3xl font-bold text-[#541A75] mt-2">{{ resolutionRateOverall.toFixed(0) }}%</p>
+              </div>
+              <div class="text-4xl">✅</div>
+            </div>
+            <div class="mt-4 h-1 bg-[#C0E0DE]/20 rounded-full overflow-hidden">
+              <div class="h-full bg-[#541A75] transition-all" [style.width.%]="resolutionRateOverall"></div>
+            </div>
+          </div>
+        </div>
+
+        
+
+        <!-- Alert Search -->
+        <div class="relative">
+          <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">🔎</span>
+          <input
+            type="text"
+            [(ngModel)]="alertSearchTerm"
+            placeholder="Search alerts..."
+            class="w-full rounded-xl border border-[#C0E0DE] bg-white py-3 pl-12 pr-4 outline-none focus:border-[#541A75] focus:ring-2 focus:ring-[#541A75]/30" />
+        </div>
+
+        <!-- Alert Filters -->
+        <div class="flex flex-wrap gap-2">
+          <button type="button" (click)="applyAlertFilter('all')" class="rounded-full border px-4 py-2 text-sm font-medium transition-all" [ngClass]="selectedAlertFilter === 'all' ? 'border-[#541A75] bg-[#541A75] text-white shadow-lg shadow-[#541A75]/20' : 'border-[#C0E0DE] text-[#541A75] bg-white hover:border-[#541A75]/50'">All Alerts</button>
+          <button type="button" (click)="applyAlertFilter('critical')" class="rounded-full border px-4 py-2 text-sm font-medium transition-all" [ngClass]="selectedAlertFilter === 'critical' ? 'border-[#CB1527] bg-[#CB1527] text-white shadow-lg shadow-[#CB1527]/20' : 'border-[#C0E0DE] text-[#CB1527] bg-white hover:border-[#CB1527]/50'">Critical</button>
+          <button type="button" (click)="applyAlertFilter('high')" class="rounded-full border px-4 py-2 text-sm font-medium transition-all" [ngClass]="selectedAlertFilter === 'high' ? 'border-[#541A75] bg-[#541A75] text-white shadow-lg shadow-[#541A75]/20' : 'border-[#C0E0DE] text-[#541A75] bg-white hover:border-[#541A75]/50'">High & Critical</button>
+          <button type="button" (click)="applyAlertFilter('unresolved')" class="rounded-full border px-4 py-2 text-sm font-medium transition-all" [ngClass]="selectedAlertFilter === 'unresolved' ? 'border-[#00635D] bg-[#00635D] text-white shadow-lg shadow-[#00635D]/20' : 'border-[#C0E0DE] text-[#00635D] bg-white hover:border-[#00635D]/50'">Unresolved</button>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Daily Evolution Chart -->
+          <div>
+            <app-daily-evolution-chart *ngIf="dailyEvolution" [data]="dailyEvolution"></app-daily-evolution-chart>
+            <div *ngIf="!dailyEvolution && !isLoadingAlerts" class="rounded-2xl border border-[#C0E0DE]/40 bg-white p-6 shadow-sm">
+              <p class="text-center text-[#7E7F9A]">Loading chart data...</p>
+            </div>
+          </div>
+          
+          <!-- Predictive Alert Card -->
+          <div class="rounded-2xl border border-[#C0E0DE]/40 bg-white p-6 shadow-sm ring-1 ring-[#C0E0DE]/20">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-lg font-bold text-[#541A75] flex items-center gap-2">
+                  <span>🔮</span> Forgetting Trend Alert
+                </h3>
+                <p class="text-xs text-[#7E7F9A] mt-1">Predictive risk analysis</p>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <!-- Predictive Alerts List -->
+              <ng-container *ngIf="predictiveAlerts && predictiveAlerts.length > 0">
+                <div *ngFor="let pred of predictiveAlerts.slice(0, 2)" class="rounded-lg border-l-4 p-4 transition-all" 
+                  [ngClass]="{
+                    'border-[#CB1527] bg-[#CB1527]/5': pred.riskLevel === 'high',
+                    'border-[#F59E0B] bg-[#F59E0B]/5': pred.riskLevel === 'medium',
+                    'border-[#00635D] bg-[#00635D]/5': pred.riskLevel === 'low',
+                    'border-[#C0E0DE] bg-white': !pred.riskLevel
+                  }">
+                  <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="flex-1">
+                      <h4 class="font-semibold text-[#541A75] text-sm">{{ pred.title }}</h4>
+                      <p class="text-xs text-[#7E7F9A] mt-1">{{ pred.description }}</p>
+                    </div>
+                    <span class="text-sm font-bold px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap"
+                      [ngClass]="{
+                        'bg-[#CB1527]/20 text-[#CB1527]': pred.riskLevel === 'high',
+                        'bg-[#F59E0B]/20 text-[#F59E0B]': pred.riskLevel === 'medium',
+                        'bg-[#00635D]/20 text-[#00635D]': pred.riskLevel === 'low',
+                        'bg-[#C0E0DE]/20 text-[#7E7F9A]': !pred.riskLevel
+                      }">
+                      {{ pred.probability }}%
+                    </span>
+                  </div>
+
+                  <!-- Probability Bar -->
+                  <div class="h-2 bg-[#C0E0DE]/20 rounded-full overflow-hidden">
+                    <div class="h-full transition-all"
+                      [style.width.%]="pred.probability"
+                      [ngClass]="{
+                        'bg-[#CB1527]': pred.riskLevel === 'high',
+                        'bg-[#F59E0B]': pred.riskLevel === 'medium',
+                        'bg-[#00635D]': pred.riskLevel === 'low',
+                        'bg-[#7E7F9A]': !pred.riskLevel
+                      }">
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+
+              <!-- No Predictive Alerts -->
+              <ng-container *ngIf="!predictiveAlerts || predictiveAlerts.length === 0">
+                <div class="text-center py-6">
+                  <p class="text-3xl mb-2">✓</p>
+                  <p class="font-semibold text-[#541A75] text-sm">Low Risk</p>
+                  <p class="text-xs text-[#7E7F9A] mt-2">No medication forgetting trends detected</p>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily Summary -->
+       
+        <!-- Alerts Sections -->
+        <div class="space-y-6">
+          
+          
+          
+          <!-- Weather Alerts -->
+
+
+          <!-- Critical Alerts -->
+          <div *ngIf="getCriticalAlerts().length > 0">
+            <div class="flex items-center gap-2 mb-4">
+              <span class="text-2xl">🚨</span>
+              <h3 class="text-lg font-semibold text-[#CB1527]">Critical Alerts ({{ getCriticalAlerts().length }})</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <app-alert-card 
+                *ngFor="let alert of getCriticalAlerts()"
+                [alert]="alert"
+                (takeInCharge)="handleAlertAction({ action: 'take-charge', alertId: $event })"
+                (resolve)="handleAlertAction({ action: 'resolve', alertId: $event })"
+                (addNote)="handleAlertAction({ action: 'add-note', alertId: $event })">
+              </app-alert-card>
+            </div>
+          </div>
+
+          <!-- Other Alerts -->
+          <div *ngIf="getNonCriticalAlerts().length > 0">
+            <div class="flex items-center gap-2 mb-4">
+              <span class="text-2xl">📋</span>
+              <h3 class="text-lg font-semibold text-[#541A75]">Other Alerts ({{ getNonCriticalAlerts().length }})</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <app-alert-card 
+                *ngFor="let alert of getNonCriticalAlerts()"
+                [alert]="alert"
+                (takeInCharge)="handleAlertAction({ action: 'take-charge', alertId: $event })"
+                (resolve)="handleAlertAction({ action: 'resolve', alertId: $event })"
+                (addNote)="handleAlertAction({ action: 'add-note', alertId: $event })">
+              </app-alert-card>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="filteredAlerts.length === 0 && !isLoadingAlerts" class="text-center py-12 rounded-2xl bg-white border border-[#C0E0DE]/40">
+            <p class="text-5xl mb-3">✓</p>
+            <p class="font-semibold text-[#541A75]">All clear</p>
+            <p class="text-sm text-[#7E7F9A] mt-2">No alerts match your current filters.</p>
+          </div>
+
+          <!-- Loading State -->
+          <div *ngIf="isLoadingAlerts" class="space-y-3">
+            <div class="rounded-xl bg-white p-6 animate-pulse">
+              <div class="h-32 bg-[#C0E0DE]/20 rounded-lg"></div>
+            </div>
+            <div class="rounded-xl bg-white p-6 animate-pulse">
+              <div class="h-32 bg-[#C0E0DE]/20 rounded-lg"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- No Patient Selected State -->
+      <div *ngIf="!selectedPatient && !isLoadingPatients" class="xl:col-span-2 text-center py-12 rounded-2xl bg-white border border-[#C0E0DE]/40">
+        <p class="text-5xl mb-3">👤</p>
+        <p class="font-semibold text-[#541A75]">Select a patient</p>
+        <p class="text-sm text-[#7E7F9A] mt-2">Choose a patient on the left to view alerts and manage their care.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Clinical Notes Panel -->
+<app-clinical-notes-panel
+  *ngIf="showClinicalNotesPanel && selectedAlertForNotes"
+  [alert]="selectedAlertForNotes"
+  (save)="saveClinicalNotes($event)"
+  (cancel)="closeClinicalNotesPanel()">
+</app-clinical-notes-panel>

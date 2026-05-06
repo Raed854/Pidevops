@@ -1,0 +1,353 @@
+<div class="feed-container">
+  <!-- Navbar Global - MemorIA Theme -->
+  <nav class="navbar-global">
+    <div class="nav-content-global">
+      <div class="logo-global">
+        <h2 routerLink="/home" style="cursor: pointer;">MemorIA</h2>
+      </div>
+      <div class="nav-buttons-global">
+        <button class="btn-back-home" routerLink="/home">
+          <i class="fas fa-home me-2"></i> Accueil
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Principal Content -->
+  <main class="feed-main">
+    <div class="feed-grid">
+      <!-- Left Column: Posts -->
+      <div class="posts-list">
+        <!-- Filter Bar -->
+        <div class="feed-filter-bar shadow-sm">
+          <div class="filter-box">
+            <i class="fas fa-search text-muted"></i>
+            <input type="text" placeholder="Rechercher une publication..." [(ngModel)]="searchTerm">
+          </div>
+          <div class="filter-controls">
+            <select class="filter-select" [(ngModel)]="filterType">
+              <option value="">Toutes les catégories</option>
+              <option *ngFor="let type of publicationTypes" [value]="type">{{ type }}</option>
+            </select>
+            <select class="filter-select" [(ngModel)]="sortBy">
+              <option value="newest">Plus récent</option>
+              <option value="oldest">Plus ancien</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Loop through Publications -->
+        <article class="post-card" *ngFor="let pub of filteredPublications; trackBy: trackById">
+          <!-- Post Header -->
+          <header class="post-header">
+            <div class="avatar-circle">
+              {{ pub.doctorName ? pub.doctorName.charAt(0).toUpperCase() : 'D' }}
+            </div>
+            <div class="doctor-info-meta">
+              <h6>{{ pub.doctorName || 'Docteur' }}</h6>
+              <time class="post-time">
+                {{ pub.createdAt | date:'d MMM y, HH:mm' }} · <i class="fas fa-globe-americas"></i>
+              </time>
+            </div>
+          </header>
+
+          <!-- Post Content -->
+          <section class="post-body">
+            <div class="badge-publication-type">
+              <span class="badge-publication" [ngClass]="{
+                       'badge-info': pub.type === 'INFORMATION',
+                       'badge-event': pub.type === 'EVENEMENT',
+                       'badge-conseil': pub.type === 'CONSEIL',
+                       'badge-other': pub.type === 'AUTRE'
+                     }">{{ pub.type }}</span>
+            </div>
+            <p class="post-description">{{ pub.content }}</p>
+
+            <!-- Event Specific Card Section -->
+            <div class="event-details-bar" *ngIf="pub.type === 'EVENEMENT' && (pub.eventLink || pub.eventAddress)">
+              <div class="event-info-row">
+                <div class="event-info-item" *ngIf="pub.eventAddress">
+                  <i class="fas fa-map-marker-alt"></i>
+                  <span>{{ pub.eventAddress }}</span>
+                </div>
+                <div class="event-info-item" *ngIf="pub.eventLink">
+                  <i class="fas fa-link"></i>
+                  <span class="text-truncate" style="max-width: 200px;">{{ pub.eventLink }}</span>
+                </div>
+              </div>
+              
+              <!-- Map Chart View -->
+              <div class="event-map-chart mt-3 shadow-xs" *ngIf="pub.eventAddress">
+                <div class="map-header">
+                  <i class="fas fa-chart-area pulse"></i>
+                  <span>Maps Localization Chart</span>
+                </div>
+                <iframe 
+                  width="100%" 
+                  height="220" 
+                  [src]="pub.eventAddress | safeMap" 
+                  style="border:0; border-radius: 0 0 12px 12px;" 
+                  allowfullscreen="" 
+                  loading="lazy" 
+                  referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+              </div>
+
+              <div class="event-actions-grid">
+                <a *ngIf="pub.eventLink" [href]="pub.eventLink" target="_blank" class="btn-event-action link">
+                  <i class="fas fa-external-link-alt"></i> Ouvrir le Lien
+                </a>
+                <a *ngIf="pub.eventAddress" [href]="'https://www.google.com/maps/search/?api=1&query=' + pub.eventAddress" target="_blank" class="btn-event-action maps">
+                  <i class="fas fa-map-marked-alt"></i> Voir sur Maps
+                </a>
+              </div>
+            </div>
+          </section>
+
+          <!-- Post Media -->
+          <div class="post-media-wrapper" *ngIf="pub.mediaUrl">
+            <img *ngIf="pub.mediaType?.startsWith('image/')"
+              [src]="communityFilesUrl +pub.mediaUrl" class="post-media-img"
+              alt="Image publication">
+            <video *ngIf="pub.mediaType?.startsWith('video/')"
+              [src]="communityFilesUrl +pub.mediaUrl" class="post-media-video"
+              controls></video>
+            <a *ngIf="!pub.mediaType?.startsWith('image/') && !pub.mediaType?.startsWith('video/')"
+              [href]="communityFilesUrl +pub.mediaUrl" target="_blank"
+              class="attachment-card">
+              <div class="file-icon"><i class="fas fa-file-alt fa-lg"></i></div>
+              <div class="flex-grow-1">
+                <div class="file-name">{{ pub.fileName || 'Document' }}</div>
+                <small class="text-muted">Télécharger</small>
+              </div>
+              <i class="fas fa-download text-muted"></i>
+            </a>
+          </div>
+
+             <!-- Community Rating System & Reactions Summary -->
+             <div class="d-flex justify-content-between align-items-center mb-2 px-3">
+                 <!-- 5-Star Premium Rating Control -->
+                 <div class="premium-rating-wrapper">
+                     <div class="star-rating-container">
+                         <div class="stars-outer">
+                             <!-- Loop through 1 to 5 to generate stars -->
+                             <i class="fa-star pointer"
+                                *ngFor="let star of [1, 2, 3, 4, 5]"
+                                [ngClass]="star <= (pub.myRating || pub.averageRating || 0) ? 'fas filled' : 'far'"
+                                (click)="onRatePub(pub, star)"></i>
+                         </div>
+                         <div class="rating-text-badge">
+                             <span>{{ pub.averageRating | number:'1.1-1' }}</span>
+                             <i class="fas fa-star text-warning" style="font-size: 0.75rem;"></i>
+                             <span class="total-avis">({{ pub.ratingCount || 0 }} avis)</span>
+                         </div>
+                     </div>
+                 </div>
+
+                 <!-- Reactions Count -->
+                 <div class="reaction-count-summary" *ngIf="pub.reactionCount && pub.reactionCount > 0">
+                    <div class="reaction-icon-group">
+                       <div class="reaction-icon-circle" style="background: #1877f2;"><i class="fas fa-thumbs-up text-white" style="font-size: 0.6rem;"></i></div>
+                    </div>
+                    <span>{{ pub.reactionCount }}</span>
+                 </div>
+             </div>
+
+          <!-- Post Actions -->
+          <footer class="post-actions mt-1">
+            <!-- Like Button with Reaction Picker -->
+            <div class="reaction-picker-container" style="flex: 1;" 
+                 (mouseenter)="showPicker(pub)" 
+                 (mouseleave)="hidePicker(pub)">
+              <div class="reaction-picker shadow-sm" *ngIf="pub.showReactionPicker">
+                 <span class="reaction-emoji" (click)="onReactPub(pub, ReactionType.LIKE)">👍</span>
+                 <span class="reaction-emoji" (click)="onReactPub(pub, ReactionType.LOVE)">❤️</span>
+                 <span class="reaction-emoji" (click)="onReactPub(pub, ReactionType.HAHA)">😆</span>
+                 <span class="reaction-emoji" (click)="onReactPub(pub, ReactionType.WOW)">😮</span>
+                 <span class="reaction-emoji" (click)="onReactPub(pub, ReactionType.SAD)">😢</span>
+                 <span class="reaction-emoji" (click)="onReactPub(pub, ReactionType.ANGRY)">😡</span>
+              </div>
+              <button class="action-btn w-100" [ngClass]="getReactionClass(pub.myReaction)" (click)="onReactPub(pub, ReactionType.LIKE)">
+                <i [class]="pub.myReaction ? 'fas fa-thumbs-up' : 'far fa-thumbs-up'"></i>
+                {{ getReactionLabel(pub.myReaction) }}
+              </button>
+            </div>
+
+            <button class="action-btn" (click)="onCommentClick(pub.id!)">
+              <i class="far fa-comment"></i> Commenter
+            </button>
+            <button class="action-btn" (click)="savePublication(pub)">
+              <i class="far fa-bookmark"></i> Enregistrer
+            </button>
+          </footer>
+
+          <!-- --- FB STYLE COMMENT SECTION --- -->
+          <div class="comment-section">
+            <div class="comment-input-area" *ngIf="currentUser">
+              <div class="avatar-circle-sm">
+                {{ currentUser.prenom ? currentUser.prenom.charAt(0) : 'U' }}
+              </div>
+              <div class="comment-input-group shadow-sm">
+                <input type="text" placeholder="Écrivez un commentaire..." [(ngModel)]="newCommentContent[pub.id!]"
+                  (keyup.enter)="addComment(pub.id!)">
+                <button class="btn-send-comment" (click)="addComment(pub.id!)"
+                  [disabled]="!newCommentContent[pub.id!]" title="Envoyer">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="mb-3 text-center border-bottom pb-2" *ngIf="!currentUser">
+              <small class="text-muted">Merci de <a routerLink="/login"
+                  [state]="{ returnUrl: '/publications-feed' }" class="text-primary fw-bold">se connecter</a> pour
+                commenter.</small>
+            </div>
+
+            <div class="comments-list-wrapper">
+              <div *ngFor="let comment of getVisibleComments(pub.id!); trackBy: trackById" class="mb-3">
+                <div class="comment-item">
+                  <div class="avatar-circle-xs">
+                    {{ comment.authorName.charAt(0) }}
+                  </div>
+                  <div class="comment-bubble-container shadow-xs">
+                    <span class="comment-author-name">{{ comment.authorName }}</span>
+                    <div *ngIf="!comment.isEditing" class="comment-text">{{ comment.content }}</div>
+                    <div *ngIf="comment.isEditing" class="d-flex align-items-center gap-2">
+                      <input type="text" class="edit-input-pill" [(ngModel)]="comment.content"
+                        (keyup.enter)="onUpdateComment(pub.id!, comment)" 
+                        (keyup.escape)="comment.isEditing = false">
+                      <div class="edit-actions-icons">
+                        <i class="fas fa-check text-success" style="cursor: pointer;" (click)="onUpdateComment(pub.id!, comment)"></i>
+                        <i class="fas fa-times text-muted" style="cursor: pointer;" (click)="comment.isEditing = false"></i>
+                      </div>
+                    </div>
+                    <div class="position-absolute bottom-0 start-100 translate-middle" *ngIf="comment.reactionCount && comment.reactionCount > 0" style="margin-left: -15px; margin-bottom: -5px;">
+                       <div class="reaction-count-summary bg-white shadow-sm rounded-pill px-1" style="font-size: 0.6rem; transform: scale(0.9);">
+                          <span>👍 {{ comment.reactionCount }}</span>
+                       </div>
+                    </div>
+                  </div>
+                  <div class="comment-options-trigger" *ngIf="currentUser && comment.authorId === currentUser.id && !comment.isEditing">
+                    <i class="fas fa-pencil-alt text-muted small me-2" style="cursor: pointer;" (click)="editComment(comment)"></i>
+                    <i class="fas fa-trash text-danger opacity-50 small" style="cursor: pointer;" (click)="deleteComment(pub.id!, comment.id!)"></i>
+                  </div>
+                </div>
+
+                <div class="comment-actions-row" *ngIf="!comment.isEditing">
+                  <div class="reaction-picker-container" 
+                       (mouseenter)="showPicker(comment)" 
+                       (mouseleave)="hidePicker(comment)">
+                     <div class="reaction-picker shadow-sm" *ngIf="comment.showReactionPicker" style="bottom: 110%; padding: 3px 8px; gap: 8px;">
+                        <span class="reaction-emoji" (click)="onReactComment(pub.id!, comment, ReactionType.LIKE)">👍</span>
+                        <span class="reaction-emoji" (click)="onReactComment(pub.id!, comment, ReactionType.LOVE)">❤️</span>
+                        <span class="reaction-emoji" (click)="onReactComment(pub.id!, comment, ReactionType.SAD)">😢</span>
+                     </div>
+                     <span class="comment-action-link" [ngClass]="getReactionClass(comment.myReaction)" (click)="onReactComment(pub.id!, comment, ReactionType.LIKE)">
+                       {{ getReactionLabel(comment.myReaction) }}
+                     </span>
+                  </div>
+                  <span class="comment-action-link" (click)="comment.showReplyInput = !comment.showReplyInput">Répondre</span>
+                  <time class="text-muted">{{ comment.createdAt | date:'shortTime' }}</time>
+                </div>
+
+                <div class="replies-container" *ngIf="comment.replies && comment.replies.length > 0">
+                  <div class="show-replies-btn" (click)="comment.showReplies = !comment.showReplies">
+                    <i class="fas fa-share fa-flip-vertical text-muted opacity-50"></i>
+                    <span>{{ comment.showReplies ? 'Masquer' : 'Afficher' }} {{ comment.replies.length }} réponses</span>
+                  </div>
+                  <div *ngIf="comment.showReplies">
+                    <div *ngFor="let reply of comment.replies; trackBy: trackById" class="mb-3">
+                      <div class="reply-item">
+                        <div class="avatar-circle-xs" style="width: 26px; height: 26px;">
+                          {{ reply.authorName.charAt(0) }}
+                        </div>
+                        <div class="comment-bubble-container reply-bubble shadow-none" style="background-color: #ebedef;">
+                          <span class="comment-author-name">{{ reply.authorName }}</span>
+                          <div *ngIf="!reply.isEditing" class="comment-text" style="font-size: 0.88rem;">{{ reply.content }}</div>
+                          <div *ngIf="reply.isEditing" class="d-flex align-items-center gap-2">
+                            <input type="text" class="edit-input-pill" style="font-size: 0.85rem;" [(ngModel)]="reply.content"
+                              (keyup.enter)="onUpdateComment(pub.id!, reply)" 
+                              (keyup.escape)="reply.isEditing = false">
+                            <div class="edit-actions-icons">
+                              <i class="fas fa-check text-success small" (click)="onUpdateComment(pub.id!, reply)"></i>
+                              <i class="fas fa-times text-muted small" (click)="reply.isEditing = false"></i>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="comment-options-trigger" *ngIf="currentUser && reply.authorId === currentUser.id && !reply.isEditing">
+                          <i class="fas fa-pencil-alt text-muted extra-small me-2" (click)="editComment(reply)"></i>
+                          <i class="fas fa-trash-alt text-danger opacity-50 extra-small" (click)="deleteComment(pub.id!, reply.id!)"></i>
+                        </div>
+                      </div>
+                      <div class="comment-actions-row" style="margin-left: 36px; font-size: 0.7rem;" *ngIf="!reply.isEditing">
+                        <span class="comment-action-link" [ngClass]="getReactionClass(reply.myReaction)" (click)="onReactComment(pub.id!, reply, ReactionType.LIKE)">
+                          {{ getReactionLabel(reply.myReaction) }}
+                        </span>
+                        <time class="text-muted">{{ reply.createdAt | date:'shortTime' }}</time>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="comment-input-area mt-2" style="margin-left: 52px;"
+                  *ngIf="comment.showReplyInput && currentUser">
+                  <div class="avatar-circle-xs" style="width: 24px; height: 24px;">
+                    {{ currentUser.prenom ? currentUser.prenom.charAt(0) : 'U' }}
+                  </div>
+                  <div class="comment-input-group" style="background-color: #f8fafc;">
+                    <input type="text" placeholder="Écrivez une réponse..."
+                      [(ngModel)]="comment.newReplyContent" (keyup.enter)="addReply(pub.id!, comment)">
+                    <button class="btn-send-comment" style="width: 28px; height: 28px; min-width: 28px;" (click)="addReply(pub.id!, comment)"
+                      [disabled]="!comment.newReplyContent" title="Envoyer">
+                      <i class="fas fa-paper-plane" style="font-size: 0.75rem;"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-2" *ngIf="pubComments[pub.id!] && pubComments[pub.id!].length > 2">
+                <button class="btn-show-more-comments" (click)="toggleComments(pub.id!)">
+                  <i class="fas fa-comment-alt-lines me-2"></i>
+                  {{ showAllComments[pub.id!] ? 'Voir moins de commentaires' : 'Afficher d\'autres commentaires (' +
+                  (pubComments[pub.id!].length - 2) + ')' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <div *ngIf="publications.length === 0" class="text-center py-5 bg-white rounded shadow-sm">
+          <i class="far fa-newspaper fa-4x text-muted opacity-25"></i>
+          <h5 class="mt-3 text-muted">Aucune publication pour le moment</h5>
+        </div>
+      </div>
+
+      <!-- Right Column: Saved Publications -->
+      <aside class="feed-sidebar">
+        <div class="saved-card shadow-sm">
+          <div class="saved-card-header">
+            <i class="fas fa-bookmark me-2 text-primary"></i>
+            <h5>Enregistrés</h5>
+          </div>
+          <div class="saved-list">
+            <div *ngIf="savedPublications.length === 0" class="text-center py-4 text-muted">
+              <i class="fas fa-folder-open d-block mb-2 opacity-50"></i>
+              <small>Aucun enregistrement</small>
+            </div>
+            <div class="saved-item" *ngFor="let sPub of savedPublications">
+              <div class="saved-item-content">
+                <span class="saved-item-title">{{ sPub.title || 'Publication sans titre' }}</span>
+                <small class="text-muted d-block">{{ sPub.doctorName || 'Doctor' }}</small>
+              </div>
+              <button class="btn-delete-saved" (click)="removeSavedPublication(sPub.id!)" title="Supprimer">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
+          </div>
+          <div class="saved-card-footer" *ngIf="savedPublications.length > 0">
+            <small>{{ savedPublications.length }} publication(s) enregistrée(s)</small>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>

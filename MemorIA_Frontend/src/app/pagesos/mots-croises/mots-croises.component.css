@@ -1,0 +1,598 @@
+/* ═══════════════════════════════════════════════════════════════
+   MOTS CROISÉS — CSS UNIFIÉ
+   Correspond exactement aux classes du template HTML
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Conteneur principal ─────────────────────────────────────── */
+.test-page-container {
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: #f3f4f6;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ─── Card principale ─────────────────────────────────────────── */
+.phase-container {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 950px;
+  min-height: 500px;
+  overflow: hidden;
+  padding-bottom: 2rem;
+  outline: none;
+}
+
+/* ─── En-tête de carte ────────────────────────────────────────── */
+.card-header-new {
+  padding: 2rem 2.5rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.test-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #1f2937;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.phase-info {
+  text-align: right;
+}
+
+.phase-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #1f2937;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.phase-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* ─── Points de progression ───────────────────────────────────── */
+.progress-dots {
+  display: flex;
+  gap: 10px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 50%;
+  transition: background 0.3s;
+}
+
+.dot.active {
+  background: #a78bfa;
+}
+
+/* ─── Timer ───────────────────────────────────────────────────── */
+.interface-header-sub {
+  padding: 1.5rem 2rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.timer-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+  font-weight: 600;
+  font-size: 1.125rem;
+  background: #fdfcff;
+  padding: 0.5rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid #f3f4f6;
+}
+
+/* ─── Corps centré (instructions / résultats) ─────────────────── */
+.card-body {
+  padding: 2.5rem;
+}
+
+.card-body.centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.intro-text {
+  font-size: 1.2rem;
+  color: #1f2937;
+  font-weight: 500;
+  margin-bottom: 2.5rem;
+  max-width: 600px;
+}
+
+/* ─── Liste d'instructions ────────────────────────────────────── */
+.instructions-list {
+  text-align: left;
+  max-width: 500px;
+  margin-bottom: 2.5rem;
+}
+
+.instructions-list h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 1.25rem;
+}
+
+.instructions-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.instructions-list li {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+  font-size: 1.05rem;
+  color: #374151;
+}
+
+.bullet {
+  color: #a78bfa;
+  font-weight: bold;
+}
+
+/* ─── Boîte lavande (jeu + résultats) ────────────────────────── */
+.lavender-focus-box {
+  border: 2px solid #a78bfa;
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 1.75rem;
+  width: 100%;
+  display: flex;
+  gap: 2.5rem;
+  margin-top: 1rem;
+}
+
+.lavender-focus-box.results-box {
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem;
+  margin-bottom: 2rem;
+  width: auto;
+  min-width: 500px;
+}
+
+/* ─── Zone de jeu ─────────────────────────────────────────────── */
+.game-content {
+  padding: 1rem 2.5rem 2.5rem;
+}
+
+/* ─── Section grille ──────────────────────────────────────────── */
+.grid-section {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* ─── GRILLE MOTS CROISÉS (CSS Grid 5×5) ─────────────────────── */
+.crossword-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 60px);
+  grid-template-rows: repeat(5, 60px);
+  gap: 4px;
+  background: #e5e7eb;
+  padding: 6px;
+  border-radius: 14px;
+}
+
+.crossword-grid .grid-cell {
+  width: 60px;
+  height: 60px;
+  background: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.crossword-grid .grid-cell:hover:not(.blocked) {
+  background: #fef9ef;
+  border-color: #f59e0b;
+}
+
+.crossword-grid .grid-cell.active {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+}
+
+.crossword-grid .grid-cell.blocked {
+  background: #e5e7eb;
+  cursor: default;
+  border-color: transparent;
+}
+
+.crossword-grid .cell-number {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #a78bfa;
+  line-height: 1;
+}
+
+.crossword-grid .cell-letter {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1f2937;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ─── Section définitions ─────────────────────────────────────── */
+.definitions-section {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+}
+
+.def-group {
+  margin-bottom: 0;
+}
+
+.mt-4 {
+  margin-top: 1.5rem;
+}
+
+.def-title {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #a78bfa;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #f3f4f6;
+  padding-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.def-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.def-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  font-size: 0.95rem;
+  align-items: flex-start;
+}
+
+.def-num {
+  font-weight: 800;
+  color: #a78bfa;
+  min-width: 2rem;
+  flex-shrink: 0;
+}
+
+.def-text {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: baseline;
+}
+
+.def-clue {
+  color: #374151;
+  font-weight: 500;
+}
+
+.def-len {
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+/* ─── Footer actions ──────────────────────────────────────────── */
+.action-footer {
+  margin-top: 1.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.grid-stats {
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.grid-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+/* ─── Boutons ─────────────────────────────────────────────────── */
+.btn-primary {
+  background: #a78bfa;
+  color: white;
+  padding: 0.85rem 2.5rem;
+  border-radius: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s, transform 0.2s;
+  box-shadow: 0 4px 10px rgba(167, 139, 250, 0.3);
+}
+
+.btn-primary:hover {
+  background: #8b5cf6;
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  background: transparent;
+  color: #6b7280;
+  padding: 0.85rem 2rem;
+  border-radius: 14px;
+  font-weight: 700;
+  border: 2px solid #e5e7eb;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s;
+}
+
+.btn-outline:hover {
+  background: #f9fafb;
+}
+
+/* ─── Modal Validation ────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  background: white;
+  padding: 3rem;
+  border-radius: 24px;
+  max-width: 450px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+.modal-body {
+  margin-bottom: 0;
+}
+
+.modal-body .check-icon {
+  color: #a78bfa;
+  margin-bottom: 1rem;
+}
+
+.modal-body h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1f2937;
+  margin: 0 0 0.75rem;
+}
+
+.modal-body p {
+  color: #6b7280;
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+/* ─── Résultats ───────────────────────────────────────────────── */
+.score-main-new {
+  font-size: 6rem;
+  font-weight: 900;
+  color: #7c3aed;
+  line-height: 1;
+}
+
+.score-label {
+  font-size: 1.2rem;
+  color: #6b7280;
+  font-weight: 600;
+  margin-top: 0.75rem;
+}
+
+.secondary-info {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0.4rem 0;
+}
+
+.table-container-new {
+  width: 100%;
+  margin-top: 2.5rem;
+  max-width: 600px;
+}
+
+.results-table-new {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.results-table-new th {
+  padding: 0.875rem 1rem;
+  text-align: left;
+  color: #9ca3af;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.results-table-new td {
+  padding: 1rem;
+  border-bottom: 1px solid #f9fafb;
+}
+
+.word-id {
+  font-weight: 800;
+  color: #7c3aed;
+}
+
+.user-answer-new {
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.status-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.status-icon.success {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.status-icon.error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* ─── Pied de carte ───────────────────────────────────────────── */
+.card-footer {
+  margin-top: 2.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .lavender-focus-box {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .crossword-grid {
+    grid-template-columns: repeat(5, 52px);
+    grid-template-rows: repeat(5, 52px);
+  }
+
+  .crossword-grid .grid-cell {
+    width: 52px;
+    height: 52px;
+  }
+
+  .crossword-grid .cell-letter {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .test-page-container {
+    padding: 1rem;
+    align-items: flex-start;
+  }
+
+  .phase-container {
+    border-radius: 14px;
+  }
+
+  .card-header-new {
+    padding: 1.5rem 1.5rem 0.75rem;
+  }
+
+  .test-title {
+    font-size: 1.25rem;
+  }
+
+  .game-content {
+    padding: 0.75rem 1.25rem 1.5rem;
+  }
+
+  .lavender-focus-box {
+    padding: 1.25rem;
+  }
+
+  .crossword-grid {
+    grid-template-columns: repeat(5, 44px);
+    grid-template-rows: repeat(5, 44px);
+  }
+
+  .crossword-grid .grid-cell {
+    width: 44px;
+    height: 44px;
+  }
+
+  .crossword-grid .cell-letter {
+    font-size: 1.1rem;
+  }
+
+  .action-footer {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .grid-actions {
+    justify-content: stretch;
+  }
+
+  .grid-actions button {
+    flex: 1;
+  }
+
+  .lavender-focus-box.results-box {
+    min-width: 0;
+    width: 100%;
+    padding: 2rem 1.5rem;
+  }
+
+  .score-main-new {
+    font-size: 4rem;
+  }
+}

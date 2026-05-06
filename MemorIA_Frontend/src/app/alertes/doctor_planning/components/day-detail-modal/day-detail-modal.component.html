@@ -1,0 +1,182 @@
+<!-- ===== DAY DETAIL MODAL ===== -->
+<div class="modal-overlay" (click)="closeModal()">
+  <div class="modal-panel" (click)="$event.stopPropagation()">
+
+    <!-- HEADER -->
+    <div class="modal-header">
+      <div class="header-date-block">
+        <div class="date-day">{{ date | date:'d' }}</div>
+        <div class="date-info">
+          <span class="date-weekday">{{ date | date:'EEEE' | titlecase }}</span>
+          <span class="date-month">{{ date | date:'MMMM yyyy' }}</span>
+        </div>
+      </div>
+      <div class="header-patient-block">
+        <div class="patient-avatar-sm">{{ patient!.initials }}</div>
+        <div>
+          <p class="patient-label">Patient</p>
+        <p class="patient-name-header">{{ patient!.prenom }} {{ patient!.nom }}</p>
+        </div>
+      </div>
+      <button class="btn-close-header" (click)="closeModal()" title="Fermer">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- SUMMARY BAR -->
+    <div class="summary-bar" *ngIf="remindersForDay.length > 0">
+      <div class="summary-chip chip-total">
+        <i class="fas fa-list-check"></i>
+        <span>{{ remindersForDay.length }} rappel{{ remindersForDay.length > 1 ? 's' : '' }}</span>
+      </div>
+      <div class="summary-chip chip-done" *ngIf="countByStatus('CONFIRMED') + countByStatus('CONFIRMED_LATE') > 0">
+        <i class="fas fa-check-circle"></i>
+        <span>{{ countByStatus('CONFIRMED') + countByStatus('CONFIRMED_LATE') }} réalisé(s)</span>
+      </div>
+      <div class="summary-chip chip-pending" *ngIf="countByStatus('PENDING') + countByStatus('PLANNED') > 0">
+        <i class="fas fa-clock"></i>
+        <span>{{ countByStatus('PENDING') + countByStatus('PLANNED') }} en attente</span>
+      </div>
+      <div class="summary-chip chip-missed" *ngIf="countByStatus('MISSED') > 0">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ countByStatus('MISSED') }} manqué(s)</span>
+      </div>
+      <div class="completion-rate" *ngIf="remindersForDay.length > 0">
+        <div class="completion-bar">
+          <div class="completion-fill" [style.width.%]="getCompletionRate()"></div>
+        </div>
+        <span class="completion-text">{{ getCompletionRate() }}%</span>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="modal-body">
+
+      <!-- EMPTY STATE -->
+      <div *ngIf="remindersForDay.length === 0" class="empty-day">
+        <div class="empty-icon-wrap">
+          <i class="fas fa-calendar-plus"></i>
+        </div>
+        <h3>Aucun rappel prévu</h3>
+        <p>Cette journée est libre. Cliquez sur "Ajouter un rappel" pour planifier une activité.</p>
+      </div>
+
+      <!-- REMINDERS LIST -->
+      <div class="reminders-list" *ngIf="remindersForDay.length > 0">
+        <div
+          *ngFor="let reminder of remindersForDay; trackBy: trackByReminderId"
+          class="reminder-card"
+          [class.card-confirmed]="reminder.status === 'CONFIRMED' || reminder.status === 'CONFIRMED_LATE'"
+          [class.card-missed]="reminder.status === 'MISSED'"
+          [class.card-pending]="reminder.status === 'PENDING' || reminder.status === 'PLANNED'">
+
+          <!-- Card Top -->
+          <div class="card-top">
+            <div class="type-icon-wrap" [style.background]="getTypeColor(reminder.type) + '18'">
+              <i [class]="getTypeIcon(reminder.type)" [style.color]="getTypeColor(reminder.type)"></i>
+            </div>
+
+            <div class="card-content">
+              <div class="card-title-row">
+                <h4 class="card-title">{{ reminder.title }}</h4>
+                <span class="status-pill"
+                  [style.background]="getStatusColor($any(reminder.status)) + '18'"
+                  [style.color]="getStatusColor($any(reminder.status))"
+                  [style.border]="'1px solid ' + getStatusColor($any(reminder.status)) + '50'">
+                  <i [class]="getStatusIcon($any(reminder.status))"></i>
+                  {{ getStatusLabel($any(reminder.status)) }}
+                </span>
+              </div>
+              <div class="card-meta">
+                <span class="meta-item"><i class="fas fa-tag"></i> {{ getTypeLabel(reminder.type) }}</span>
+                <span class="meta-item" *ngIf="reminder.reminderTime"><i class="fas fa-clock"></i> {{ reminder.reminderTime }}</span>
+                <span class="meta-item" *ngIf="reminder.durationMinutes"><i class="fas fa-hourglass-half"></i> {{ reminder.durationMinutes }} min</span>
+              </div>
+              <p class="card-description" *ngIf="reminder.description">{{ reminder.description }}</p>
+            </div>
+          </div>
+
+          <!-- Note affichée -->
+          <div class="note-display" *ngIf="reminder.notes && editingNoteId !== reminder.idReminder">
+            <i class="fas fa-sticky-note"></i>
+            <span>{{ reminder.notes }}</span>
+          </div>
+
+          <!-- Édition de note -->
+          <div class="note-edit" *ngIf="editingNoteId === reminder.idReminder">
+            <textarea
+              [value]="getNoteText(reminder.idReminder || 0)"
+              (input)="updateNoteText(reminder.idReminder || 0, $any($event.target).value)"
+              placeholder="Ajouter une note..."
+              class="note-textarea"
+              rows="3">
+            </textarea>
+            <div class="note-actions">
+              <button class="btn-note-cancel" (click)="toggleNoteEdit(reminder.idReminder)">Annuler</button>
+              <button class="btn-note-save" (click)="saveNote(reminder)"><i class="fas fa-save"></i> Enregistrer</button>
+            </div>
+          </div>
+
+          <!-- Card Actions -->
+          <div class="card-actions">
+            <button
+              *ngIf="canMarkDone(reminder)"
+              class="btn-action btn-done"
+              (click)="markDone(reminder)"
+              title="Marquer comme réalisé">
+              <i class="fas fa-check-circle"></i> Réalisé
+            </button>
+            <button
+              *ngIf="canReschedule(reminder)"
+              class="btn-action btn-reschedule"
+              title="Reporter">
+              <i class="fas fa-calendar-alt"></i> Reporter
+            </button>
+            <div class="actions-right">
+              <button
+                class="btn-icon btn-icon-note"
+                (click)="toggleNoteEdit(reminder.idReminder)"
+                [class.active-note]="editingNoteId === reminder.idReminder"
+                title="{{ editingNoteId === reminder.idReminder ? 'Fermer la note' : 'Ajouter / modifier une note' }}">
+                <i class="fas fa-pen-to-square"></i>
+                <span class="btn-icon-label">Note</span>
+              </button>
+              <button
+                *ngIf="canDelete(reminder)"
+                class="btn-icon btn-icon-danger"
+                (click)="deleteReminder(reminder.idReminder)"
+                title="Supprimer ce rappel">
+                <i class="fas fa-trash-can"></i>
+                <span class="btn-icon-label">Supprimer</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="modal-footer">
+      <div class="footer-info" *ngIf="remindersForDay.length > 0">
+        <i class="fas fa-chart-pie"></i>
+        {{ getCompletionRate() }}% réalisé ce jour
+      </div>
+      <div class="footer-info" *ngIf="remindersForDay.length === 0">
+        <i class="fas fa-info-circle"></i>
+        Aucun rappel planifié
+      </div>
+      <div class="footer-btns">
+        <button class="btn-add-reminder-modal" (click)="addReminder()">
+          <i class="fas fa-plus"></i>
+          Ajouter un rappel
+        </button>
+        <button class="btn-close-footer" (click)="closeModal()">
+          <i class="fas fa-xmark"></i>
+          Fermer
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>

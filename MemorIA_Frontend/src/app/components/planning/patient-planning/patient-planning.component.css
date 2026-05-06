@@ -1,0 +1,371 @@
+:host {
+  @apply block w-full min-h-screen;
+}
+
+/* ===== ANIMATIONS PERSONNALISÉES ===== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-gentle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes bounce-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* ===== CLASSES D'ANIMATION ===== */
+
+.animate-card-enter {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.4s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInFromRight 0.4s ease-out forwards;
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 2s ease-in-out infinite;
+}
+
+.animate-bounce-soft {
+  animation: bounce-soft 1.5s ease-in-out infinite;
+}
+
+/* ===== EFFETS HOVER ET TRANSITION ===== */
+
+.hover-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 12px 20px -8px rgba(84, 26, 117, 0.1);
+}
+
+.hover-lift {
+  transition: all 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* ===== BOUTONS OPTIMISÉS ===== */
+
+button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+button:focus-visible {
+  outline: 3px solid #541A75;
+  outline-offset: 2px;
+}
+
+/* ===== ACCESSIBILITÉ ===== */
+
+*:focus-visible {
+  outline: 3px solid #541A75;
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* Textes plus lisibles */
+.text-readable {
+  line-height: 1.8;
+  letter-spacing: 0.025em;
+}
+
+/* Tailles de police adaptatives */
+.text-extra-large {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+.text-large {
+  font-size: clamp(1.125rem, 2vw, 1.5rem);
+}
+
+/* ===== CARTES DE RAPPEL OPTIMISÉES ===== */
+
+.reminder-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.reminder-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s;
+}
+
+.reminder-card:hover::before {
+  left: 100%;
+}
+
+/* Badge de statut animé */
+.status-badge {
+  position: relative;
+  overflow: hidden;
+}
+
+.status-badge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmer 2s infinite;
+}
+
+/* ===== RESPONSIVE OPTIMISÉ ===== */
+
+/* Tablettes */
+@media (max-width: 1024px) {
+  .text-extra-large {
+    font-size: 1.5rem;
+  }
+
+  .hover-card:hover {
+    transform: translateY(-4px) scale(1.005);
+  }
+}
+
+/* Smartphones */
+@media (max-width: 640px) {
+  .text-large {
+    font-size: 1.125rem;
+  }
+
+  .text-extra-large {
+    font-size: 1.25rem;
+  }
+
+  /* Désactiver certains effets hover sur mobile */
+  .hover-card:hover {
+    transform: none;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Boutons plus grands pour le toucher */
+  button {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* Petits smartphones */
+@media (max-width: 375px) {
+  .text-large {
+    font-size: 1rem;
+  }
+}
+
+/* ===== MODE IMPRESSION ===== */
+
+@media print {
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  .bg-gradient-to-br,
+  .bg-gradient-to-r {
+    background: white !important;
+    color: black !important;
+  }
+
+  .shadow-lg,
+  .shadow-xl,
+  .shadow-2xl {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  * {
+    page-break-inside: avoid;
+  }
+}
+
+/* ===== PRÉFÉRENCES UTILISATEUR ===== */
+
+/* Réduire les animations pour ceux qui préfèrent */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mode sombre (désactivé par défaut pour accessibilité) */
+@media (prefers-color-scheme: dark) {
+  /* Garder le mode clair pour meilleure lisibilité des patients */
+  :host {
+    background: #F9FAFB;
+  }
+}
+
+/* ===== LOADING ET ÉTATS ===== */
+
+.loading-spinner {
+  border: 4px solid rgba(84, 26, 117, 0.1);
+  border-left-color: #541A75;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skeleton-loader {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ===== UTILITAIRES SUPPLÉMENTAIRES ===== */
+
+.gradient-border {
+  position: relative;
+  background: white;
+  padding: 2px;
+  border-radius: 1rem;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  padding: 2px;
+  background: linear-gradient(135deg, #541A75, #00635D);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Effet de surbrillance au focus */
+.focus-ring {
+  @apply focus:ring-4 focus:ring-[#541A75] focus:ring-opacity-30 focus:outline-none;
+}
+
+/* Badge de notification animé */
+.notification-pulse {
+  animation: pulse-gentle 2s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(84, 26, 117, 0.7);
+}
+
+@keyframes notification-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(84, 26, 117, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(84, 26, 117, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(84, 26, 117, 0);
+  }
+}
+
+/* Scroll fluide */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #541A75, #6B2A95);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #6B2A95, #541A75);
+}

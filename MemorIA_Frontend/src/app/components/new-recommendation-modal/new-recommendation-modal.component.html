@@ -1,0 +1,213 @@
+<div class="rec-modal-wrapper">
+
+    <!-- ══ EN-TÊTE ══════════════════════════════════════════════════ -->
+    <div class="rec-modal-header">
+        <div class="rec-modal-header-left">
+            <div class="rec-modal-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+                    <rect x="9" y="3" width="6" height="4" rx="1"/>
+                    <line x1="9" y1="12" x2="15" y2="12"/>
+                    <line x1="9" y1="16" x2="13" y2="16"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="rec-modal-title">Nouvelle recommandation</h2>
+                <p class="rec-modal-subtitle">Prescrire une action pour l'aidant</p>
+            </div>
+        </div>
+        <button class="rec-modal-close" [mat-dialog-close]="" aria-label="Fermer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- ══ CORPS DU FORMULAIRE ═══════════════════════════════════════ -->
+    <div class="rec-modal-body" [formGroup]="form">
+
+        <!-- ── 1. SÉLECTION DU PATIENT ──────────────────────────────── -->
+        <div class="rec-form-block">
+            <div class="rec-form-label">
+                <span class="rec-step-num">1</span>
+                <span>Sélectionner le patient <span class="req">*</span></span>
+            </div>
+
+            <!-- Chargement -->
+            <div *ngIf="loadingPatients" class="rec-loading-row">
+                <div class="rec-spinner"></div>
+                <span>Chargement des patients…</span>
+            </div>
+
+            <!-- Aucun patient -->
+            <div *ngIf="!loadingPatients && patients.length === 0" class="rec-alert-box rec-alert-error">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Aucun patient attribué. Contactez l'administrateur.
+            </div>
+
+            <!-- Liste déroulante patients -->
+            <div *ngIf="!loadingPatients && patients.length > 0" class="rec-select-wrapper">
+                <svg class="rec-select-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <select class="rec-select"
+                        formControlName="patientId"
+                        (change)="onPatientSelected(+$any($event.target).value)"
+                        [class.rec-input-error]="form.get('patientId')?.invalid && form.get('patientId')?.touched">
+                    <option value="">— Sélectionner un patient —</option>
+                    <option *ngFor="let p of patients" [value]="p.id">{{ p.displayName }}</option>
+                </select>
+                <svg class="rec-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+
+            <!-- Validation réussie -->
+            <div *ngIf="selectedPatient && form.get('patientId')?.valid" class="rec-success-chip">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                {{ selectedPatient.displayName }}
+            </div>
+
+            <p *ngIf="form.get('patientId')?.invalid && form.get('patientId')?.touched"
+               class="rec-field-error">Veuillez sélectionner un patient.</p>
+        </div>
+
+        <!-- ── 2. ACTION RECOMMANDÉE ─────────────────────────────────── -->
+        <div class="rec-form-block">
+            <div class="rec-form-label">
+                <span class="rec-step-num">2</span>
+                <span>Action recommandée <span class="req">*</span></span>
+            </div>
+
+            <div class="rec-textarea-wrapper"
+                 [class.rec-input-error]="form.get('action')?.invalid && form.get('action')?.touched">
+                <textarea class="rec-textarea"
+                    formControlName="action"
+                    rows="4"
+                    placeholder="Ex : Prendre la tension tous les matins à 8h et noter les résultats dans le cahier de suivi"
+                    (input)="characterCount = $any($event.target).value.length">
+                </textarea>
+            </div>
+
+            <div class="rec-textarea-meta">
+                <p *ngIf="form.get('action')?.invalid && form.get('action')?.touched" class="rec-field-error">
+                    {{ getActionErrorMessage() }}
+                </p>
+                <span class="rec-char-count" [class.rec-char-warn]="characterCount > 400"
+                      [class.rec-char-danger]="characterCount > 490">
+                    {{ characterCount }}/500
+                </span>
+            </div>
+
+            <!-- Bulle d'aide contextuelle -->
+            <div *ngIf="actionHelpVisible" class="rec-help-bubble">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2A6EBB" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                Décrivez précisément ce que l'aidant doit faire, quand et comment.
+            </div>
+
+            <!-- Exemples -->
+            <div class="rec-examples-box">
+                <p class="rec-examples-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E6A800" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Exemples
+                </p>
+                <ul class="rec-examples-list">
+                    <li>Prendre la tension chaque matin avant le petit-déjeuner</li>
+                    <li>Administrer le médicament X à 8h et 20h, après les repas</li>
+                    <li>Appeler le cabinet avant vendredi pour planifier la consultation</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ── 3. PRIORITÉ ───────────────────────────────────────────── -->
+        <div class="rec-form-block">
+            <div class="rec-form-label">
+                <span class="rec-step-num">3</span>
+                <span>Priorité <span class="req">*</span></span>
+            </div>
+
+            <div class="rec-priority-grid">
+                <button type="button"
+                    *ngFor="let opt of priorityOptions"
+                    class="rec-priority-btn"
+                    [class.selected]="form.get('priority')?.value === opt.value"
+                    [attr.data-priority]="opt.value"
+                    (click)="form.get('priority')?.setValue(opt.value)"
+                    [title]="opt.description">
+                    <span class="rec-priority-dot" [style.background]="getPriorityBg(opt.value)"></span>
+                    <span class="rec-priority-btn-label">{{ opt.label }}</span>
+                </button>
+            </div>
+
+            <!-- Note d'impact -->
+            <div class="rec-priority-info">
+                <p>Impact de la priorité choisie :</p>
+                <div class="rec-priority-info-rows">
+                    <div class="rec-pinfo-row"><span class="dot-red"></span><span><strong>Urgente</strong> → Notification immédiate + alerte sonore</span></div>
+                    <div class="rec-pinfo-row"><span class="dot-orange"></span><span><strong>Haute</strong> → Tâche en tête de liste de l'aidant</span></div>
+                    <div class="rec-pinfo-row"><span class="dot-yellow"></span><span><strong>Moyenne</strong> → Affichage normal</span></div>
+                    <div class="rec-pinfo-row"><span class="dot-green"></span><span><strong>Basse</strong> → Affichage normal sans alerte</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 4. DATE LIMITE ─────────────────────────────────────────── -->
+        <div class="rec-form-block">
+            <div class="rec-form-label">
+                <span class="rec-step-num">4</span>
+                <span>Date limite <span class="req">*</span></span>
+            </div>
+
+            <div class="rec-input-wrapper"
+                 [class.rec-input-error]="form.get('deadline')?.invalid && form.get('deadline')?.touched">
+                <svg class="rec-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <input class="rec-input"
+                       type="datetime-local"
+                       formControlName="deadline"
+                       [min]="minDeadline" />
+            </div>
+
+            <p *ngIf="form.get('deadline')?.invalid && form.get('deadline')?.touched"
+               class="rec-field-error">Veuillez sélectionner une date limite.</p>
+
+            <!-- Indicateur de délai -->
+            <div *ngIf="form.get('deadline')?.value" class="rec-deadline-chip">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {{ recommendationService.formatDeadline(form.get('deadline')?.value) }}
+            </div>
+        </div>
+
+        <!-- ── 5. NOTES (optionnel) ──────────────────────────────────── -->
+        <div class="rec-form-block">
+            <div class="rec-form-label">
+                <span class="rec-step-num rec-step-opt">5</span>
+                <span>Notes supplémentaires <span class="opt-label">(optionnel)</span></span>
+            </div>
+            <textarea class="rec-textarea rec-textarea-sm"
+                formControlName="notes"
+                rows="2"
+                placeholder="Instructions complémentaires pour l'aidant…"
+                maxlength="500">
+            </textarea>
+            <div style="text-align:right; font-size:0.75rem; color:#9ca3af; margin-top:4px;">
+                {{ form.get('notes')?.value?.length || 0 }}/500
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ PIED DE PAGE ══════════════════════════════════════════════ -->
+    <div class="rec-modal-footer">
+        <button class="rec-btn-cancel" (click)="onCancel()" [disabled]="submitLoading">
+            Annuler
+        </button>
+        <button class="rec-btn-submit" (click)="onSubmit()" [disabled]="isSubmitDisabled()">
+            <span *ngIf="submitLoading" class="rec-spinner rec-spinner-white"></span>
+            <svg *ngIf="!submitLoading" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>{{ submitLoading ? 'Envoi en cours…' : 'Ajouter la recommandation' }}</span>
+        </button>
+    </div>
+</div>

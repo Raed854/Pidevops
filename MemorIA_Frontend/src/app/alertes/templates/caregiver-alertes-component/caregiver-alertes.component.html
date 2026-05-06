@@ -1,0 +1,219 @@
+<app-navbar></app-navbar>
+
+<div class="caregiver-alerts-layout flex min-h-screen bg-gradient-to-br from-[#f8f7fb] via-[#f5f3fb] to-[#f0f7f7]">
+  <app-sidebar-diagnostic></app-sidebar-diagnostic>
+
+  <!-- Main Content -->
+  <main class="flex-1 p-4 md:p-6 xl:p-8 w-full overflow-x-hidden">
+    
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="space-y-6">
+      <div class="h-40 bg-white rounded-2xl animate-pulse"></div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="h-32 bg-white rounded-xl animate-pulse"></div>
+        <div class="h-32 bg-white rounded-xl animate-pulse"></div>
+        <div class="h-32 bg-white rounded-xl animate-pulse"></div>
+      </div>
+    </div>
+
+    <!-- Error: No Patient -->
+    <div *ngIf="!isLoading && !selectedPatient && hasError && errorType === 'no-patient'" class="text-center py-20">
+      <p class="text-6xl mb-4">👤</p>
+      <h2 class="text-2xl font-bold text-[#541A75] mb-2">Aucun patient lié</h2>
+      <p class="text-sm text-[#7E7F9A]">Contactez votre administrateur pour être assigné à un patient</p>
+    </div>
+
+    <!-- Error: Forbidden -->
+    <div *ngIf="!isLoading && hasError && errorType === 'forbidden'" class="rounded-2xl bg-red-50 border-l-4 border-red-500 p-6">
+      <p class="text-sm font-bold text-red-600">🔒 Accès refusé</p>
+      <p class="text-sm text-gray-600">{{ errorMessage }}</p>
+    </div>
+
+    <!-- Main Content -->
+    <ng-container *ngIf="!isLoading && selectedPatient && !hasError">
+
+      <!-- Top Header Section -->
+      <div class="rounded-2xl bg-gradient-to-br from-white to-[#f8fbfb] p-4 sm:p-6 md:p-8 shadow-md ring-1 ring-[#C0E0DE]/30 mb-6">
+        <div class="flex flex-col gap-4 sm:gap-6">
+          <!-- Patient Info -->
+          <div class="flex items-center gap-3 sm:gap-4">
+            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#541A75] to-[#7E7F9A] text-white flex items-center justify-center text-xl sm:text-2xl font-bold flex-shrink-0">
+              {{ selectedPatient.firstName.charAt(0) }}{{ selectedPatient.lastName.charAt(0) }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-[#541A75] truncate">{{ selectedPatient.firstName }} {{ selectedPatient.lastName }}</h1>
+              <p class="text-sm sm:text-base text-[#7E7F9A] truncate">{{ selectedPatient.age }} ans • {{ selectedPatient.stage }}</p>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-2 sm:gap-3 ml-auto sm:m-0">
+            
+            <button 
+              (click)="openManualAlertModal()"
+              class="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-[#00635D] text-white font-semibold hover:bg-[#0A8B7E] transition-all duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base whitespace-nowrap">
+              <span>➕</span>
+              <span class="hidden sm:inline">Alerte</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weather Alert Section (if needed) -->
+      <div *ngIf="currentWeather && isDangerousWeather()" class="mb-6 rounded-2xl bg-gradient-to-br from-[#CB1527]/10 to-[#E8A4A8]/10 border-2 border-[#CB1527] p-4 sm:p-6">
+        <div class="flex gap-3 sm:gap-4">
+          <div class="text-3xl sm:text-4xl flex-shrink-0">⚠️</div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-base sm:text-lg font-bold text-[#CB1527] mb-2">Alerte Météo - Avis de Prudence</h3>
+            <p class="text-sm sm:text-base text-[#541A75] font-semibold mb-3">{{ getWeatherWarning() }}</p>
+            <div class="space-y-1 sm:space-y-2 text-xs sm:text-sm text-[#7E7F9A]">
+              <p>📍 <strong>Recommandation :</strong> Ne pas sortir de la maison sans nécessité</p>
+              <p>🌡️ <strong>Température :</strong> {{ currentWeather.temperature }}°C</p>
+              <p>📋 <strong>Conditions :</strong> {{ currentWeather.condition }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <!-- Adherence -->
+        <div class="rounded-2xl bg-white p-5 sm:p-6 shadow-md ring-1 ring-[#C0E0DE]/20">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs uppercase tracking-wide text-[#7E7F9A] font-semibold">Observance</p>
+            <span class="text-xl sm:text-2xl">✅</span>
+          </div>
+          <p class="text-2xl sm:text-3xl font-bold text-[#00635D]">{{ selectedPatient.adherenceRate || 0 }}%</p>
+          <div class="mt-3 h-1.5 bg-[#C0E0DE]/20 rounded-full overflow-hidden">
+            <div class="h-full bg-[#00635D]" [style.width.%]="selectedPatient.adherenceRate || 0"></div>
+          </div>
+        </div>
+
+        <!-- Risk Score -->
+        <div class="rounded-2xl bg-white p-5 sm:p-6 shadow-md ring-1 ring-[#C0E0DE]/20">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs uppercase tracking-wide text-[#7E7F9A] font-semibold">Risque Global</p>
+            <span class="text-xl sm:text-2xl">📊</span>
+          </div>
+          <p class="text-2xl sm:text-3xl font-bold" [ngClass]="(selectedPatient.globalRiskScore || 0) > 70 ? 'text-[#CB1527]' : 'text-[#541A75]'">
+            {{ selectedPatient.globalRiskScore || 0 }}%
+          </p>
+          <div class="mt-3 h-1.5 rounded-full overflow-hidden" [ngClass]="(selectedPatient.globalRiskScore || 0) > 70 ? 'bg-[#CB1527]/20' : 'bg-[#541A75]/20'">
+            <div class="h-full transition-all" [ngClass]="(selectedPatient.globalRiskScore || 0) > 70 ? 'bg-[#CB1527]' : 'bg-[#541A75]'" [style.width.%]="selectedPatient.globalRiskScore || 0"></div>
+          </div>
+        </div>
+
+        <!-- Unresolved Alerts -->
+        <div class="rounded-2xl bg-white p-5 sm:p-6 shadow-md ring-1 ring-[#C0E0DE]/20">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs uppercase tracking-wide text-[#7E7F9A] font-semibold">Non Traitées</p>
+            <span class="text-xl sm:text-2xl">🚨</span>
+          </div>
+          <p class="text-2xl sm:text-3xl font-bold text-[#CB1527]">{{ selectedPatient.unresolvedAlerts }}</p>
+          <p class="text-xs text-[#7E7F9A] mt-2">alertes en attente</p>
+        </div>
+
+        <!-- Response Rate -->
+        <div class="rounded-2xl bg-white p-5 sm:p-6 shadow-md ring-1 ring-[#C0E0DE]/20">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs uppercase tracking-wide text-[#7E7F9A] font-semibold">Taux de Réponse</p>
+            <span class="text-xl sm:text-2xl">📈</span>
+          </div>
+          <p class="text-2xl sm:text-3xl font-bold text-[#541A75]">{{ kpiData?.responseRate || 0 }}%</p>
+          <p class="text-xs text-[#7E7F9A] mt-2">24 dernières heures</p>
+        </div>
+      </div>
+
+      <!-- Search + Filters -->
+      <div class="space-y-3 mb-6">
+        <!-- Search Box -->
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-lg">🔎</span>
+          <input type="text" [(ngModel)]="alertSearchTerm" (input)="onSearchChange()" placeholder="Chercher une alerte..." class="w-full rounded-xl border border-[#C0E0DE] bg-white py-2 sm:py-3 pl-10 sm:pl-12 pr-4 text-sm outline-none focus:border-[#541A75] focus:ring-2 focus:ring-[#541A75]/30" />
+        </div>
+
+        <!-- Filter Pills -->
+        <div class="flex gap-2 flex-wrap">
+          <button *ngFor="let f of alertFilters" (click)="applyAlertFilter(f.value)" 
+            class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border transition-all duration-200 text-xs sm:text-sm font-medium"
+            [ngClass]="selectedAlertFilter === f.value 
+              ? 'border-[#541A75] bg-[#541A75] text-white shadow-lg shadow-[#541A75]/20' 
+              : 'border-[#C0E0DE] bg-white text-[#541A75] hover:border-[#541A75]/50'">
+            {{ f.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Alerts Sections -->
+      <div class="space-y-6">
+        
+        <!-- Critical Alerts Section -->
+        <div *ngIf="getCriticalAlerts().length > 0">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="text-xl sm:text-2xl">🚨</span>
+            <h3 class="font-bold text-base sm:text-lg text-[#CB1527]">Alertes Critiques ({{ getCriticalAlerts().length }})</h3>
+          </div>
+          <div class="space-y-3">
+            <app-alert-card *ngFor="let a of getCriticalAlerts(); trackBy: trackByAlertId" 
+              [alert]="a" 
+              (takeInCharge)="handleAlertAction({ alertId: a.id, action: 'acknowledge' })" 
+              (resolve)="handleAlertAction({ alertId: a.id, action: 'resolve' })" 
+              (addNote)="handleAlertAction({ alertId: a.id, action: 'note' })">
+            </app-alert-card>
+          </div>
+        </div>
+
+     
+
+        <!-- Other Alerts Section -->
+        <div *ngIf="getNonCriticalAlerts().length > 0">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="text-xl sm:text-2xl">ℹ️</span>
+            <h3 class="font-bold text-base sm:text-lg text-[#541A75]">Autres Alertes ({{ getNonCriticalAlerts().length }})</h3>
+          </div>
+          <div class="space-y-3">
+            <app-alert-card *ngFor="let a of getNonCriticalAlerts(); trackBy: trackByAlertId" 
+              [alert]="a" 
+              (takeInCharge)="handleAlertAction({ alertId: a.id, action: 'acknowledge' })" 
+              (resolve)="handleAlertAction({ alertId: a.id, action: 'resolve' })" 
+              (addNote)="handleAlertAction({ alertId: a.id, action: 'note' })">
+            </app-alert-card>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="filteredAlerts.length === 0 && !isLoadingAlerts" class="text-center py-16 rounded-2xl bg-white border border-[#C0E0DE]/40">
+          <p class="text-5xl mb-3">✅</p>
+          <p class="font-semibold text-lg text-[#541A75]">Tout est en ordre</p>
+          <p class="text-sm text-[#7E7F9A] mt-2">Aucune alerte pour ce patient</p>
+        </div>
+
+        <!-- Loading Skeleton -->
+        <div *ngIf="isLoadingAlerts" class="space-y-3">
+          <div class="h-24 bg-white rounded-xl animate-pulse"></div>
+          <div class="h-24 bg-white rounded-xl animate-pulse"></div>
+        </div>
+
+      </div>
+
+    </ng-container>
+
+  </main>
+
+  <!-- Chat Panel -->
+  <app-caregiver-chat-panel
+    [isOpen]="showChatPanel"
+    [selectedPatientId]="selectedPatient?.id || 0"
+    [selectedPatientName]="selectedPatient ? selectedPatient.firstName + ' ' + selectedPatient.lastName : 'Patient'"
+    (closeRequested)="closeChatPanel()">
+  </app-caregiver-chat-panel>
+
+  <!-- Manual Alert Modal -->
+  <app-manual-alert-modal 
+    [isOpen]="showManualAlertModal" 
+    [patientId]="selectedPatient?.id || 0" 
+    (closed)="onModalClosed()"
+    (alertCreated)="onAlertCreated($event)">
+  </app-manual-alert-modal>
+
+</div>

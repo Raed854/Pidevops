@@ -1,0 +1,53 @@
+<div class="manage-page">
+  <div class="manage-container">
+    <button class="back-btn" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i> Back
+    </button>
+
+    <div class="header">
+      <h1><i class="fas fa-credit-card"></i>My Subscription</h1>
+    </div>
+
+    <div class="loading" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Loading...</span>
+    </div>
+
+    <!-- Active Subscription -->
+    <div class="subscription-card active" *ngIf="!isLoading && subscription?.active">
+      <div class="status-badge active">
+        <i class="fas fa-check-circle"></i> Active
+      </div>
+      <div class="plan-info">
+        <h2>{{ getPlanLabel(subscription.planType) }}</h2>
+        <p class="period">Next billing date: {{ formatDate(subscription.currentPeriodEnd) }}</p>
+      </div>
+      <div class="actions">
+        <a class="receipt-btn" *ngIf="subscription.receiptUrl"
+           href="{{communityBaseUrl}}/subscriptions/receipt/{{subscription.receiptUrl}}" target="_blank" rel="noopener">
+          <i class="fas fa-file-invoice"></i> Download Receipt
+        </a>
+        <button class="cancel-btn" (click)="cancelSubscription()" [disabled]="isCancelling">
+          <span *ngIf="!isCancelling"><i class="fas fa-times-circle"></i>Cancel Subscription</span>
+          <span *ngIf="isCancelling"><i class="fas fa-spinner fa-spin"></i> Cancelling...</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- No Subscription -->
+    <div class="subscription-card inactive" *ngIf="!isLoading && !subscription?.active">
+      <div class="status-badge inactive">
+        <i class="fas fa-times-circle"></i> Inactive
+      </div>
+      <div class="plan-info">
+        <h2>No active subscription</h2>
+        <p class="period">Subscribe to access messaging and the community</p>
+      </div>
+      <div class="actions">
+        <button class="subscribe-btn" (click)="goToSubscribe()">
+          <i class="fas fa-rocket"></i> Subscribe Now
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

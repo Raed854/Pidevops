@@ -1,0 +1,31 @@
+:host {
+  display: block;
+}
+
+.alerts-shell {
+  margin-left: 242px;
+  padding-top: 84px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8f7fb 0%, #f3f7f7 100%);
+}
+
+.critical-alert-card {
+  box-shadow: 0 0 0 1px rgba(203, 21, 39, 0.08), 0 8px 22px rgba(84, 26, 117, 0.08);
+}
+
+.critical-alert-card:hover {
+  box-shadow: 0 0 0 1px rgba(203, 21, 39, 0.16), 0 12px 28px rgba(84, 26, 117, 0.12);
+}
+
+@media (max-width: 1024px) {
+  .alerts-shell {
+    margin-left: 0;
+    padding-top: 78px;
+  }
+}
+
+@media (max-width: 768px) {
+  .alerts-shell {
+    padding-bottom: 5rem;
+  }
+}

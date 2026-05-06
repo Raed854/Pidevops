@@ -1,0 +1,130 @@
+<div class="rapport-container" *ngIf="report">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <h1 class="title">Diagnostic Report</h1>
+      <div class="patient-info">
+        <p class="patient-name">Patient: {{ report.patientName }}</p>
+        <p class="test-date">Date: {{ report.testDate | date: 'medium' }}</p>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn btn-secondary" (click)="printReport()">
+        <span>Print Report</span>
+      </button>
+      <button class="btn btn-primary" (click)="downloadReport()" [disabled]="isGeneratingPdf">
+        <span *ngIf="!isGeneratingPdf">Download PDF</span>
+        <span *ngIf="isGeneratingPdf">Generating PDF...</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Section -->
+  <div class="summary-section">
+    <div class="summary-grid">
+      <!-- Score Card -->
+      <div class="summary-card score-card">
+        <h3 class="card-title">Overall Score</h3>
+        <div class="score-display">
+          <div class="score-circle">
+            <span class="score-percentage">{{ report.scorePercentage }}%</span>
+          </div>
+          <p class="score-details">{{ report.totalScore }} / {{ report.totalMaxScore }} points</p>
+        </div>
+      </div>
+
+      <!-- Diagnosis Card -->
+      <div class="summary-card diagnosis-card">
+        <h3 class="card-title">Diagnosis</h3>
+        <div class="diagnosis-display">
+          <div
+            class="diagnosis-badge"
+            [style.background-color]="getDiagnosisColor()"
+          >
+            {{ report.diagnosis }}
+          </div>
+          <p class="diagnosis-description">
+            Based on the language test results
+          </p>
+        </div>
+      </div>
+
+      <!-- MRI Card -->
+      <div class="summary-card mri-card" *ngIf="report.mriImage">
+        <h3 class="card-title">MRI Scan</h3>
+        <div class="mri-preview" (click)="openMriModal()">
+          <img [src]="report.mriImage" alt="MRI Scan" />
+          <div class="mri-overlay">
+            <span>Click to enlarge</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Questions & Answers Section -->
+  <div class="questions-section">
+    <h2 class="section-title">Test Results - Question by Question</h2>
+
+    <div class="questions-grid">
+      <div
+        class="question-card"
+        *ngFor="let questionResult of report.questions"
+      >
+        <div class="question-header">
+          <span class="question-number">Question {{ questionResult.id }}</span>
+          <div class="question-score">
+            <span
+              class="score-badge"
+              [style.background-color]="getScoreColor(questionResult.score, questionResult.maxScore)"
+            >
+              {{ questionResult.score }}/{{ questionResult.maxScore }}
+            </span>
+          </div>
+        </div>
+
+        <div class="question-content">
+          <h4 class="question-text">{{ questionResult.question }}</h4>
+
+          <div class="answer-section">
+            <div class="answer-item">
+              <label class="answer-label">Patient's Answer:</label>
+              <p class="answer-text" [class.empty-answer]="!questionResult.answer">
+                {{ questionResult.answer || 'No answer provided' }}
+              </p>
+            </div>
+
+            <div class="answer-item">
+              <label class="answer-label">Expected Answer:</label>
+              <p class="answer-text expected">{{ questionResult.correctAnswer }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MRI Modal -->
+<div class="modal-overlay" *ngIf="showMriModal" (click)="closeMriModal()">
+  <div class="modal-content mri-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">MRI Scan - Full View</h2>
+      <button class="close-btn" (click)="closeMriModal()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <img [src]="report?.mriImage" alt="MRI Scan Full View" class="mri-full-image" />
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeMriModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="loading-container" *ngIf="!report">
+  <p>Loading report...</p>
+</div>

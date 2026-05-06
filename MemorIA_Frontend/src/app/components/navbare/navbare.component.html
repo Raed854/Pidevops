@@ -1,0 +1,47 @@
+<div class="navbar">
+  <div class="search-container">
+    <i class="fas fa-search search-icon"></i>
+    <input type="text" class="search-input" placeholder="Search for a patient, a test...">
+  </div>
+
+  <div class="navbar-actions">
+    <!-- Notifications -->
+    <div class="icon-btn" title="Notifications">
+      <i class="fas fa-bell"></i>
+      <span class="notification-badge" *ngIf="notificationCount > 0">{{ notificationCount }}</span>
+    </div>
+
+    <!-- Messages -->
+    <div class="icon-btn" title="Messages">
+      <i class="fas fa-envelope"></i>
+      <span class="notification-badge message-badge" *ngIf="messageCount > 0">{{ messageCount }}</span>
+    </div>
+
+    <!-- User Management (for doctors) -->
+    <a *ngIf="isDoctor" routerLink="/admin/users" class="icon-btn" title="User Management">
+      <i class="fas fa-users"></i>
+    </a>
+
+    <!-- User Profile and Dropdown Menu -->
+    <div class="user-profile" (click)="toggleDropdown()">
+      <div class="user-avatar">
+        <i class="fas fa-user-circle"></i>
+      </div>
+      <div class="user-info">
+        <div class="user-name">{{ userName }}</div>
+        <div class="user-role">{{ userRole }}</div>
+      </div>
+
+      <!-- Dropdown Menu -->
+      <div class="dropdown-menu" *ngIf="showDropdown">
+        <a routerLink="/home" class="dropdown-item">
+          <i class="fas fa-home"></i> Home
+        </a>
+        <div class="dropdown-divider"></div>
+        <button (click)="logout()" class="dropdown-item danger">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

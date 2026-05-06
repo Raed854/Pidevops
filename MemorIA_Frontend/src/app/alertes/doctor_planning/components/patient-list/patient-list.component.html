@@ -1,0 +1,60 @@
+<div class="patient-list-container">
+
+  <!-- Recherche -->
+  <div class="search-box">
+    <i class="fas fa-search"></i>
+    <input
+      type="text"
+      [(ngModel)]="searchTerm"
+      placeholder="Rechercher un patient..."
+      class="search-input">
+  </div>
+
+  <!-- Liste -->
+  <div class="patients-list">
+    <div
+      *ngFor="let patient of filteredPatients"
+      class="patient-card"
+      [class.selected]="selectedPatient?.id === patient.id"
+      (click)="onSelectPatient(patient)">
+
+      <!-- Avatar -->
+      <div class="patient-avatar">
+        <img *ngIf="patient.photo" [src]="patient.photo" [alt]="patient.nom">
+        <span *ngIf="!patient.photo" class="avatar-initials">
+          {{ patient.initials }}
+        </span>
+      </div>
+
+      <!-- Infos -->
+      <div class="patient-info">
+        <div class="patient-name">
+          {{ patient.prenom }} {{ patient.nom }}
+        </div>
+        <div class="patient-details">
+          <span class="patient-age">{{ patient.age }} ans</span>
+          <span class="stage-badge" [class]="getStageClass(patient.stage)">
+            {{ getStageLabel(patient.stage) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Adherence -->
+      <div class="patient-adherence">
+        <div class="adherence-circle" [style.border-color]="getAdherenceColor(patient.adherenceRate)">
+          <span [style.color]="getAdherenceColor(patient.adherenceRate)">
+            {{ patient.adherenceRate | number:'1.0-0' }}%
+          </span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Aucun résultat -->
+    <div *ngIf="filteredPatients.length === 0" class="no-results">
+      <i class="fas fa-user-slash"></i>
+      <p>Aucun patient trouvé</p>
+    </div>
+  </div>
+
+</div>

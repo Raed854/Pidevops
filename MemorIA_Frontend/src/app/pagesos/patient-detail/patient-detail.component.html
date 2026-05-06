@@ -1,0 +1,108 @@
+<div class="patient-detail-container">
+    <!-- Back button -->
+    <a routerLink="/patients" class="back-link">
+        <lucide-icon [img]="icons.ArrowLeft" size="20"></lucide-icon>
+        Retour aux patients
+    </a>
+
+    <!-- Patient Header -->
+    <div class="patient-header-card">
+        <div class="patient-identity">
+            <div class="patient-photo">
+                {{ getInitials(patient.name) }}
+            </div>
+            <div class="patient-details">
+                <h1 class="patient-detail-name">{{ patient.name }}</h1>
+                <p class="patient-meta">
+                    {{ patient.age }} ans • Né(e) le {{ formatDate(patient.dateOfBirth) }}
+                </p>
+                <span [class]="'status-badge status-' + patient.status">
+                    {{ patient.status === 'surveillance' ? 'À surveiller' : 'Normal' }}
+                </span>
+            </div>
+        </div>
+        <div class="patient-quick-actions">
+            <button class="btn btn-primary">
+                <lucide-icon [img]="icons.Calendar" size="20"></lucide-icon>
+                Planifier RDV
+            </button>
+            <button class="btn btn-secondary">
+                <lucide-icon [img]="icons.FileText" size="20"></lucide-icon>
+                Nouveau test
+            </button>
+        </div>
+    </div>
+
+    <div class="patient-content-grid">
+        <!-- Alerts -->
+        <div *ngIf="patient.alerts.length > 0" class="info-card alert-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <lucide-icon [img]="icons.AlertCircle" size="20"></lucide-icon>
+                    Alertes
+                </h2>
+            </div>
+            <div class="card-body">
+                <div *ngFor="let alert of patient.alerts" class="alert-item">
+                    <div class="alert-icon alert-warning">
+                        <lucide-icon [img]="icons.AlertCircle" size="18"></lucide-icon>
+                    </div>
+                    <div class="alert-content">
+                        <p class="alert-message">{{ alert.message }}</p>
+                        <p class="alert-date">{{ formatDate(alert.date) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Score History -->
+        <div class="info-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <lucide-icon [img]="icons.Activity" size="20"></lucide-icon>
+                    Historique des scores
+                </h2>
+            </div>
+            <div class="card-body">
+                <div class="score-timeline">
+                    <div *ngFor="let item of patient.history" class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <span class="timeline-date">{{ formatDate(item.date) }}</span>
+                                <span class="timeline-score">{{ item.score }}/30</span>
+                            </div>
+                            <p class="timeline-test">{{ item.test }}</p>
+                            <p class="timeline-notes">{{ item.notes }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medications -->
+        <div class="info-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <lucide-icon [img]="icons.Pill" size="20"></lucide-icon>
+                    Traitements en cours
+                </h2>
+            </div>
+            <div class="card-body">
+                <div class="medications-list">
+                    <div *ngFor="let med of patient.medications" class="medication-item">
+                        <div class="medication-icon">
+                            <lucide-icon [img]="icons.Pill" size="18"></lucide-icon>
+                        </div>
+                        <div class="medication-info">
+                            <p class="medication-name">{{ med.name }}</p>
+                            <p class="medication-dosage">
+                                {{ med.dosage }} • {{ med.frequency }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

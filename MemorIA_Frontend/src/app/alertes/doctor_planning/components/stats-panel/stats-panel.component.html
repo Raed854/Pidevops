@@ -1,0 +1,121 @@
+<!-- ===== STATS PANEL ===== -->
+<div class="stats-panel">
+
+  <!-- HEADER -->
+  <div class="panel-header">
+    <div class="header-title">
+      <span class="header-icon"><i class="fas fa-chart-pie"></i></span>
+      <div>
+        <h2 class="panel-title">Adherence</h2>
+        <p class="panel-subtitle">{{ metrics.period30days.overallRate | number:'1.0-0' }}% last 30 days</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CIRCULAR RATE -->
+  <div class="rate-section">
+    <div class="circular-chart-wrapper">
+      <svg class="circular-svg" viewBox="0 0 120 120">
+        <!-- Track -->
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#EEF0F7" stroke-width="10"/>
+        <!-- Progress -->
+        <circle
+          cx="60" cy="60" r="50"
+          fill="none"
+          [attr.stroke]="getObservanceColor(metrics.period30days.overallRate)"
+          stroke-width="10"
+          stroke-linecap="round"
+          stroke-dasharray="314.16"
+          [attr.stroke-dashoffset]="314.16 * (1 - metrics.period30days.overallRate / 100)"
+          transform="rotate(-90 60 60)">
+        </circle>
+      </svg>
+      <div class="circular-center">
+        <span class="rate-value" [style.color]="getObservanceColor(metrics.period30days.overallRate)">
+          {{ metrics.period30days.overallRate | number:'1.0-0' }}%
+        </span>
+        <span class="rate-label">completion</span>
+      </div>
+    </div>
+
+    <!-- Status Badge -->
+    <div class="status-badge"
+      [class.status-good]="metrics.period30days.overallRate >= 80"
+      [class.status-medium]="metrics.period30days.overallRate >= 50 && metrics.period30days.overallRate < 80"
+      [class.status-bad]="metrics.period30days.overallRate < 50">
+      <i [class]="getStatusIcon(metrics.period30days.overallRate)"></i>
+      <span>{{ getObservanceStatus(metrics.period30days.overallRate) }}</span>
+    </div>
+    <p class="status-sub">{{ metrics.period30days.overallRate >= 80 ? 'Very good follow-up' : 'Needs improvement' }}</p>
+  </div>
+
+  <!-- DIVIDER -->
+  <div class="panel-divider"></div>
+
+  <!-- BY CATEGORY -->
+  <div class="panel-section">
+    <h3 class="section-title">
+      <i class="fas fa-layer-group"></i>
+      By Category
+    </h3>
+
+    <div class="categories-list">
+      <div *ngFor="let category of metrics.period30days.byType; trackBy: trackByType"
+        class="category-item">
+        <div class="category-top">
+          <div class="category-icon-wrap" [style.background]="getObservanceColor(category.rate) + '18'">
+            <i [class]="getCategoryIcon(category.type)" [style.color]="getObservanceColor(category.rate)"></i>
+          </div>
+          <div class="category-info">
+            <span class="cat-name">{{ getCategoryLabel(category.type) }}</span>
+            <span class="cat-ratio">{{ category.completed }}/{{ category.total }}</span>
+          </div>
+          <span class="cat-rate" [style.color]="getObservanceColor(category.rate)">
+            {{ category.rate | number:'1.0-0' }}%
+          </span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill"
+            [style.width.%]="category.rate"
+            [style.background]="getObservanceColor(category.rate)">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state categories -->
+    <div *ngIf="!metrics.period30days.byType || metrics.period30days.byType.length === 0"
+      class="empty-state">
+      <i class="fas fa-inbox"></i>
+      <span>No data available</span>
+    </div>
+  </div>
+
+  <!-- DIVIDER -->
+  <div class="panel-divider"></div>
+
+  <!-- MISSED REMINDERS -->
+  <div class="panel-section">
+    <h3 class="section-title missed-title-color">
+      <i class="fas fa-exclamation-circle"></i>
+      Missed Reminders
+    </h3>
+
+    <div class="missed-list" *ngIf="metrics.recentMissed && metrics.recentMissed.length > 0">
+      <div *ngFor="let reminder of metrics.recentMissed | slice:0:4" class="missed-item">
+        <div class="missed-dot"></div>
+        <div class="missed-info">
+          <p class="missed-name">{{ reminder.title }}</p>
+          <p class="missed-date">{{ reminder.reminderDate }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="!metrics.recentMissed || metrics.recentMissed.length === 0"
+      class="empty-state success-state">
+      <i class="fas fa-check-circle"></i>
+      <span>No recently missed reminders</span>
+    </div>
+  </div>
+
+</div>

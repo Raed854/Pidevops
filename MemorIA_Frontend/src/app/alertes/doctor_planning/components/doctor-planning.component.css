@@ -1,0 +1,273 @@
+:root {
+  --primary-violet: #541A75;
+  --gray-violet: #7E7F9A;
+  --light-green: #C0E0DE;
+  --dark-green: #00635D;
+  --alert-red: #CB1527;
+
+  --bg-light: #F8F9FA;
+  --text-dark: #2D3748;
+  --border-light: #E2E8F0;
+}
+
+/* ===== MAIN CONTAINER ===== */
+.doctor-planning-container {
+  min-height: 100vh;
+  background: var(--bg-light);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== HEADER ===== */
+.planning-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: white;
+  border-bottom: 1px solid var(--border-light);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary-violet);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-title i {
+  font-size: 32px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--gray-violet);
+  margin: 0;
+}
+
+.btn-add-reminder {
+  padding: 12px 24px;
+  background: var(--primary-violet);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(84, 26, 117, 0.2);
+}
+
+.btn-add-reminder:hover {
+  background: #6d2491;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(84, 26, 117, 0.3);
+}
+
+.btn-add-reminder:disabled {
+  background: #999;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Actions header (contient bouton + et PDF) ── */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Bouton Export PDF ── */
+.btn-export-pdf {
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #CB1527 0%, #a01020 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(203, 21, 39, 0.3);
+  white-space: nowrap;
+}
+.btn-export-pdf:hover:not(:disabled) {
+  background: linear-gradient(135deg, #a01020 0%, #7a0c18 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(203, 21, 39, 0.45);
+}
+.btn-export-pdf:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-export-pdf .fa-spinner { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ===== LAYOUT 3 COLONNES ===== */
+.planning-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr 360px;
+  gap: 24px;
+  padding: 24px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.patients-sidebar,
+.calendar-section,
+.stats-sidebar {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.calendar-section {
+  min-height: 0;
+}
+
+/* ===== NO SELECTION STATES ===== */
+.no-patient-selected,
+.no-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+  text-align: center;
+  color: var(--gray-violet);
+}
+
+.no-patient-selected i,
+.no-stats i {
+  font-size: 64px;
+  color: var(--border-light);
+  margin-bottom: 16px;
+}
+
+.no-patient-selected h3,
+.no-stats h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin: 0 0 8px 0;
+}
+
+.no-patient-selected p,
+.no-stats p {
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ===== LOADING STATE ===== */
+.loading-calendar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+  padding: 40px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--light-green);
+  border-top-color: var(--primary-violet);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-calendar p {
+  color: var(--gray-violet);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 1400px) {
+  .planning-layout {
+    grid-template-columns: 280px 1fr 340px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .planning-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    height: auto;
+  }
+
+  .patients-sidebar,
+  .stats-sidebar {
+    max-height: 400px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .planning-header {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .planning-layout {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .btn-add-reminder {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .doctor-planning-container {
+    padding: 16px;
+  }
+
+  .planning-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .btn-add-reminder {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

@@ -1,0 +1,13 @@
+target/
+.idea/
+.vscode/
+.git/
+.gitignore
+*.log
+*.md
+HELP.md
+Dockerfile
+.dockerignore
+.github/
+Jenkinsfile
+node_modules/

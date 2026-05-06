@@ -1,0 +1,96 @@
+<div class="stats-container">
+  <!-- Header -->
+  <div class="stats-header">
+    <h1>Diagnostic Statistics</h1>
+    <p class="subtitle">Track AI scores across all patient diagnostics</p>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading statistics...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage" class="error-container">
+    <p>{{ errorMessage }}</p>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!loading && !errorMessage && statistics && statistics.totalDiagnostics > 0">
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="card">
+        <span class="card-label">Total Diagnostics</span>
+        <span class="card-value">{{ statistics.totalDiagnostics }}</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Average Score</span>
+        <span class="card-value">{{ statistics.averageScore }}%</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Best Score</span>
+        <span class="card-value highlight-green">{{ statistics.highestScore }}%</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Latest Score</span>
+        <span class="card-value">{{ statistics.lastScore }}%</span>
+      </div>
+    </div>
+
+    <!-- Risk Level Distribution -->
+    <div class="risk-section">
+      <h2>Distribution by Risk Level</h2>
+      <div class="risk-grid">
+        <div *ngFor="let level of riskLevels" class="risk-row">
+          <div class="risk-label-group">
+            <span class="risk-dot risk-dot--{{ level.toLowerCase() }}"></span>
+            <span class="risk-name">{{ getRiskLabel(level) }}</span>
+            <span class="risk-count">{{ getRiskCount(level) }}</span>
+          </div>
+          <div class="risk-bar-track">
+            <div
+              class="risk-bar-fill risk-bar--{{ level.toLowerCase() }}"
+              [style.width.%]="getRiskPercentage(level)"
+            ></div>
+          </div>
+          <span class="risk-pct">{{ getRiskPercentage(level) }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-wrapper">
+      <h2>AI Score per Diagnostic</h2>
+      <div class="chart-container">
+        <canvas #scoreChart></canvas>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item">
+        <span class="legend-color" style="background: #22c55e;"></span>
+        <span>Excellent (75-100%)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: #f59e0b;"></span>
+        <span>Moderate (50-74%)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: #f97316;"></span>
+        <span>Low (25-49%)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: #ef4444;"></span>
+        <span>Critical (&lt;25%)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- No data -->
+  <div *ngIf="!loading && !errorMessage && statistics && statistics.totalDiagnostics === 0" class="no-data">
+    <p>No diagnostics found. Submit a diagnostic to see your statistics.</p>
+    <button class="btn-primary" (click)="goBack()">Go to Dashboard</button>
+  </div>
+</div>

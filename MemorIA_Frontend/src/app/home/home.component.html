@@ -1,0 +1,203 @@
+<div class="home-container">
+
+  <!-- ── Navbar ── -->
+  <nav class="navbar">
+    <div class="nav-content">
+      <div class="logo">
+        <span class="logo-icon">🧠</span>
+        <span class="logo-text">MemorIA</span>
+      </div>
+      <div class="nav-links">
+        <a href="#about">About</a>
+        <a href="#stats">Statistics</a>
+        <a href="#features">Features</a>
+        <a routerLink="/publications-feed" class="nav-link-publications">Publications</a>
+      </div>
+      <div class="nav-buttons">
+        <button class="btn-login" routerLink="/login">Login</button>
+        <button class="btn-signup" routerLink="/signup">Get Started</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge">AI-Powered Cognitive Care Platform</div>
+      <h1 class="hero-title">
+        Protecting Minds,<br/>
+        <span class="gradient-text">Empowering Lives</span>
+      </h1>
+      <p class="hero-subtitle">
+        MemorIA combines artificial intelligence and geolocation to detect cognitive decline early,
+        monitor patients in real time, and give caregivers peace of mind.
+      </p>
+      <div class="hero-actions">
+        <button class="cta-primary" routerLink="/signup">Start Free Today</button>
+        <button class="cta-secondary" routerLink="/login">View Demo</button>
+      </div>
+      <div class="hero-trust">
+        <span>✓ No credit card required</span>
+        <span>✓ HIPAA compliant</span>
+        <span>✓ Trusted by 500+ caregivers</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="azimut-ring">
+        <div class="azimut-center">
+          <span class="azimut-icon">🧠</span>
+          <span class="azimut-label">MemorIA</span>
+        </div>
+        <div class="azimut-item azimut-n">
+          <span class="az-icon">🗺️</span><span>Geo-Safety</span>
+        </div>
+        <div class="azimut-item azimut-ne">
+          <span class="az-icon">📊</span><span>Analytics</span>
+        </div>
+        <div class="azimut-item azimut-e">
+          <span class="az-icon">🤖</span><span>AI Detect</span>
+        </div>
+        <div class="azimut-item azimut-se">
+          <span class="az-icon">🔔</span><span>Alerts</span>
+        </div>
+        <div class="azimut-item azimut-s">
+          <span class="az-icon">❤️</span><span>Care</span>
+        </div>
+        <div class="azimut-item azimut-sw">
+          <span class="az-icon">📋</span><span>Reports</span>
+        </div>
+        <div class="azimut-item azimut-w">
+          <span class="az-icon">🛡️</span><span>Privacy</span>
+        </div>
+        <div class="azimut-item azimut-nw">
+          <span class="az-icon">👨‍👩‍👧</span><span>Family</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Stats Azimut ── -->
+  <section class="stats-section" id="stats">
+    <div class="section-header">
+      <div class="section-tag">Global Impact</div>
+      <h2>The Numbers Behind<br/><span class="gradient-text">Cognitive Decline</span></h2>
+      <p>Understanding the scale of the challenge drives our mission to build better tools.</p>
+    </div>
+    <div class="stats-grid">
+      @for (stat of stats; track stat.label; let i = $index) {
+        <div class="stat-card" [style.--accent]="stat.color">
+          <div class="stat-icon">{{ stat.icon }}</div>
+          <div class="stat-number">
+            <span class="stat-value">{{ displayValues[i] }}</span>
+            <span class="stat-suffix">{{ stat.suffix }}</span>
+          </div>
+          <div class="stat-label">{{ stat.label }}</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" [style.background]="stat.color"></div>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── About MCI ── -->
+  <section class="about-section" id="about">
+    <div class="about-inner">
+      <div class="about-image">
+        <img src="assets/images/image1.jpg" alt="Brain Health" />
+        <div class="about-image-badge">
+          <span class="badge-num">Early</span>
+          <span class="badge-label">Detection Saves Lives</span>
+        </div>
+      </div>
+      <div class="about-text">
+        <div class="section-tag">What is MCI?</div>
+        <h2>Understanding Mild<br/><span class="gradient-text">Cognitive Impairment</span></h2>
+        <p>
+          Mild Cognitive Impairment (MCI) causes cognitive changes noticed by the person affected and
+          those around them — but does not yet prevent everyday activities.
+        </p>
+        <p>
+          MCI can develop for multiple reasons. Some individuals progress to dementia; others remain stable
+          or revert to normal cognition. Early detection dramatically improves treatment outcomes.
+        </p>
+        <div class="about-pills">
+          <span class="pill">Memory Changes</span>
+          <span class="pill">Language Issues</span>
+          <span class="pill">Reasoning Difficulty</span>
+          <span class="pill">Spatial Disorientation</span>
+        </div>
+        <a class="cta-secondary inline-cta" routerLink="/signup">Learn more & get started →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Features ── -->
+  <section class="features-section" id="features">
+    <div class="section-header">
+      <div class="section-tag">Platform Features</div>
+      <h2>Everything You Need<br/><span class="gradient-text">In One Place</span></h2>
+    </div>
+    <div class="features-grid">
+      @for (feat of features; track feat.title) {
+        <div class="feature-card">
+          <div class="feat-icon">{{ feat.icon }}</div>
+          <h3>{{ feat.title }}</h3>
+          <p>{{ feat.desc }}</p>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── CTA Banner ── -->
+  <section class="cta-section">
+    <div class="cta-inner">
+      <h2>Ready to protect your loved ones?</h2>
+      <p>Join hundreds of families using MemorIA to monitor and support cognitive health.</p>
+      <button class="cta-primary large" routerLink="/signup">Create Free Account</button>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="logo-icon">🧠</span>
+        <span class="logo-text">MemorIA</span>
+        <p>AI-powered platform for cognitive care and patient monitoring.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a routerLink="/login">Login</a>
+        <a routerLink="/signup">Sign Up</a>
+        <a href="#about">About MCI</a>
+        <a href="#features">Features</a>
+      </div>
+      <div class="footer-contact">
+        <h4>Contact Us</h4>
+        <div class="contact-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+          <a href="mailto:contact@memoria.com">contact&#64;memoria.com</a>
+        </div>
+        <div class="contact-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.19 14.9a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          <a href="tel:+1234567890">+1 (234) 567-890</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 MemorIA. All rights reserved. Built with ❤️ for cognitive care.</p>
+    </div>
+  </footer>
+
+</div>

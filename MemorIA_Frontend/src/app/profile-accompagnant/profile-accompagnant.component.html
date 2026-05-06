@@ -1,0 +1,140 @@
+<div class="profile-page">
+
+  <!-- Hero Banner -->
+  <div class="profile-hero accompagnant-hero">
+    <div class="hero-content">
+      <div class="hero-avatar"><i class="pi pi-heart"></i></div>
+      <div class="hero-text">
+        <h1>Profil Accompagnant</h1>
+        <p>Bonjour <strong>{{ userName }}</strong> — Complétez vos informations d'accompagnement pour commencer.</p>
+      </div>
+    </div>
+    <div class="hero-badge"><i class="pi pi-shield"></i> Données sécurisées</div>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="profile-form">
+
+    <!-- Section 1 : Lien & Fréquence -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-icon s-amber"><i class="pi pi-users"></i></div>
+        <div>
+          <h2>Relation avec le patient</h2>
+          <p>Type de lien et fréquence d'accompagnement</p>
+        </div>
+      </div>
+      <div class="field-grid">
+
+        <div class="field">
+          <label>Lien avec le patient <span class="req">*</span></label>
+          <select formControlName="lienPatient" class="form-select">
+            @for (option of lienOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (form.get('lienPatient')?.invalid && form.get('lienPatient')?.touched) {
+            <small class="field-error"><i class="pi pi-exclamation-circle"></i> Champ requis.</small>
+          }
+        </div>
+
+        <div class="field">
+          <label>Fréquence d'accompagnement <span class="req">*</span></label>
+          <select formControlName="frequenceAccompagnement" class="form-select">
+            @for (option of frequenceOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (form.get('frequenceAccompagnement')?.invalid && form.get('frequenceAccompagnement')?.touched) {
+            <small class="field-error"><i class="pi pi-exclamation-circle"></i> Champ requis.</small>
+          }
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Section 2 : Informations personnelles -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-icon s-purple"><i class="pi pi-user"></i></div>
+        <div>
+          <h2>Informations personnelles</h2>
+          <p>Vos coordonnées et date de naissance</p>
+        </div>
+      </div>
+      <div class="field-grid">
+
+        <div class="field">
+          <label>Date de naissance <span class="req">*</span></label>
+          <input type="date" formControlName="dateNaissance" class="form-input" />
+          @if (form.get('dateNaissance')?.invalid && form.get('dateNaissance')?.touched) {
+            <small class="field-error"><i class="pi pi-exclamation-circle"></i> Champ requis.</small>
+          }
+        </div>
+
+        <div class="field">
+          <label>Téléphone de secours</label>
+          <div class="input-wrapper">
+            <i class="pi pi-phone input-icon"></i>
+            <input type="tel" formControlName="telephoneSecours" placeholder="+213 XX XX XX XX" class="form-input" />
+          </div>
+        </div>
+
+        <div class="field full-width">
+          <label>Adresse</label>
+          <div class="input-wrapper">
+            <i class="pi pi-home input-icon"></i>
+            <input type="text" formControlName="adresse" placeholder="Numéro et nom de rue" class="form-input" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Code postal</label>
+          <div class="input-wrapper">
+            <i class="pi pi-map input-icon"></i>
+            <input type="text" formControlName="codePostal" placeholder="Ex : 16000" class="form-input" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Ville</label>
+          <div class="input-wrapper">
+            <i class="pi pi-building input-icon"></i>
+            <input type="text" formControlName="ville" placeholder="Votre ville" class="form-input" />
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Section 3 : Situation professionnelle -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-icon s-blue"><i class="pi pi-briefcase"></i></div>
+        <div>
+          <h2>Situation professionnelle</h2>
+          <p>Statut d'activité (optionnel)</p>
+        </div>
+      </div>
+      <div class="field-grid">
+
+        <div class="field">
+          <label>Situation</label>
+          <select formControlName="situationPro" class="form-select">
+            @for (option of situationProOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="form-footer">
+      <button type="submit" class="submit-button" [disabled]="isSubmitting">
+        <i class="pi pi-check"></i>
+        {{ isSubmitting ? 'Enregistrement…' : 'Enregistrer mon profil' }}
+      </button>
+    </div>
+
+  </form>
+</div>

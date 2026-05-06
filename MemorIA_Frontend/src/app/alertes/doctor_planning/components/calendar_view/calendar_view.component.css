@@ -1,0 +1,261 @@
+.calendar-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 18px 20px 12px;
+}
+
+/* ─── HEADER : "Mars 2026" + badge patient + navigation + vue ─── */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 10px;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.calendar-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #541A75;
+  margin: 0;
+  text-transform: capitalize;
+  letter-spacing: -.3px;
+}
+
+/* Badge patient vert d'eau (comme capture : "youssef ellouze") */
+.patient-info { display: flex; }
+.patient-badge {
+  padding: 4px 12px;
+  background: #C0E0DE;
+  color: #00635D;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ─── Contrôles navigation + vue ─── */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btn-nav {
+  width: 32px; height: 32px;
+  border: 1px solid #E2E8F0;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #7E7F9A;
+  font-size: 12px;
+  transition: all .2s;
+}
+.btn-nav:hover { background: #541A75; color: white; border-color: #541A75; }
+
+.btn-today {
+  padding: 7px 14px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #541A75;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.btn-today:hover { background: #541A75; color: white; }
+
+/* Switcher Mois/Semaine/Jour */
+.view-switcher {
+  display: flex;
+  background: #F4F6FB;
+  border-radius: 7px;
+  padding: 2px;
+  gap: 1px;
+}
+
+.view-btn {
+  padding: 5px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #7E7F9A;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.view-btn:hover { color: #541A75; }
+.view-btn.active { background: #541A75; color: white; }
+
+/* ─── Jours de la semaine ─── */
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: #C0E0DE;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+  margin-bottom: 1px;
+}
+
+.weekday {
+  padding: 10px 8px;
+  background: #C0E0DE;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #00635D;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+/* ─── Grille calendrier ─── */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: #E2E8F0;
+  flex: 1;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+}
+
+.calendar-day {
+  background: white;
+  padding: 6px 8px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 72px;
+  transition: background .15s;
+}
+.calendar-day:hover { background: rgba(192, 224, 222, 0.2); }
+
+.calendar-day.other-month {
+  background: #F8F9FA;
+  color: #bbb;
+}
+.calendar-day.other-month .day-number { color: #c0c4d0; }
+
+/* Aujourd'hui — bordure violette */
+.calendar-day.today {
+  background: rgba(84, 26, 117, 0.04);
+  border: 2px solid #541A75;
+}
+
+.calendar-day.has-events {
+  /* pas de border-left pour garder un look propre */
+}
+
+.day-number {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2D3748;
+  margin-bottom: 4px;
+}
+
+.calendar-day.today .day-number {
+  color: #541A75;
+  font-weight: 800;
+}
+
+/* ─── Points rappels (dots) ─── */
+.day-events { flex: 1; }
+
+.event-dots-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.event-dot-mini {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.1);
+}
+.event-dot-mini:hover { transform: scale(1.4); }
+
+/* Couleurs par statut */
+.event-dot-mini.status-confirmed     { background: #00635D; }
+.event-dot-mini.status-confirmed_late{ background: #F59E0B; }
+.event-dot-mini.status-pending       { background: #F59E0B; }
+.event-dot-mini.status-planned       { background: #541A75; opacity: .7; }
+.event-dot-mini.status-missed        { background: #CB1527; animation: pulse-red 2s infinite; }
+.event-dot-mini.status-canceled      { background: #9CA3AF; }
+.event-dot-mini.status-rescheduled   { background: #F97316; }
+
+@keyframes pulse-red {
+  0%,100% { opacity: 1; }
+  50%      { opacity: .5; }
+}
+
+.more-events-badge {
+  font-size: 9px; font-weight: 700;
+  color: #7E7F9A; background: #EEF0F7;
+  padding: 1px 4px; border-radius: 6px;
+}
+
+/* Indicateurs bas de cellule */
+.status-indicators {
+  display: flex; gap: 3px;
+  margin-top: auto; padding-top: 2px;
+}
+.indicator { width: 5px; height: 5px; border-radius: 50%; }
+.indicator.completed { background: #00635D; }
+.indicator.pending   { background: #F59E0B; }
+.indicator.critical  { background: #CB1527; }
+
+/* ─── Légende ─── */
+.calendar-legend {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #faf8fd;
+  border-radius: 8px;
+  border: 1px solid #ede8f5;
+}
+.legend-title {
+  font-size: 11px; font-weight: 700;
+  color: #541A75; margin-bottom: 8px;
+  text-transform: uppercase; letter-spacing: .4px;
+}
+.legend-items { display: flex; flex-wrap: wrap; gap: 12px; }
+.legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #555; font-weight: 500;
+}
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.legend-dot.status-confirmed      { background: #00635D; }
+.legend-dot.status-confirmed_late { background: #F59E0B; }
+.legend-dot.status-pending        { background: #F59E0B; }
+.legend-dot.status-planned        { background: #541A75; }
+.legend-dot.status-missed         { background: #CB1527; }
+.legend-dot.status-canceled       { background: #9CA3AF; }
+.legend-dot.status-rescheduled    { background: #F97316; }
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  .calendar-header { flex-direction: column; gap: 12px; }
+  .header-controls { justify-content: flex-start; }
+  .calendar-day { min-height: 56px; padding: 4px; }
+  .day-number { font-size: 12px; }
+}

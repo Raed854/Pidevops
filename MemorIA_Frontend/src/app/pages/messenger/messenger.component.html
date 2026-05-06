@@ -1,0 +1,466 @@
+<div class="dashboard-wrapper">
+
+    <header class="dashboard-header">
+        <div class="welcome-text">
+            <h1>Caregiver<span class="text-accent-color-messenger">Space</span></h1>
+        </div>
+        <div class="header-tools d-flex gap-2">
+            <div class="user-badge d-flex align-items-center gap-2">
+                <div class="avatar sm">{{ (currentUser.firstName || currentUser.prenom)?.charAt(0) || 'U' }}</div>
+                <span>{{ currentUser.firstName || currentUser.prenom }}</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="premium-chat-layout">
+
+        <!-- Sidebar -->
+        <aside class="chat-sidebar">
+            <div class="sidebar-header p-3 border-bottom">
+                <div class="view-tabs">
+                    <button [class.active]="activeTab === 'all'" (click)="switchTab('all')" title="Toutes">
+                        <i class="fas fa-comments"></i>
+                    </button>
+                    <button [class.active]="activeTab === 'archived'" (click)="switchTab('archived')" title="Archives">
+                        <i class="fas fa-archive"></i>
+                    </button>
+                    <button [class.active]="activeTab === 'blocked'" (click)="switchTab('blocked')" title="Bloqués">
+                        <i class="fas fa-ban"></i>
+                    </button>
+                    <button [class.active]="activeTab === 'caregivers'" (click)="switchTab('caregivers')"
+                        title="Soignants">
+                        <i class="fas fa-user-nurse"></i>
+                    </button>
+                </div>
+                <div class="search-box mt-3">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" placeholder="Rechercher une discussion..." [(ngModel)]="searchTerm">
+                </div>
+            </div>
+
+            <div class="sidebar-content premium-scroll">
+
+                <!-- All Discussions -->
+                <ng-container *ngIf="activeTab === 'all'">
+                    <div *ngFor="let conv of filteredConversations" class="conv-card glass-card mb-2 mx-2"
+                        [class.active]="selectedConversation?.id === conv.id">
+                        <div class="conv-card-body d-flex align-items-center p-2" (click)="selectConversation(conv)">
+                            <div class="avatar-box sm me-3"
+                                [style.background]="conv.type === 'GROUP' ? 'var(--primary-messenger-gradient)' : 'var(--secondary-messenger-gradient)'">
+                                {{ getOtherParticipantName(conv).charAt(0) }}
+                            </div>
+                            <div class="conv-info ms-2 flex-grow-1 overflow-hidden">
+                                <h6 class="mb-0 text-truncate fw-semibold">
+                                    {{ getOtherParticipantName(conv) }}
+                                    <span class="small text-muted fw-normal"> - {{ conv.type === 'GROUP' ? 'Groupe de soin' : 'Message direct' }}</span>
+                                </h6>
+                            </div>
+                        </div>
+                        <div class="conv-card-actions d-flex border-top">
+                            <button class="btn-action flex-grow-1" (click)="selectConversation(conv)" title="Ouvrir">
+                                <i class="fas fa-eye"></i> <span>Open</span>
+                            </button>
+                            <button class="btn-action flex-grow-1" (click)="selectConversation(conv)" title="Chat">
+                                <i class="fas fa-comment-dots"></i> <span>Chat</span>
+                            </button>
+                            <button class="btn-action flex-grow-1" (click)="archiveConversation(conv)" title="Archiver">
+                                <i class="fas fa-archive"></i> <span>Archive</span>
+                            </button>
+                            <button class="btn-action flex-grow-1 text-danger" (click)="deleteConversationById(conv.id)"
+                                title="Supprimer">
+                                <i class="fas fa-trash"></i> <span>Delete</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div *ngIf="filteredConversations.length === 0" class="empty-state">
+                        <i class="fas fa-comment-dots"></i>
+                        <p>No discussions found</p>
+                    </div>
+                </ng-container>
+
+                <!-- Archived List -->
+                <ng-container *ngIf="activeTab === 'archived'">
+                    <div class="list-section-header px-3 py-2">
+                        <i class="fas fa-archive me-2"></i> Archived conversations
+                        <span class="badge bg-secondary ms-2">{{ archivedConversations.length }}</span>
+                    </div>
+                    <div *ngFor="let conv of archivedConversations" class="conv-card glass-card mb-2 mx-2">
+                        <div class="conv-card-body d-flex align-items-center p-2">
+                            <div class="avatar-box sm me-3"
+                                [style.background]="conv.type === 'GROUP' ? 'var(--primary-messenger-gradient)' : 'var(--secondary-messenger-gradient)'">
+                                {{ getOtherParticipantName(conv).charAt(0) }}
+                            </div>
+                            <div class="conv-info ms-2 flex-grow-1 overflow-hidden">
+                                <h6 class="mb-0 text-truncate fw-semibold">
+                                    {{ getOtherParticipantName(conv) }}
+                                    <span class="small text-muted fw-normal"> <i class="fas fa-archive me-1 ms-1"></i> Archivée</span>
+                                </h6>
+                            </div>
+                        </div>
+                        <div class="conv-card-actions d-flex border-top">
+                            <button class="btn-action flex-grow-1" (click)="selectConversation(conv); switchTab('all')"
+                                title="Ouvrir">
+                                <i class="fas fa-eye"></i> <span>Open</span>
+                            </button>
+                            <button class="btn-action flex-grow-1 text-success" (click)="unarchiveConversation(conv.id)"
+                                title="Désarchiver">
+                                <i class="fas fa-inbox"></i> <span>Unarchive</span>
+                            </button>
+                            <button class="btn-action flex-grow-1 text-danger" (click)="deleteConversationById(conv.id)"
+                                title="Supprimer">
+                                <i class="fas fa-trash"></i> <span>Delete</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div *ngIf="archivedConversations.length === 0" class="empty-state">
+                        <i class="fas fa-archive"></i>
+                        <p>No archived discussions</p>
+                    </div>
+                </ng-container>
+
+                <!-- Blocked List -->
+                <ng-container *ngIf="activeTab === 'blocked'">
+                    <div class="list-section-header px-3 py-2">
+                        <i class="fas fa-ban me-2"></i> Users blocked
+                        <span class="badge bg-danger ms-2">{{ blockedConversations.length }}</span>
+                    </div>
+                    <div *ngFor="let conv of blockedConversations" class="conv-card glass-card mb-2 mx-2">
+                        <div class="conv-card-body d-flex align-items-center p-2">
+                            <div class="avatar-box sm me-2" style="background: #e74c3c;">
+                                {{ getOtherParticipantName(conv).charAt(0) }}
+                            </div>
+                            <div class="conv-info ms-2 flex-grow-1 overflow-hidden">
+                                <h6 class="mb-0 text-truncate">{{ getOtherParticipantName(conv) }}</h6>
+                                <p class="small text-danger mb-0">
+                                    <i class="fas fa-ban me-1"></i> block
+                                </p>
+                            </div>
+                        </div>
+                        <div class="conv-card-actions d-flex border-top">
+                            <button class="btn-action flex-grow-1 text-success" (click)="unblockConversation(conv.id)"
+                                title="Débloquer">
+                                <i class="fas fa-unlock"></i> <span>Unblock</span>
+                            </button>
+                            <button class="btn-action flex-grow-1 text-danger" (click)="deleteConversationById(conv.id)"
+                                title="Supprimer">
+                                <i class="fas fa-trash"></i> <span>Delete</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div *ngIf="blockedConversations.length === 0" class="empty-state">
+                        <i class="fas fa-user-check"></i>
+                        <p>No blocked users</p>
+                    </div>
+                </ng-container>
+
+                <!-- Caregivers List -->
+                <ng-container *ngIf="activeTab === 'caregivers'">
+                    <div class="list-section-header px-3 py-2">
+                        <i class="fas fa-user-nurse me-2"></i> Caregiver directory
+                    </div>
+                    <div *ngFor="let cg of filteredCaregivers" class="conv-card glass-card mb-2 mx-2">
+                        <div class="conv-card-body d-flex align-items-center p-2" (click)="startPrivateChat(cg)">
+                            <div class="avatar-box sm bg-light text-primary border me-2">
+                                {{ cg.firstName.charAt(0) }}
+                            </div>
+                            <div class="conv-info ms-2 flex-grow-1 overflow-hidden">
+                                <h6 class="mb-0 text-truncate fw-semibold">
+                                    {{ cg.firstName }} {{ cg.lastName }}
+                                    <span class="small text-muted fw-normal"> - {{ cg.role }}</span>
+                                </h6>
+                            </div>
+                            <i class="fas fa-chevron-right text-muted small"></i>
+                        </div>
+                        <div class="conv-card-actions d-flex border-top">
+                            <button class="btn-action flex-grow-1" (click)="startPrivateChat(cg)"
+                                title="Envoyer un message">
+                                <i class="fas fa-comment-dots"></i> <span>Message</span>
+                            </button>
+                        </div>
+                    </div>
+                </ng-container>
+
+            </div>
+        </aside>
+
+        <!-- Chat Area -->
+        <main class="chat-main">
+            <ng-container *ngIf="selectedConversation; else selectConv">
+                <!-- Header -->
+                <header class="chat-header p-3 border-bottom d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center flex-grow-1 clickable-header" (click)="openHeaderProfile(selectedConversation)">
+                        <div class="avatar-box sm me-3"
+                            [style.background]="selectedConversation.type === 'GROUP' ? 'var(--primary-messenger-gradient)' : 'var(--secondary-messenger-gradient)'">
+                            {{ getOtherParticipantName(selectedConversation).charAt(0) }}
+                        </div>
+                        <div class="d-flex align-items-center flex-wrap">
+                            <h5 class="mb-0 font-weight-bold me-2">
+                                {{ getOtherParticipantName(selectedConversation) }}
+                            </h5>
+                            <span class="status-badge small mx-2 fw-normal" *ngIf="selectedConversation.type !== 'GROUP'"
+                                [class.text-success]="isOtherUserOnline(selectedConversation)" [class.text-muted]="!isOtherUserOnline(selectedConversation)">
+                                <i class="fas fa-circle status-dot"></i> {{ isOtherUserOnline(selectedConversation) ? 'Actif' : 'Hors ligne' }}
+                            </span>
+                            <span class="status-badge small mx-2 fw-normal text-success" *ngIf="selectedConversation.type === 'GROUP'">
+                                <i class="fas fa-circle status-dot"></i> {{ selectedConversation.community?.members?.length || 0 }} membres
+                            </span>
+                        </div>
+                    </div>
+                    <div class="search-box mx-3 flex-grow-1" *ngIf="messages.length > 0">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" placeholder="..."
+                            [(ngModel)]="chatSearchTerm">
+                    </div>
+                    <div class="chat-actions d-flex gap-2">
+                        <button class="action-btn" *ngIf="selectedConversation.type === 'GROUP'"
+                            (click)="leaveGroup(selectedConversation)" title="Quitter le groupe">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                        <button class="action-btn" (click)="archiveConversation(selectedConversation)" title="Archiver">
+                            <i class="fas fa-archive"></i>
+                        </button>
+                        <button class="action-btn text-danger" (click)="blockUser(selectedConversation)"
+                            *ngIf="selectedConversation.type === 'PRIVATE' && getOtherParticipantRole(selectedConversation) !== 'DOCTOR'"
+                            title="Bloquer">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Messages Area -->
+                <div class="messages-container premium-scroll p-4" #scrollContainer>
+                    <div *ngFor="let msg of filteredMessages; trackBy: trackByMessageId" class="message-row"
+                        [class.sent]="msg.sender.id === currentUser.id"
+                        [class.received]="msg.sender.id !== currentUser.id">
+
+                        <div class="message-meta-top" *ngIf="msg.sender.id !== currentUser.id">
+                            <span class="clickable-name" (click)="openUserProfile(msg.sender)">{{ msg.sender.firstName }} {{ msg.sender.lastName }}</span>
+                        </div>
+
+                        <div class="message-wrapper">
+                            <div class="reply-bubble" *ngIf="msg.replyTo">
+                                <i class="fas fa-reply"></i> {{ msg.replyTo.content | slice:0:35 }}...
+                            </div>
+
+                            <div class="bubble">
+                                <ng-container *ngIf="msg.content && msg.content.includes('\n\n--- Transcription ---\n')">
+                                    <div class="bubble-content" *ngIf="!msg.content.startsWith('voicemessage_')">{{ msg.content.split('\n\n--- Transcription ---\n')[0] }}</div>
+                                    <div class="transcription-box mt-2">
+                                        <div class="transcription-label"><i class="fas fa-magic"></i> Transcription</div>
+                                        <div class="transcription-text">{{ msg.content.split('\n\n--- Transcription ---\n')[1] }}</div>
+                                    </div>
+                                </ng-container>
+                                <ng-container *ngIf="!msg.content || !msg.content.includes('\n\n--- Transcription ---\n')">
+                                    <div class="bubble-content" *ngIf="msg.content && !msg.content.startsWith('voicemessage_')">{{ msg.content }}</div>
+                                </ng-container>
+
+                                <!-- Attachment Support -->
+                                <div class="file-attachment mt-2" *ngIf="msg.fileUrl">
+
+                                    <!-- Playable Audio File -->
+                                    <div class="instagram-audio-player mt-1" *ngIf="msg.fileType === 'audio/webm' || msg.fileType === 'audio/mp4' || msg.fileType === 'audio/mpeg' || msg.fileType === 'audio/ogg' || msg.fileUrl.endsWith('.webm') || msg.fileUrl.endsWith('.mp3') || msg.fileUrl.endsWith('.ogg') || msg.fileUrl.endsWith('.wav') || msg.fileUrl.endsWith('.m4a')">
+                                    <audio #audioRef [id]="'audio-' + msg.id" [src]="communityFilesUrl +msg.fileUrl" (timeupdate)="updateTime($event, msg.id)" (loadedmetadata)="onAudioLoaded($event, msg.id)" (ended)="audioEnded(msg.id)" class="audio-hidden"></audio>
+                                        <button class="audio-play-btn" (click)="togglePlay(audioRef, msg.id)">
+                                            <i [class]="playingAudioId === msg.id ? 'fas fa-pause' : 'fas fa-play'"></i>
+                                        </button>
+                                        <div class="audio-waveform" (click)="seekAudio($event, audioRef)">
+                                            <div class="waveform-bars">
+                                                <div class="waveform-bar" *ngFor="let h of fakeWaveformHeights" [style.height.%]="h"></div>
+                                            </div>
+                                            <div class="waveform-progress-bars" [style.width.%]="audioProgressMap[msg.id] || 0">
+                                                <div class="waveform-progress-content">
+                                                    <div class="waveform-bar active" *ngFor="let h of fakeWaveformHeights" [style.height.%]="h" class="waveform-active"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span class="audio-timer">{{ audioTimeMap[msg.id] || '0:00' }}</span>
+                                    </div>
+
+                                    <!-- Inline Image Preview -->
+                                    <div class="image-preview" *ngIf="msg.fileType?.startsWith('image/')">
+                                        <img [src]="communityFilesUrl +msg.fileUrl"
+                                             [alt]="msg.content || 'Image'"
+                                             (click)="openImageFullscreen(communityFilesUrl +msg.fileUrl)"
+                                             loading="lazy">
+                                        <div class="image-name" *ngIf="msg.content && !msg.content.startsWith('voicemessage_')">{{ msg.content }}</div>
+                                    </div>
+
+                                    <!-- Regular File Download Link (non-audio, non-image) -->
+                                    <div class="file-info" (click)="downloadFile(msg.fileUrl)" *ngIf="!msg.fileType?.startsWith('image/') && !msg.fileType?.startsWith('audio/') && !msg.fileUrl.endsWith('.webm') && !msg.fileUrl.endsWith('.mp3') && !msg.fileUrl.endsWith('.ogg') && !msg.fileUrl.endsWith('.wav') && !msg.fileUrl.endsWith('.m4a')">
+                                        <i class="fas fa-paperclip"></i>
+                                        <span class="text-truncate">{{ msg.content }}</span>
+                                        <i class="fas fa-download ms-auto"></i>
+                                    </div>
+                                </div>
+
+                                <div class="bubble-meta">
+                                    <span>{{ msg.createdAt | date:'HH:mm' }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="floating-actions">
+                                <button *ngIf="msg.fileType?.startsWith('audio') || msg.fileUrl?.endsWith('.webm') || msg.fileUrl?.endsWith('.m4a')" (click)="requestTranscription(msg.id)" title="Transcrire"><i class="fas fa-magic"></i></button>
+                                <button (click)="replyMessage(msg)" title="Répondre"><i class="fas fa-reply"></i></button>
+                                <button (click)="speakMessage(msg.content)" title="Écouter"><i
+                                        class="fas fa-volume-up"></i></button>
+                                <button (click)="openForward(msg.id)" title="Transférer"><i
+                                        class="fas fa-share"></i></button>
+                                <button *ngIf="msg.sender.id === currentUser.id" (click)="editMessage(msg)"
+                                    title="Modifier"><i class="fas fa-edit"></i></button>
+                                <button (click)="deleteMessage(msg.id)" title="Supprimer" class="text-danger"><i
+                                        class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Composer -->
+                <footer class="chat-composer p-3 border-top">
+                    <div class="reply-preview" *ngIf="replyToMessage">
+                        <div class="preview-text">
+                            <i class="fas fa-reply me-2"></i> In response to <strong>{{ replyToMessage.sender.firstName
+                                }}</strong>
+                        </div>
+                        <button class="cancel-reply" (click)="cancelReply()"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <!-- Standard Composer View -->
+                    <div class="composer-controls" *ngIf="!isRecording">
+                        <label class="attach-btn" title="Joindre un fichier">
+                            <i class="fas fa-paperclip"></i>
+                            <input type="file" (change)="onFileSelected($event)" hidden>
+                        </label>
+                        <textarea id="message-input" [(ngModel)]="newMessage"
+                            placeholder="Comment se sent le patient aujourd'hui ?"
+                            (keyup.enter)="!$any($event).shiftKey && sendMessage()" rows="1"></textarea>
+
+                        <button class="send-btn ms-2 bg-danger" *ngIf="!newMessage.trim() && !pendingFile" (click)="startRecording()" title="Enregistrer un message vocal">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <button class="send-btn ms-2" *ngIf="newMessage.trim() || pendingFile" [disabled]="!newMessage.trim() && !pendingFile"
+                            (click)="sendMessage()" title="Envoyer">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+
+                    <!-- Voice Recording View -->
+                    <div class="composer-controls instagram-recording-composer w-100 p-2 bg-white rounded" *ngIf="isRecording">
+                        <button class="trash-btn" (click)="cancelRecording()"><i class="fas fa-trash-alt"></i></button>
+                        <div class="slide-cancel flex-grow-1 text-center">
+                            <i class="fas fa-chevron-left me-2"></i> Slide to cancel
+                        </div>
+                        <div class="recording-timer-box">
+                            <span class="recording-blink me-2">●</span>
+                            <span class="fw-bold">{{ formatAudioTime(recordingTime) }}</span>
+                        </div>
+                        <button class="send-record-btn ms-3" (click)="stopRecording()">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                    </div>
+                    <div class="pending-file-container" *ngIf="pendingFile">
+                        <div class="image-preview mt-2 pending-image-wrap" *ngIf="pendingFile.fileType?.startsWith('image/')">
+                            <img [src]="communityFilesUrl +pendingFile.fileUrl" class="pending-image">
+                            <button class="pending-image-remove" (click)="pendingFile = null">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="pending-file-badge mt-2" *ngIf="!pendingFile.fileType?.startsWith('image/')">
+                            <i class="fas fa-check"></i> Prêt : {{ pendingFile.fileName }}
+                            <span (click)="pendingFile = null">×</span>
+                        </div>
+                    </div>
+
+                </footer>
+            </ng-container>
+
+            <ng-template #selectConv>
+                <div class="no-selection">
+                    <div class="empty-icon">
+                        <i class="fas fa-user-nurse"></i>
+                    </div>
+                    <h3>Messaging</h3>
+                </div>
+            </ng-template>
+        </main>
+
+    </div>
+</div>
+
+<!-- New Chat Modal -->
+<div class="modal-overlay" *ngIf="showNewChatModal">
+    <div class="modal-content glass-card narrow">
+
+        <div class="modal-body">
+            <div class="search-input-wrap mb-3">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="..." [(ngModel)]="newChatSearchTerm"
+                    (keyup)="searchNewChatUsers()">
+            </div>
+            <div class="user-selection-list premium-scroll">
+                <div *ngFor="let u of newChatSearchResults" class="user-select-item" (click)='startNewChat(u)'>
+                    <div class="avatar sm me-3">{{ u.firstName.charAt(0) }}</div>
+                    <div class="user-info flex-grow-1 overflow-hidden">
+                        <h6 class="mb-0 text-truncate fw-semibold">
+                            {{ u.firstName }} {{ u.lastName }}
+                            <span class="small text-muted fw-normal"> - {{ u.role }}</span>
+                        </h6>
+                    </div>
+                    <i class="fas fa-chevron-right ms-auto"></i>
+                </div>
+                <div *ngIf="newChatSearchResults.length === 0 && newChatSearchTerm.length >= 2"
+                    class="p-3 text-center text-muted">
+                    not found "{{ newChatSearchTerm }}"
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Forward Modal -->
+<div class="modal-overlay" *ngIf="showForwardModal">
+    <div class="modal-content glass-card narrow">
+        <header class="modal-header">
+            <h3>Forward to...</h3>
+            <button class="close-modal" (click)="showForwardModal = false">&times;</button>
+        </header>
+        <div class="modal-body">
+            <div class="search-input-wrap mb-3">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="..." [(ngModel)]="searchTerm">
+            </div>
+            <div class="forward-list premium-scroll">
+                <div *ngFor="let c of conversations" class="user-row" (click)="forwardTo(c.id)">
+                    <div class="avatar sm">{{ getOtherParticipantName(c).charAt(0) }}</div>
+                    <span>{{ getOtherParticipantName(c) }}</span>
+                    <i class="fas fa-share text-primary ms-auto"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<app-user-profile-modal
+    *ngIf="showProfileModal && profileUser"
+    [userId]="profileUser.id"
+    [userName]="(profileUser.firstName || profileUser.prenom || '') + ' ' + (profileUser.lastName || profileUser.nom || '')"
+    [userRole]="profileUser.role"
+    [userEmail]="profileUser.email || ''"
+    [conversationId]="selectedConversation?.id"
+    (close)="closeUserProfile()"
+    (openLightbox)="openImageFullscreen($event)">
+</app-user-profile-modal>
+
+<app-group-info-modal
+    *ngIf="showGroupInfo && groupInfoConversation"
+    [conversation]="groupInfoConversation"
+    (close)="closeGroupInfo()"
+    (openMemberProfile)="onGroupMemberClick($event)"
+    (openLightbox)="openImageFullscreen($event)">
+</app-group-info-modal>
+
+<app-image-lightbox-modal
+    *ngIf="lightboxImageUrl"
+    [imageUrl]="lightboxImageUrl"
+    (close)="closeLightbox()">
+</app-image-lightbox-modal>

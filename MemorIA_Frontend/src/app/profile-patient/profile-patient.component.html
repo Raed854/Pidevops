@@ -1,0 +1,167 @@
+<div class="profile-page">
+
+  <!-- Hero Banner -->
+  <div class="profile-hero patient-hero">
+    <div class="hero-content">
+      <div class="hero-avatar"><i class="pi pi-heart-fill"></i></div>
+      <div class="hero-text">
+        <h1>Profil Patient</h1>
+        <p>Bonjour <strong>{{ userName }}</strong> — Complétez vos informations pour accéder à votre espace de suivi.</p>
+      </div>
+    </div>
+    <div class="hero-badge"><i class="pi pi-shield"></i> Données sécurisées</div>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="profile-form">
+
+    <!-- Section 1 : Identité -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-icon s-purple"><i class="pi pi-user"></i></div>
+        <div>
+          <h2>Informations personnelles</h2>
+          <p>Données d'identité requises pour votre dossier</p>
+        </div>
+      </div>
+      <div class="field-grid">
+
+        <div class="field">
+          <label>Date de naissance <span class="req">*</span></label>
+          <input type="date" formControlName="dateNaissance" class="form-input" />
+          @if (form.get('dateNaissance')?.invalid && form.get('dateNaissance')?.touched) {
+            <small class="field-error"><i class="pi pi-exclamation-circle"></i> Champ requis.</small>
+          }
+        </div>
+
+        <div class="field">
+          <label>Sexe <span class="req">*</span></label>
+          <select formControlName="sexe" class="form-select">
+            @for (option of sexeOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (form.get('sexe')?.invalid && form.get('sexe')?.touched) {
+            <small class="field-error"><i class="pi pi-exclamation-circle"></i> Champ requis.</small>
+          }
+        </div>
+
+        <div class="field full-width">
+          <label>Numéro de sécurité sociale <span class="req">*</span></label>
+          <div class="input-wrapper">
+            <i class="pi pi-id-card input-icon"></i>
+            <input type="text" formControlName="numeroSecuriteSociale" placeholder="1 84 12 75 108 042 18" class="form-input" />
+          </div>
+          @if (form.get('numeroSecuriteSociale')?.invalid && form.get('numeroSecuriteSociale')?.touched) {
+            <small class="field-error"><i class="pi pi-exclamation-circle"></i> Champ requis.</small>
+          }
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Section 2 : Adresse -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-icon s-blue"><i class="pi pi-map-marker"></i></div>
+        <div>
+          <h2>Adresse</h2>
+          <p>Informations de localisation (optionnel)</p>
+        </div>
+      </div>
+      <div class="field-grid">
+
+        <div class="field full-width">
+          <label>Adresse</label>
+          <div class="input-wrapper">
+            <i class="pi pi-home input-icon"></i>
+            <input type="text" formControlName="adresse" placeholder="Numéro et nom de rue" class="form-input" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Ville</label>
+          <div class="input-wrapper">
+            <i class="pi pi-building input-icon"></i>
+            <input type="text" formControlName="ville" placeholder="Votre ville" class="form-input" />
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Section 3 : Médical -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-icon s-red"><i class="pi pi-heart"></i></div>
+        <div>
+          <h2>Informations médicales</h2>
+          <p>Couverture santé et données médicales (optionnel)</p>
+        </div>
+      </div>
+      <div class="field-grid">
+
+        <div class="field">
+          <label>Groupe sanguin</label>
+          <select formControlName="groupeSanguin" class="form-select">
+            @for (option of groupeSanguinOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Mutuelle</label>
+          <div class="input-wrapper">
+            <i class="pi pi-file-check input-icon"></i>
+            <input type="text" formControlName="mutuelle" placeholder="Nom de votre mutuelle" class="form-input" />
+          </div>
+        </div>
+
+        <div class="field full-width">
+          <label>Numéro de police mutuelle</label>
+          <div class="input-wrapper">
+            <i class="pi pi-hashtag input-icon"></i>
+            <input type="text" formControlName="numeroPoliceMutuelle" placeholder="Numéro de contrat" class="form-input" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-footer">
+      <button type="submit" class="submit-button" [disabled]="isSubmitting">
+        <i class="pi pi-check"></i>
+        {{ isSubmitting ? 'Enregistrement…' : 'Enregistrer mon profil' }}
+      </button>
+    </div>
+
+  </form>
+
+
+  <!-- ── Quick Actions ─────────────────────────────────────────────────────── -->
+  <div class="quick-actions">
+
+    <!-- Medical Record Card -->
+    <div class="action-card medical-card" (click)="goToMedicalRecord()" role="button" tabindex="0"
+         (keydown.enter)="goToMedicalRecord()">
+      <div class="action-icon s-teal"><i class="pi pi-file-edit"></i></div>
+      <div class="action-body">
+        <h3>Mon Dossier Médical</h3>
+        <p>Consultez, ajoutez ou modifiez vos informations médicales détaillées : diagnostic, médicaments, antécédents et plus.</p>
+      </div>
+      <div class="action-arrow"><i class="pi pi-chevron-right"></i></div>
+    </div>
+
+    <!-- Diagnostic Card -->
+    <div class="action-card diag-card" (click)="goToDiagnostic()" role="button" tabindex="0"
+         (keydown.enter)="goToDiagnostic()">
+      <div class="action-icon s-purple"><i class="pi pi-brain"></i></div>
+      <div class="action-body">
+        <h3>Test de diagnostic</h3>
+        <p>Réalisez votre test cognitif et consultez vos résultats de suivi.</p>
+      </div>
+      <div class="action-arrow"><i class="pi pi-chevron-right"></i></div>
+    </div>
+
+  </div>
+
+</div>

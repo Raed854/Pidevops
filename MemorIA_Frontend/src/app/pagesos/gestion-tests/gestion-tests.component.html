@@ -1,0 +1,438 @@
+<div class="gestion-tests-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <button class="btn-back" (click)="goBack()">
+                <lucide-icon [img]="icons.ArrowLeft" size="18"></lucide-icon>
+                Retour
+            </button>
+            <h1 class="page-title">
+                <lucide-icon [img]="icons.FlaskConical" size="28"></lucide-icon>
+                Gestion des Tests Cognitifs
+            </h1>
+            <p class="page-subtitle">Visualiser, modifier et supprimer les tests cognitifs</p>
+        </div>
+    </div>
+
+    <!-- Restructured Layout Controls -->
+    <div class="test-controls-area" *ngIf="viewMode() === 'list'">
+        <!-- Search Row -->
+        <div class="search-row">
+            <div class="search-wrapper">
+                <lucide-icon [img]="icons.Search" size="20" class="search-icon"></lucide-icon>
+                <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event); onFilterChange()"
+                    placeholder="Rechercher par titre, protocole ou description..." class="search-input-premium">
+            </div>
+        </div>
+
+        <!-- Filters Row -->
+        <div class="filters-row">
+            <h3 class="control-section-label">
+                <lucide-icon [img]="icons.Filter" size="18"></lucide-icon>
+                FILTRES
+            </h3>
+            <div class="filter-group-horizontal">
+                <div class="select-box">
+                    <select [ngModel]="filterType()" (ngModelChange)="filterType.set($event); onFilterChange()"
+                        class="filter-select-premium">
+                        <option [value]="null">Tous les Types</option>
+                        <option *ngFor="let type of testTypes" [value]="type">{{ typeLabels[type] }}</option>
+                    </select>
+                </div>
+
+                <div class="select-box">
+                    <select [ngModel]="filterDifficulty()"
+                        (ngModelChange)="filterDifficulty.set($event); onFilterChange()" class="filter-select-premium">
+                        <option [value]="null">Toutes les Difficultés</option>
+                        <option *ngFor="let level of difficultyLevels" [value]="level">{{ difficultyLabels[level] }}
+                        </option>
+                    </select>
+                </div>
+
+                <button *ngIf="searchQuery() || filterType() || filterDifficulty()" class="btn-clear-filters-premium"
+                    (click)="clearFilters()">
+                    <lucide-icon [img]="icons.XMark" size="14"></lucide-icon>
+                    Effacer les filtres
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics Billboard -->
+        <div class="stats-overview-card">
+            <h3 class="stats-header-title">
+                <lucide-icon [img]="icons.Activity" size="18"></lucide-icon>
+                APERÇU DES TESTS
+            </h3>
+            <div class="stats-grid-2x2">
+                <div class="stat-card-compact total">
+                    <span class="stat-label">Total</span>
+                    <span class="stat-value">{{ stats().total }}</span>
+                </div>
+                <div class="stat-card-compact stable">
+                    <span class="stat-label">Stable</span>
+                    <span class="stat-value">{{ stats().stable }}</span>
+                </div>
+                <div class="stat-card-compact moyen">
+                    <span class="stat-label">Moyen</span>
+                    <span class="stat-value">{{ stats().moyen }}</span>
+                </div>
+                <div class="stat-card-compact critique">
+                    <span class="stat-label">Critique</span>
+                    <span class="stat-value">{{ stats().critique }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Info -->
+    <div class="results-info" *ngIf="!loading() && viewMode() === 'list'">
+        <span class="results-count">{{ filteredTests.length }} test(s) trouvé(s)</span>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading()" class="loading-state">
+        <div class="spinner"></div>
+        <p>Chargement des tests...</p>
+    </div>
+
+    <!-- Tests Cards List View -->
+    <div *ngIf="!loading() && viewMode() === 'list'" class="tests-cards-list">
+
+        <!-- Empty State -->
+        <div *ngIf="filteredTests.length === 0" class="empty-state">
+            <lucide-icon [img]="icons.FlaskConical" size="48"></lucide-icon>
+            <h3>Aucun test trouvé</h3>
+            <p>Modifiez vos filtres ou ajoutez de nouveaux tests</p>
+        </div>
+
+        <!-- Card for each test -->
+        <div *ngFor="let test of filteredTests" class="test-card-wrapper">
+            <div class="test-card" (click)="viewTest(test)"
+                [ngClass]="['border-' + getDifficultyClass(test.difficultyLevel), isExpanded(test.id!) ? 'expanded' : '']">
+
+                <!-- Left: icon -->
+                <div class="card-icon-col">
+                    <div class="test-icon-box" [ngClass]="getDifficultyClass(test.difficultyLevel)">
+                        <lucide-icon [img]="getTypeIcon(test.type)" size="22"></lucide-icon>
+                    </div>
+                </div>
+
+                <!-- Middle: info -->
+                <div class="card-info-col">
+                    <div class="card-title-row">
+                        <span class="card-test-title">{{ test.titre }}</span>
+                        <span class="type-badge">{{ getTypeLabel(test.type) }}</span>
+                        <span class="difficulty-badge" [ngClass]="getDifficultyClass(test.difficultyLevel)">
+                            {{ getDifficultyLabel(test.difficultyLevel || '') }}
+                        </span>
+                        <span class="status-badge" [ngClass]="test.isActive ? 'active' : 'inactive'">
+                            {{ test.isActive ? 'Actif' : 'Inactif' }}
+                        </span>
+                    </div>
+                    <p class="card-test-desc" *ngIf="test.description">
+                        {{ test.description | slice:0:120 }}{{ test.description && test.description.length > 120 ? '...'
+                        :
+                        '' }}
+                    </p>
+                    <div class="card-meta-row">
+                        <span class="meta-chip">
+                            <lucide-icon [img]="icons.Activity" size="13"></lucide-icon>
+                            Score max : {{ test.totalScore }}
+                        </span>
+                        <span class="meta-chip">
+                            <lucide-icon [img]="icons.ChevronRight" size="13"></lucide-icon>
+                            {{ test.durationMinutes }} min
+                        </span>
+                        <button class="expand-toggle-btn" (click)="toggleExpand(test, $event)"
+                            [ngClass]="{'active': isExpanded(test.id!)}">
+                            <lucide-icon [img]="icons.Brain" size="13"></lucide-icon>
+                            {{ isExpanded(test.id!) ? 'Masquer' : 'Questions (' + (test.questions?.length || 0) + ')' }}
+                            <lucide-icon [img]="icons.ChevronRight" size="12"
+                                [style.transform]="isExpanded(test.id!) ? 'rotate(90deg)' : 'none'"></lucide-icon>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: action buttons - Ghost style with colors -->
+                <div class="card-actions-col" (click)="$event.stopPropagation()">
+                    <button class="btn-card-ghost edit" (click)="editTest(test)" title="Modifier">
+                        <lucide-icon [img]="icons.Pencil" size="16"></lucide-icon>
+                        Modifier
+                    </button>
+                    <button class="btn-card-ghost delete" (click)="confirmDelete(test)" title="Supprimer">
+                        <lucide-icon [img]="icons.Trash2" size="16"></lucide-icon>
+                        Supprimer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Nested Questions (Expanded) - Horizontal Cards -->
+            <div class="expanded-questions-area" *ngIf="isExpanded(test.id!)">
+                <div *ngIf="isQuestionsLoading(test.id!)" class="inline-loading">
+                    <div class="mini-spinner"></div>
+                    Chargement des questions...
+                </div>
+
+                <div class="questions-horizontal-list" *ngIf="!isQuestionsLoading(test.id!)">
+                    <div *ngFor="let q of getQuestionsForTest(test.id!); let i = index" class="question-mini-card"
+                        (click)="viewQuestionDetail(q, $event)">
+                        <div class="q-mini-index">{{ i + 1 }}</div>
+                        <div class="q-mini-body">
+                            <span class="q-mini-text">{{ q.questionText | slice:0:40 }}{{ q.questionText.length > 40 ?
+                                '...' : '' }}</span>
+                            <div class="q-mini-meta">
+                                <span class="q-mini-badge">{{ q.questionType }}</span>
+                                <span class="q-mini-points">{{ q.score }} pts</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div *ngIf="getQuestionsForTest(test.id!).length === 0" class="no-questions-msg">
+                        Aucune question trouvée.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULL PAGE DETAIL VIEW - REDESIGNED -->
+    <div *ngIf="viewMode() === 'detail' && selectedTest()" class="detail-view-container">
+        <header class="detail-header-premium">
+            <div class="header-left-content">
+                <button class="btn-back" (click)="viewMode.set('list')">
+                    <lucide-icon [img]="icons.ArrowLeft" size="16"></lucide-icon>
+                    Retour à la gestion
+                </button>
+                <h1 class="detail-main-title">{{ selectedTest()!.titre }}</h1>
+                <div class="detail-badges-row">
+                    <span class="difficulty-badge" [ngClass]="getDifficultyClass(selectedTest()!.difficultyLevel)">
+                        {{ getDifficultyLabel(selectedTest()!.difficultyLevel || '') }}
+                    </span>
+                    <span class="status-badge" [ngClass]="selectedTest()!.isActive ? 'active' : 'inactive'">
+                        {{ selectedTest()!.isActive ? 'Actif' : 'Inactif' }}
+                    </span>
+                </div>
+            </div>
+            <div class="header-right-actions">
+                <button class="btn-primary-purple" (click)="editTest(selectedTest()!)">
+                    <lucide-icon [img]="icons.Pencil" size="18"></lucide-icon>
+                    Modifier la configuration
+                </button>
+            </div>
+        </header>
+
+        <div class="detail-grid-premium">
+            <div class="detail-info-card">
+                <div class="info-icon-box">
+                    <lucide-icon [img]="getTypeIcon(selectedTest()!.type)" size="24"></lucide-icon>
+                </div>
+                <span class="info-label">Catégorie</span>
+                <span class="info-value">{{ getTypeLabel(selectedTest()!.type) }}</span>
+            </div>
+            <div class="detail-info-card">
+                <div class="info-icon-box" style="background: #ECFDF5; color: #10B981;">
+                    <lucide-icon [img]="icons.Activity" size="24"></lucide-icon>
+                </div>
+                <span class="info-label">Performance</span>
+                <span class="info-value">{{ selectedTest()!.totalScore || 30 }} Points max</span>
+            </div>
+            <div class="detail-info-card">
+                <div class="info-icon-box" style="background: #EFF6FF; color: #3B82F6;">
+                    <lucide-icon [img]="icons.ChevronRight" size="24"></lucide-icon>
+                </div>
+                <span class="info-label">Durée Estimée</span>
+                <span class="info-value">{{ selectedTest()!.durationMinutes || 15 }} Minutes</span>
+            </div>
+            <div class="detail-info-card">
+                <div class="info-icon-box" style="background: #FFFBEB; color: #F59E0B;">
+                    <lucide-icon [img]="icons.Brain" size="24"></lucide-icon>
+                </div>
+                <span class="info-label">Questions</span>
+                <span class="info-value">{{ typeQuestions().length || selectedTest()?.questions?.length || 0 }}
+                    items</span>
+            </div>
+        </div>
+
+        <div class="detail-description-box" *ngIf="selectedTest()!.description">
+            <h2 class="section-title">
+                <lucide-icon [img]="icons.MessageSquare" size="20" style="color: #7C3AED;"></lucide-icon>
+                Description Clinique
+            </h2>
+            <p class="description-text">{{ selectedTest()!.description }}</p>
+        </div>
+
+        <!-- Questions Section Redesigned -->
+        <div class="questions-section">
+            <div class="questions-header">
+                <h2 class="section-title">
+                    <lucide-icon [img]="icons.Plus" size="22" style="color: #7C3AED;"></lucide-icon>
+                    Banque de Questions
+                </h2>
+                <button class="btn-fetch-questions" (click)="refreshQuestions()">
+                    <lucide-icon [img]="icons.Search" size="18"></lucide-icon>
+                    Actualiser les questions
+                </button>
+            </div>
+
+            <div *ngIf="selectedTest()?.id && isQuestionsLoading(selectedTest()!.id!)" class="loading-state"
+                style="padding: 3rem;">
+                <div class="spinner"></div>
+                <p>Récupération des données en cours...</p>
+            </div>
+
+            <div class="questions-horizontal-list"
+                *ngIf="selectedTest()?.id && !isQuestionsLoading(selectedTest()!.id!) && getQuestionsForTest(selectedTest()!.id!).length > 0">
+                <div *ngFor="let q of getQuestionsForTest(selectedTest()!.id!); let i = index"
+                    class="question-mini-card" (click)="viewQuestionDetail(q, $event)">
+                    <div class="q-mini-index">{{ i + 1 }}</div>
+                    <div class="q-mini-body">
+                        <span class="q-mini-text">{{ q.questionText | slice:0:40 }}{{ q.questionText.length > 40 ? '...'
+                            : '' }}</span>
+                        <div class="q-mini-meta">
+                            <span class="q-mini-badge">{{ q.questionType }}</span>
+                            <span class="q-mini-points">{{ q.score }} pts</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="selectedTest()?.id && !isQuestionsLoading(selectedTest()!.id!) && getQuestionsForTest(selectedTest()!.id!).length === 0"
+                class="empty-state">
+                <p>Aucune question chargée pour ce protocole. Utilisez le bouton ci-dessus.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT MODAL -->
+    <div *ngIf="showEditModal()" class="modal-overlay" (click)="closeModals()">
+        <div class="modal-content modal-edit" (click)="$event.stopPropagation()">
+            <div class="modal-header edit-header">
+                <h2 class="modal-title">
+                    <lucide-icon [img]="icons.Pencil" size="22"></lucide-icon>
+                    Modifier le Test
+                </h2>
+                <button class="btn-close" (click)="closeModals()">
+                    <lucide-icon [img]="icons.XMark" size="20"></lucide-icon>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Titre</label>
+                    <input type="text" class="form-input" [ngModel]="editForm().titre"
+                        (ngModelChange)="updateEditField('titre', $event)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" [ngModel]="editForm().description"
+                        (ngModelChange)="updateEditField('description', $event)"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Type (Non modifiable)</label>
+                        <div class="form-readonly-field">{{ getTypeLabel(editForm().type || '') }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Difficulté (Non modifiable)</label>
+                        <div class="form-readonly-field">{{ getDifficultyLabel(editForm().difficultyLevel || '') }}
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Score Maximum</label>
+                        <input type="number" class="form-input" [ngModel]="editForm().totalScore"
+                            (ngModelChange)="updateEditField('totalScore', $event)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Durée (minutes)</label>
+                        <input type="number" class="form-input" [ngModel]="editForm().durationMinutes"
+                            (ngModelChange)="updateEditField('durationMinutes', $event)">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-secondary" (click)="closeModals()">Annuler</button>
+                <button class="btn-modal-primary save" (click)="saveEdit()">
+                    Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUESTION DETAIL MODAL -->
+    <div *ngIf="showQuestionDetail()" class="modal-overlay" (click)="closeModals()">
+        <div class="modal-content modal-detail-violet" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <lucide-icon [img]="icons.Brain" size="22"></lucide-icon>
+                    Détails de la Question
+                </h2>
+                <button class="btn-close" (click)="closeModals()">
+                    <lucide-icon [img]="icons.XMark" size="20"></lucide-icon>
+                </button>
+            </div>
+            <div class="modal-body" *ngIf="selectedQuestion()">
+                <div class="detail-card-violet">
+                    <div class="detail-section">
+                        <label class="detail-label">Énoncé de la question</label>
+                        <p class="detail-text-large">{{ selectedQuestion()!.questionText }}</p>
+                    </div>
+
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Type</span>
+                            <span class="q-badge-large">{{ selectedQuestion()!.questionType }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Points</span>
+                            <span class="detail-value">{{ selectedQuestion()!.score }} points</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Ordre</span>
+                            <span class="detail-value">Index #{{ selectedQuestion()!.orderIndex }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Obligatoire</span>
+                            <span class="detail-value">{{ selectedQuestion()!.isRequired ? 'Oui' : 'Non' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary-purple" (click)="closeModals()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE CONFIRM MODAL -->
+    <div *ngIf="showDeleteConfirm()" class="modal-overlay" (click)="closeModals()">
+        <div class="modal-content modal-delete" (click)="$event.stopPropagation()">
+            <div class="modal-header delete-header">
+                <h2 class="modal-title">
+                    <lucide-icon [img]="icons.Trash2" size="22"></lucide-icon>
+                    Confirmer la suppression
+                </h2>
+                <button class="btn-close" (click)="closeModals()">
+                    <lucide-icon [img]="icons.XMark" size="20"></lucide-icon>
+                </button>
+            </div>
+            <div class="modal-body" *ngIf="selectedTest()">
+                <div class="delete-warning">
+                    <div class="warning-icon">⚠️</div>
+                    <p class="warning-text">
+                        Êtes-vous sûr de vouloir supprimer le test
+                        <strong>« {{ selectedTest()!.titre }} »</strong> ?
+                    </p>
+                    <p class="warning-subtext">Cette action est irréversible.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-secondary" (click)="closeModals()">Annuler</button>
+                <button class="btn-modal-danger" (click)="deleteTest()">
+                    <lucide-icon [img]="icons.Trash2" size="16"></lucide-icon>
+                    Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,18 @@
+<div class="progress-circle-container">
+    <svg [attr.width]="size()" [attr.height]="size()" class="progress-circle-svg">
+        <!-- Background circle -->
+        <circle [attr.cx]="size() / 2" [attr.cy]="size() / 2" [attr.r]="radius()" fill="none" stroke="var(--border)"
+            [attr.stroke-width]="strokeWidth" />
+        <!-- Progress circle -->
+        <circle [attr.cx]="size() / 2" [attr.cy]="size() / 2" [attr.r]="radius()" fill="none" [attr.stroke]="color()"
+            [attr.stroke-width]="strokeWidth" [attr.stroke-dasharray]="circumference()"
+            [attr.stroke-dashoffset]="offset()" stroke-linecap="round" class="progress-circle-progress"
+            [attr.transform]="transform()" />
+        <!-- Percentage text -->
+        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" class="progress-circle-text"
+            font-size="32" font-weight="700" [attr.fill]="color()">
+            {{ percentage() }}%
+        </text>
+    </svg>
+    <p class="progress-circle-label">{{ label() }}</p>
+</div>

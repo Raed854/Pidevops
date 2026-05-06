@@ -1,0 +1,125 @@
+<div class="calendar-container">
+
+  <div class="calendar-header">
+    <div class="header-left">
+      <h3 class="calendar-title">
+        {{ monthName | titlecase }} {{ year }}
+      </h3>
+      <div class="patient-info" *ngIf="selectedPatient">
+        <span class="patient-badge">
+          <i class="fas fa-user"></i>
+          {{ selectedPatient.prenom }} {{ selectedPatient.nom }}
+        </span>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <button class="btn-nav" (click)="previousMonth()">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <button class="btn-today" (click)="goToToday()">
+        Aujourd'hui
+      </button>
+      <button class="btn-nav" (click)="nextMonth()">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+
+      <div class="view-switcher">
+        <button
+          class="view-btn"
+          [class.active]="view === 'month'"
+          (click)="changeView('month')">
+          Mois
+        </button>
+        <button
+          class="view-btn"
+          [class.active]="view === 'week'"
+          (click)="changeView('week')">
+          Semaine
+        </button>
+        <button
+          class="view-btn"
+          [class.active]="view === 'day'"
+          (click)="changeView('day')">
+          Jour
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="calendar-weekdays">
+    <div class="weekday" *ngFor="let day of weekDays">
+      {{ day }}
+    </div>
+  </div>
+
+  <div class="calendar-grid">
+    <div
+      *ngFor="let day of calendarDays"
+      class="calendar-day"
+      [class.other-month]="!day.isCurrentMonth"
+      [class.today]="isToday(day.date)"
+      [class.has-events]="day.events.length > 0"
+      (click)="onDayClick(day)">
+
+      <div class="day-number">
+        {{ day.date.getDate() }}
+      </div>
+
+      <div class="day-events" *ngIf="day.events.length > 0">
+        <div class="event-dots-container">
+          <span
+            *ngFor="let event of day.events.slice(0, 5)"
+            class="event-dot-mini"
+            [ngClass]="'status-' + (event.status | lowercase)"
+            [title]="event.title + ' - ' + event.reminderTime + ' (' + event.status + ')'">
+          </span>
+          <span *ngIf="day.events.length > 5" class="more-events-badge">
+            +{{ day.events.length - 5 }}
+          </span>
+        </div>
+      </div>
+
+      <div class="status-indicators" *ngIf="day.isCurrentMonth">
+        <span *ngIf="day.hasCompleted" class="indicator completed"></span>
+        <span *ngIf="day.hasPending" class="indicator pending"></span>
+        <span *ngIf="day.hasCritical" class="indicator critical"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="calendar-legend">
+    <div class="legend-title">Statuts des rappels :</div>
+    <div class="legend-items">
+      <div class="legend-item">
+        <span class="legend-dot status-confirmed"></span>
+        <span>Réalisé</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot status-confirmed_late"></span>
+        <span>Réalisé en retard</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot status-pending"></span>
+        <span>En attente</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot status-planned"></span>
+        <span>Planifié</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot status-missed"></span>
+        <span>Manqué</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot status-canceled"></span>
+        <span>Annulé</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot status-rescheduled"></span>
+        <span>Reporté</span>
+      </div>
+    </div>
+  </div>
+
+</div>

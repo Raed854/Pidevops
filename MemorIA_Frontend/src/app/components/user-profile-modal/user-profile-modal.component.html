@@ -1,0 +1,99 @@
+<div class="modal-overlay" (click)="onOverlayClick($event)">
+  <div class="modal-panel">
+    <button class="close-btn" (click)="onClose()">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <div class="profile-header">
+      <div class="avatar">
+        <i class="fas fa-user-circle"></i>
+        <span class="presence-dot" [class.online]="isOnline" [class.offline]="!isOnline"></span>
+      </div>
+      <h2 class="user-name">{{ userName || 'Utilisateur #' + userId }}</h2>
+      <span class="role-badge" [class.doctor]="userRole === 'SOIGNANT'" [class.caregiver]="userRole === 'ACCOMPAGNANT'">
+        {{ getRoleLabel() }}
+      </span>
+      <p class="status-text" *ngIf="isOnline">🟢 En ligne</p>
+      <p class="status-text offline" *ngIf="!isOnline && lastSeen">{{ lastSeen }}</p>
+      <p class="email-text" *ngIf="userEmail"><i class="fas fa-envelope"></i> {{ userEmail }}</p>
+    </div>
+
+    <!-- Conversation Stats -->
+    <div class="profile-stats" *ngIf="!isLoading && conversationId">
+      <div class="stat-item">
+        <i class="fas fa-paper-plane"></i>
+        <div class="stat-detail">
+          <span class="stat-number">{{ totalMessagesInConv }}</span>
+          <span class="stat-label">Messages échangés</span>
+        </div>
+      </div>
+      <div class="stat-item">
+        <i class="fas fa-photo-video"></i>
+        <div class="stat-detail">
+          <span class="stat-number">{{ sharedMediaCount }}</span>
+          <span class="stat-label">Médias partagés</span>
+        </div>
+      </div>
+      <div class="stat-item" *ngIf="firstMessageDate">
+        <i class="fas fa-calendar-plus"></i>
+        <div class="stat-detail">
+          <span class="stat-number stat-date">{{ firstMessageDate }}</span>
+          <span class="stat-label">Première conversation</span>
+        </div>
+      </div>
+      <div class="stat-item" *ngIf="lastMessageDate">
+        <i class="fas fa-clock"></i>
+        <div class="stat-detail">
+          <span class="stat-number stat-date">{{ lastMessageDate }}</span>
+          <span class="stat-label">Dernier message</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="no-conv" *ngIf="!isLoading && !conversationId">
+      <i class="fas fa-user-circle"></i>
+      <span>Profil utilisateur</span>
+    </div>
+
+    <!-- Tabs: Media -->
+    <div class="tab-bar" *ngIf="conversationId && mediaMessages.length > 0">
+      <button [class.active]="activeTab === 'info'" (click)="activeTab = 'info'">
+        <i class="fas fa-user"></i> Infos
+      </button>
+      <button [class.active]="activeTab === 'media'" (click)="activeTab = 'media'">
+        <i class="fas fa-photo-video"></i> Médias ({{ mediaMessages.length }})
+      </button>
+    </div>
+
+    <!-- Media Tab -->
+    <div class="tab-content" *ngIf="activeTab === 'media' && conversationId">
+      <div class="media-grid" *ngIf="imageMedia.length > 0">
+        <h4 class="media-section-title"><i class="fas fa-image"></i> Images</h4>
+        <div class="image-grid">
+          <div class="media-thumb" *ngFor="let msg of imageMedia" (click)="openImage(getFileUrl(msg.fileUrl))">
+            <img [src]="getFileUrl(msg.fileUrl)" [alt]="getFileName(msg)" loading="lazy">
+          </div>
+        </div>
+      </div>
+      <div class="file-list" *ngIf="fileMedia.length > 0">
+        <h4 class="media-section-title"><i class="fas fa-file"></i> Fichiers</h4>
+        <div class="file-item" *ngFor="let msg of fileMedia">
+          <i class="fas fa-file-alt"></i>
+          <span class="file-name">{{ getFileName(msg) }}</span>
+          <a [href]="getFileUrl(msg.fileUrl)" target="_blank" class="download-btn">
+            <i class="fas fa-download"></i>
+          </a>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="mediaMessages.length === 0">
+        <i class="fas fa-photo-video"></i>
+        <span>Aucun média partagé</span>
+      </div>
+    </div>
+
+    <div class="loading" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Chargement...</span>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,159 @@
+<div class="signup-page">
+  <div class="signup-container">
+
+    <!-- ── Card Header ── -->
+    <div class="signup-header">
+      <div class="header-top">
+        <div class="brand">
+          <div class="brand-logo"><i class="pi pi-brain"></i></div>
+          <span class="brand-name">MemorIA</span>
+        </div>
+        <button class="back-btn" type="button" (click)="backToHome()">
+          <i class="pi pi-arrow-left"></i> Retour
+        </button>
+      </div>
+      <h1 class="header-title">Créer un compte</h1>
+      <p class="header-subtitle">
+        Rejoignez la plateforme MemoriA et commencez votre parcours de soins personnalisé
+      </p>
+    </div>
+
+    <!-- ── Card Body ── -->
+    <div class="signup-body">
+      <form [formGroup]="signupForm" (ngSubmit)="onSubmit()">
+
+        <!-- Role Selector -->
+        <div class="section">
+          <p class="section-label"><i class="pi pi-id-card"></i> Type de compte</p>
+          <div class="role-cards">
+            <div
+              class="role-card"
+              [class.active]="signupForm.get('role')?.value === 'PATIENT'"
+              (click)="selectRole('PATIENT')"
+            >
+              <div class="role-icon patient-icon"><i class="pi pi-heart-fill"></i></div>
+              <span class="role-name">Patient</span>
+              <span class="role-desc">Suivi cognitif & diagnostics</span>
+            </div>
+            <div
+              class="role-card"
+              [class.active]="signupForm.get('role')?.value === 'SOIGNANT'"
+              (click)="selectRole('SOIGNANT')"
+            >
+              <div class="role-icon soignant-icon"><i class="pi pi-verified"></i></div>
+              <span class="role-name">Soignant</span>
+              <span class="role-desc">Médecin ou professionnel de santé</span>
+            </div>
+            <div
+              class="role-card"
+              [class.active]="signupForm.get('role')?.value === 'ACCOMPAGNANT'"
+              (click)="selectRole('ACCOMPAGNANT')"
+            >
+              <div class="role-icon accompagnant-icon"><i class="pi pi-heart"></i></div>
+              <span class="role-name">Accompagnant</span>
+              <span class="role-desc">Aidant familial ou professionnel</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-divider">
+          <span>Informations personnelles</span>
+        </div>
+
+        <!-- Fields grid -->
+        <div class="field-grid">
+
+          <div class="field">
+            <label for="nom">Nom <span class="required">*</span></label>
+            <p-iconField>
+              <p-inputIcon styleClass="pi pi-user" />
+              <input id="nom" pInputText formControlName="nom" placeholder="Votre nom" style="width:100%" />
+            </p-iconField>
+            @if (signupForm.get('nom')?.invalid && signupForm.get('nom')?.touched) {
+              <small class="field-error">Min. 2 caractères requis.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="prenom">Prénom <span class="required">*</span></label>
+            <p-iconField>
+              <p-inputIcon styleClass="pi pi-user" />
+              <input id="prenom" pInputText formControlName="prenom" placeholder="Votre prénom" style="width:100%" />
+            </p-iconField>
+            @if (signupForm.get('prenom')?.invalid && signupForm.get('prenom')?.touched) {
+              <small class="field-error">Min. 2 caractères requis.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="email">Email <span class="required">*</span></label>
+            <p-iconField>
+              <p-inputIcon styleClass="pi pi-envelope" />
+              <input id="email" pInputText type="email" formControlName="email" placeholder="vous@exemple.com" style="width:100%" />
+            </p-iconField>
+            @if (signupForm.get('email')?.invalid && signupForm.get('email')?.touched) {
+              <small class="field-error">Adresse email invalide.</small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="telephone">Téléphone <span class="required">*</span></label>
+            <p-iconField>
+              <p-inputIcon styleClass="pi pi-phone" />
+              <input id="telephone" pInputText type="tel" formControlName="telephone" placeholder="+213 XX XX XX XX" style="width:100%" />
+            </p-iconField>
+            @if (signupForm.get('telephone')?.invalid && signupForm.get('telephone')?.touched) {
+              <small class="field-error">Min. 8 caractères requis.</small>
+            }
+          </div>
+
+          <div class="field full-width">
+            <label for="password">Mot de passe <span class="required">*</span></label>
+            <p-iconField>
+              <p-inputIcon styleClass="pi pi-lock" />
+              <input id="password" pInputText type="password" formControlName="password" placeholder="Min. 6 caractères" style="width:100%" />
+            </p-iconField>
+            @if (signupForm.get('password')?.invalid && signupForm.get('password')?.touched) {
+              <small class="field-error">Min. 6 caractères requis.</small>
+            }
+          </div>
+
+        </div>
+
+        <!-- Info box -->
+        <div class="info-box">
+          <i class="pi pi-info-circle"></i>
+          <div>
+            <p>Après validation par un administrateur et première connexion, vous compléterez votre profil détaillé.</p>
+            <p>Votre compte sera activé par un administrateur avant de pouvoir vous connecter.</p>
+          </div>
+        </div>
+
+        @if (errorMessage) {
+          <div class="alert alert-error">
+            <i class="pi pi-exclamation-circle"></i> {{ errorMessage }}
+          </div>
+        }
+        @if (successMessage) {
+          <div class="alert alert-success">
+            <i class="pi pi-check-circle"></i> {{ successMessage }}
+          </div>
+        }
+
+        <p-button
+          type="submit"
+          label="Créer mon compte"
+          icon="pi pi-user-plus"
+          [loading]="isSubmitting"
+          [style]="{ width: '100%' }"
+        />
+
+        <p class="login-link">
+          Déjà inscrit ? <a routerLink="/login">Se connecter</a>
+        </p>
+
+      </form>
+    </div>
+
+  </div>
+</div>

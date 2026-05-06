@@ -1,0 +1,111 @@
+<div class="test-container">
+
+  @if (!isComplete()) {
+
+    <!-- Header -->
+    <div class="test-header">
+      <div class="header-left">
+        <h1 class="test-title">Test d'Orientation</h1>
+        <div class="dots-row">
+          @for (q of questions; track q.id; let i = $index) {
+            <span class="dot"
+                  [class.active]="currentIndex() === i"
+                  [class.done]="currentIndex() > i">
+            </span>
+          }
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+        <div class="phase-block">
+          <div class="phase-label">Orientation</div>
+          <div class="phase-value">Phase {{ currentIndex() + 1 }}/{{ totalQuestions() }}</div>
+        </div>
+        <div class="timer-box">⏱ {{ formattedTime() }}</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Question card (big bordered card like screenshot) -->
+    <div class="question-card">
+      <span class="question-number">Question {{ currentIndex() + 1 }}</span>
+      <h2 class="question-text">{{ currentQuestion().questionText }}</h2>
+    </div>
+
+    <!-- Instruction -->
+    <p class="instruction-text">{{ currentQuestion().instruction }}</p>
+    <p class="question-counter">Question {{ currentIndex() + 1 }} / {{ totalQuestions() }}</p>
+
+    <!-- MCQ options -->
+    @if (currentQuestion().type === 'mcq') {
+      <div class="options-section">
+        <div class="options-grid">
+          @for (opt of currentQuestion().options || []; track opt) {
+            <button class="option-btn"
+                    [class.selected]="isSelected(opt)"
+                    [class.correct-answer]="showFeedback() && opt === currentQuestion().correctAnswer && isSelected(opt)"
+                    [class.wrong-answer]="showFeedback() && isSelected(opt) && opt !== currentQuestion().correctAnswer"
+                    (click)="selectOption(opt)">
+              {{ opt }}
+            </button>
+          }
+        </div>
+        @if (showFeedback() && getAnswer(currentQuestion().id)) {
+          <div class="answer-feedback" [class.correct]="isCurrentAnswerCorrect()" [class.wrong]="!isCurrentAnswerCorrect()">
+            {{ isCurrentAnswerCorrect() ? '✓ Bonne réponse !' : '✗ Réponse attendue : ' + currentQuestion().correctAnswer }}
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Text input -->
+    @if (currentQuestion().type === 'text') {
+      <div class="text-input-section">
+        <input type="text"
+               class="text-input"
+               [class.input-correct]="showFeedback() && isCurrentAnswerCorrect()"
+               [class.input-wrong]="showFeedback() && getAnswer(currentQuestion().id) && !isCurrentAnswerCorrect()"
+               [placeholder]="currentQuestion().placeholder || 'Tapez votre réponse...'"
+               [value]="getAnswer(currentQuestion().id)"
+               (input)="setAnswer($event, currentQuestion().id)" />
+        @if (showFeedback() && getAnswer(currentQuestion().id)) {
+          <div class="answer-feedback" [class.correct]="isCurrentAnswerCorrect()" [class.wrong]="!isCurrentAnswerCorrect()">
+            {{ isCurrentAnswerCorrect() ? '✓ Bonne réponse !' : '✗ Réponse attendue : ' + currentQuestion().correctAnswer }}
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Navigation -->
+    <div class="navigation">
+      <button class="btn-prev" [disabled]="currentIndex() === 0" (click)="goPrev()">
+        ← Précédent
+      </button>
+      <button class="btn-next" (click)="goNext()">
+        {{ isLastQuestion() ? 'TERMINER →' : 'SUIVANT →' }}
+      </button>
+    </div>
+
+  } @else {
+
+    <!-- Results -->
+    <div class="results-card">
+      <div class="results-icon">🧭</div>
+      <h2 class="results-title">Test d'Orientation Terminé !</h2>
+      <div class="score-circle"
+           [class.high]="finalScore() >= 7"
+           [class.medium]="finalScore() >= 4 && finalScore() < 7"
+           [class.low]="finalScore() < 4">
+        <span class="score-value">{{ finalScore() }}</span>
+        <span class="score-max">/ {{ totalQuestions() }}</span>
+      </div>
+      <div class="results-detail">
+        {{ finalScore() }} bonne(s) réponse(s) sur {{ totalQuestions() }} questions
+      </div>
+      <p class="results-time">⏱ Durée : {{ formattedTime() }}</p>
+      <button class="btn-next" (click)="returnToDashboard()">Retour aux tests</button>
+    </div>
+
+  }
+
+</div>

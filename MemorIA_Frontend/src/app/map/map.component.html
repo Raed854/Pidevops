@@ -1,0 +1,259 @@
+<div class="map-page">
+
+  <!-- ── Top bar ── -->
+  <div class="map-topbar">
+
+    <!-- Search box -->
+    <div class="search-wrapper">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search a place..."
+          [(ngModel)]="searchQuery"
+          (input)="onSearchInput()"
+          (keydown.enter)="onSearchSubmit()"
+          (blur)="showSuggestions = false"
+          (focus)="showSuggestions = searchResults.length > 0"
+          autocomplete="off"
+        />
+        @if (searching) {
+          <span class="search-spinner"></span>
+        }
+        @if (searchQuery) {
+          <button class="clear-btn" (click)="clearSearch()">✕</button>
+        }
+      </div>
+
+      <!-- Suggestions dropdown -->
+      @if (showSuggestions) {
+        <ul class="suggestions">
+          @for (result of searchResults; track result.place_id) {
+            <li class="suggestion-item" (mousedown)="selectResult(result)">
+              <span class="sug-icon">📌</span>
+              <span class="sug-text">
+                <strong>{{ result.display_name.split(',')[0] }}</strong>
+                <small>{{ result.display_name }}</small>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (searchError && !showSuggestions && !searching) {
+        <div class="search-error">{{ searchError }}</div>
+      }
+    </div>
+
+    <!-- Tile style switcher -->
+    <div class="style-switcher">
+      @for (style of tileStyles; track style.id) {
+        <button
+          class="style-btn"
+          [class.style-btn--active]="activeStyleId === style.id"
+          (click)="switchStyle(style.id)"
+        >{{ style.label }}</button>
+      }
+    </div>
+
+    <!-- Action buttons -->
+    <div class="map-buttons">
+      <button
+        class="btn btn-position"
+        (click)="showCurrentPosition()"
+        [disabled]="loadingPosition"
+      >
+        <span class="btn-icon">📍</span>
+        {{ loadingPosition ? 'Locating...' : 'Current Position' }}
+      </button>
+
+     
+
+      <button
+        class="btn"
+        [class.btn-tracking-active]="trackedVisible"
+        [class.btn-tracking]="!trackedVisible"
+        (click)="toggleTrackedPersons()"
+      >
+        <span class="btn-icon">👥</span>
+        {{ trackedVisible ? 'Hide Persons' : 'Tracked Persons' }}
+      </button>
+
+      @if (trackedVisible) {
+        <button
+          class="btn"
+          [class.btn-auto-active]="autoMode"
+          [class.btn-auto]="!autoMode"
+          (click)="toggleAutoMode()"
+        >
+          <span class="btn-icon">⚡</span>
+          {{ autoMode ? 'Auto ON (1s)' : 'Auto (1s)' }}
+        </button>
+
+        <button
+          class="btn"
+          [class.btn-follow-active]="followMode"
+          [class.btn-follow]="!followMode"
+          (click)="toggleFollowMode()"
+        >
+          <span class="btn-icon">🎯</span>
+          {{ followMode ? 'Follow ON' : 'Follow' }}
+        </button>
+      }
+
+      <button
+        class="btn"
+        [class.btn-saved-zones-active]="savedZonesVisible"
+        [class.btn-saved-zones]="!savedZonesVisible"
+        (click)="toggleSavedZones()"
+      >
+        <span class="btn-icon">🗂️</span>
+        {{ savedZonesVisible ? 'Masquer Zones' : 'Zones Sauvegardées' }}
+      </button>
+
+      <button
+        class="btn"
+        [class.btn-zone-save-active]="zoneSaveMode"
+        [class.btn-zone-save]="!zoneSaveMode"
+        (click)="toggleZoneSaveMode()"
+      >
+        <span class="btn-icon">{{ zoneSaveMode ? '✕' : '➕' }}</span>
+        {{ zoneSaveMode ? 'Annuler' : 'Ajouter Zone' }}
+      </button>
+    </div>
+  </div>
+
+  @if (positionError) {
+    <div class="error-banner">⚠️ {{ positionError }}</div>
+  }
+
+  @if (trackingError) {
+    <div class="error-banner">⚠️ {{ trackingError }}</div>
+  }
+
+  <!-- Zone drawing toolbar -->
+  @if (savedPoints.length > 0) {
+    <div class="zone-toolbar">
+      <span class="zone-count">
+        🔵 {{ savedPoints.length }} point{{ savedPoints.length > 1 ? 's' : '' }} selected
+        @if (savedPoints.length < 3 && !zoneDrawn) {
+          <small>(add {{ 3 - savedPoints.length }} more to draw zone)</small>
+        }
+      </span>
+      <button
+        class="btn btn-draw"
+        [disabled]="savedPoints.length < 3"
+        (click)="drawZone()"
+      >
+        🔷 Draw Zone
+      </button>
+      <button class="btn btn-clear" (click)="clearZonePoints()">
+        🗑 Clear
+      </button>
+    </div>
+  }
+
+  @if (trackedVisible && trackedUsers.length > 0) {
+    <div class="tracking-panel">
+      <div class="tracking-panel-title">👥 Personnes trackées</div>
+      @for (u of trackedUsers; track u.id) {
+        <div class="tracking-row">
+          <div class="tracking-row__left">
+            <span class="tracking-id">{{ u.id }}</span>
+            <span class="tracking-time">🕐 {{ u.lastSeen }}</span>
+          </div>
+          <div class="tracking-row__right">
+            <span class="tracking-stat"><span class="tracking-stat__label">dist</span>{{ u.distance }} m</span>
+            <span class="tracking-stat tracking-stat--speed"><span class="tracking-stat__label">⚡</span>{{ u.speed }} km/h</span>
+          </div>
+        </div>
+      }
+      <!-- Legend -->
+      <div class="tracking-legend-row">
+        <span class="legend-item"><span class="legend-dot legend-dot--green"></span>Départ</span>
+        <span class="legend-item"><span class="legend-line"></span>Trajet</span>
+        <span class="legend-item"><span class="legend-dot legend-dot--red"></span>Position</span>
+        <span class="legend-item"><span class="legend-dot legend-dot--blue"></span>Point</span>
+      </div>
+    </div>
+  }
+
+  <!-- ── Zone save hint banner ── -->
+  @if (zoneSaveMode && !zoneSavePoint) {
+    <div class="zone-hint-banner">
+      <span>📌 Cliquez sur la carte pour sélectionner le centre de la zone autorisée</span>
+    </div>
+  }
+
+  <!-- ── Zone save form panel ── -->
+  @if (zoneSaveMode && zoneSavePoint) {
+    <div class="zone-form-panel">
+      <div class="zone-form-header">
+        <span class="zone-form-title">➕ Nouvelle Zone Autorisée</span>
+        <button class="zone-form-close" (click)="cancelZoneSave()">✕</button>
+      </div>
+
+      <div class="zone-form-coords">
+        📍 {{ zoneSavePoint.lat.toFixed(5) }}, {{ zoneSavePoint.lng.toFixed(5) }}
+        <button class="zone-reselect" (click)="zoneSavePoint = null">Changer</button>
+      </div>
+
+      <div class="zone-form-fields">
+        <label class="zone-field">
+          <span>Nom de la zone *</span>
+          <input type="text" [(ngModel)]="zoneForm.nom" placeholder="Ex: Zone Maison" />
+        </label>
+
+        <label class="zone-field">
+          <span>Rayon (mètres)</span>
+          <div class="zone-radius-row">
+            <input type="range" min="50" max="2000" step="50"
+              [(ngModel)]="zoneForm.rayon" (input)="onZoneRadiusChange()" />
+            <span class="zone-radius-val">{{ zoneForm.rayon }} m</span>
+          </div>
+        </label>
+
+        <label class="zone-field">
+          <span>Traitement</span>
+          @if (traitementsLoading) {
+            <div class="zone-loading">⏳ Chargement...</div>
+          } @else if (traitements.length === 0) {
+            <div class="zone-no-data">⚠️ Aucun traitement disponible</div>
+          } @else {
+            <select [(ngModel)]="zoneForm.idTraitement">
+              @for (t of traitements; track t.idTraitement) {
+                <option [value]="t.idTraitement">
+                  #{{ t.idTraitement }} — {{ t.titre }}
+                </option>
+              }
+            </select>
+          }
+        </label>
+
+        <label class="zone-field zone-field--inline">
+          <input type="checkbox" [(ngModel)]="zoneForm.actif" />
+          <span>Zone active</span>
+        </label>
+      </div>
+
+      @if (zoneSaveStatus === 'success') {
+        <div class="zone-status zone-status--success">✅ Zone enregistrée avec succès !</div>
+      }
+      @if (zoneSaveStatus === 'error') {
+        <div class="zone-status zone-status--error">❌ {{ zoneSaveError }}</div>
+      }
+
+      <div class="zone-form-actions">
+        <button class="zone-btn-cancel" (click)="cancelZoneSave()">Annuler</button>
+        <button class="zone-btn-save"
+          [disabled]="!zoneForm.nom.trim() || zoneSaveStatus === 'saving'"
+          (click)="saveZone()">
+          {{ zoneSaveStatus === 'saving' ? '⏳ Enregistrement...' : '💾 Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <div id="map" [class.map--zone-mode]="zoneSaveMode"></div>
+</div>

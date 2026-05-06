@@ -1,0 +1,92 @@
+<div class="stats-page">
+  <div class="notification-toast" *ngIf="notificationMessage">
+    <i class="fas fa-bell"></i>
+    {{ notificationMessage }}
+  </div>
+
+  <div class="stats-header">
+    <h1><i class="fas fa-chart-bar"></i>My Statistics</h1>
+  </div>
+
+  <div class="stats-grid" *ngIf="!isLoading">
+    <!-- Subscription Card -->
+    <div class="stat-card purple full-width" *ngIf="subscriptionLoaded">
+      <div class="stat-icon"><i class="fas fa-id-card"></i></div>
+      <div class="stat-info">
+        <div class="sub-header-row">
+          <span class="stat-label">Statut de mon Pack</span>
+          <span class="plan-badge" *ngIf="activeAbonnement">{{ getPlanLabel() }}</span>
+          <span class="plan-badge none" *ngIf="!activeAbonnement">Aucun pack actif</span>
+        </div>
+
+        <div class="usage-row" *ngIf="activeAbonnement">
+          <div class="usage-text">
+            <span class="stat-value">{{ activeAbonnement.seancesRestantes }}</span>
+            <span class="stat-label-inline">séances restantes</span>
+          </div>
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div class="progress-fill"
+                [style.width.%]="(activeAbonnement.seancesRestantes / getSeancesTotal()) * 100"></div>
+            </div>
+            <span class="progress-text">{{ getSeancesUsed() }} / {{ getSeancesTotal() }} utilisées</span>
+          </div>
+        </div>
+
+        <div class="no-sub-row" *ngIf="!activeAbonnement">
+          <p>Vous n'avez pas de pack de séances actif. Achetez-en un pour commencer à réserver.</p>
+          <button class="btn-primary-sm" (click)="navigateTo('/accompagnant-paiement')">Acheter un Pack</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card teal">
+      <div class="stat-icon"><i class="fas fa-paper-plane"></i></div>
+      <div class="stat-info">
+        <span class="stat-value">{{ stats.totalMessages || 0 }}</span>
+        <span class="stat-label">My Messages </span>
+      </div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-icon"><i class="fas fa-comments"></i></div>
+      <div class="stat-info">
+        <span class="stat-value">{{ stats.totalConversations || 0 }}</span>
+        <span class="stat-label">Conversations</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions" *ngIf="!isLoading">
+    <button class="action-btn booking" (click)="navigateTo('/calendrier-accompagnant')" [disabled]="!activeAbonnement">
+      <i class="fas fa-calendar-plus"></i>
+      <span>Réserver une séance</span>
+    </button>
+    <button class="action-btn tracking" (click)="navigateTo('/mes-reservations')">
+      <i class="fas fa-list-ul"></i>
+      <span>Mes réservations</span>
+    </button>
+    <button class="action-btn payment" (click)="navigateTo('/accompagnant-paiement')">
+      <i class="fas fa-credit-card"></i>
+      <span>Paiement / Packs</span>
+    </button>
+  </div>
+
+  <div class="chart-section" *ngIf="activityData.length > 0">
+    <h2><i class="fas fa-chart-line"></i>Community Activity (7 days)</h2>
+    <div class="chart-container">
+      <div class="chart-bars">
+        <div *ngFor="let day of activityData" class="bar-group">
+          <div class="bar-value">{{ day.count }}</div>
+          <div class="bar" [style.height.px]="getBarHeight(day.count)"></div>
+          <div class="bar-label">{{ getDayLabel(day.date) }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-state" *ngIf="isLoading">
+    <i class="fas fa-spinner fa-spin"></i>
+    <span>Loading your statistics...</span>
+  </div>
+</div>

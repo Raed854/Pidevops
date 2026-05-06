@@ -1,0 +1,44 @@
+/* Patient Selector Styles */
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+div::-webkit-scrollbar {
+  width: 6px;
+}
+
+div::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+div::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+div::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* Patient item hover effect */
+.divide-y > div:hover {
+  box-shadow: inset -4px 0 0 -2px rgba(84, 26, 117, 0.1);
+}
+
+/* Active state animation */
+.divide-y > div[style*="border-color: #541A75"] {
+  animation: slideIn 200ms ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0.8;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

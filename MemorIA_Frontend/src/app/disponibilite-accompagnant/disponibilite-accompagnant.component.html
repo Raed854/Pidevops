@@ -1,0 +1,242 @@
+<div class="page">
+
+  <!-- ══════════════════════════════════════════════
+       PAGE HEADER
+  ══════════════════════════════════════════════ -->
+  <div class="page-header">
+    <div class="page-header__left">
+      <h1 class="page-title">📅 Disponibilités</h1>
+      <p class="page-subtitle">Gérez vos créneaux de disponibilité</p>
+    </div>
+    <button class="btn btn--primary" (click)="openModal()">
+      <span class="btn__icon">＋</span> Nouvelle disponibilité
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       SUMMARY CHIPS
+  ══════════════════════════════════════════════ -->
+  <div class="summary-row">
+    <div class="summary-chip summary-chip--total">
+      <span class="chip-icon">📋</span>
+      <span class="chip-value">{{ disponibilites.length }}</span>
+      <span class="chip-label">Total</span>
+    </div>
+    <div class="summary-chip summary-chip--libre">
+      <span class="chip-icon">✅</span>
+      <span class="chip-value">{{ libreCount }}</span>
+      <span class="chip-label">Libres</span>
+    </div>
+    <div class="summary-chip summary-chip--reserve">
+      <span class="chip-icon">🔒</span>
+      <span class="chip-value">{{ reserveCount }}</span>
+      <span class="chip-label">Réservés</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       MAIN CONTENT: Calendar + Table
+  ══════════════════════════════════════════════ -->
+  <div class="main-grid">
+
+    <!-- ── Calendar ──────────────────────────── -->
+    <section class="section calendar-section">
+      <div class="section-head">
+        <h2 class="section-title">📆 Calendrier</h2>
+      </div>
+
+      <div class="calendar">
+        <!-- Month navigation -->
+        <div class="cal-nav">
+          <button class="cal-nav-btn" (click)="prevMonth()">&#8249;</button>
+          <span class="cal-month-label">{{ calendarMonthLabel }}</span>
+          <button class="cal-nav-btn" (click)="nextMonth()">&#8250;</button>
+        </div>
+
+        <!-- Day-of-week headers -->
+        <div class="cal-grid cal-grid--header">
+          <div class="cal-day-name" *ngFor="let d of weekDays">{{ d }}</div>
+        </div>
+
+        <!-- Day cells -->
+        <div class="cal-grid">
+          <div
+            *ngFor="let day of calendarDays"
+            class="cal-day"
+            [class.cal-day--empty]="!day"
+            [class.cal-day--today]="isToday(day)"
+            [class.cal-day--selected]="isSelected(day)"
+            [class.cal-day--has-dispo]="hasDisponibilite(day)"
+            (click)="selectDay(day)"
+          >
+            <span *ngIf="day">{{ day }}</span>
+            <span class="cal-dot" *ngIf="hasDisponibilite(day)"></span>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="cal-legend">
+          <span class="legend-item"><span class="legend-dot legend-dot--today"></span> Aujourd'hui</span>
+          <span class="legend-item"><span class="legend-dot legend-dot--selected"></span> Sélectionné</span>
+          <span class="legend-item"><span class="legend-dot legend-dot--dispo"></span> Disponibilité</span>
+        </div>
+
+        <p class="cal-hint">Cliquez sur un jour pour ajouter une disponibilité</p>
+      </div>
+    </section>
+
+    <!-- ── Table ─────────────────────────────── -->
+    <section class="section table-section">
+      <div class="section-head">
+        <h2 class="section-title">
+          🗂️ Mes disponibilités
+          <span class="badge badge--blue">{{ disponibilites.length }}</span>
+        </h2>
+      </div>
+
+      <div *ngIf="disponibilites.length === 0" class="empty-state">
+        <div class="empty-state__icon">📭</div>
+        <p>Aucune disponibilité enregistrée.</p>
+        <button class="btn btn--outline" (click)="openModal()">Ajouter la première</button>
+      </div>
+
+      <div class="table-wrapper" *ngIf="disponibilites.length > 0">
+        <table class="dispo-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Heure début</th>
+              <th>Heure fin</th>
+              <th>Statut</th>
+              <th>Heures travaillées</th>
+              <th>Patient</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let dispo of sortedDisponibilites" [class]="'row-' + dispo.statut">
+              <td class="date-cell">
+                <span class="date-day">{{ dispo.date | date:'dd/MM/yyyy' }}</span>
+              </td>
+              <td>
+                <span class="time-chip">{{ dispo.heureDebut }}</span>
+              </td>
+              <td>
+                <span class="time-chip">{{ dispo.heureFin }}</span>
+              </td>
+              <td>
+                <span class="statut-badge" [class.statut-badge--libre]="dispo.statut === 'libre'" [class.statut-badge--reserve]="dispo.statut === 'réservé'">
+                  {{ dispo.statut === 'libre' ? '✅ Libre' : '🔒 Réservé' }}
+                </span>
+              </td>
+              <td class="hours-cell">
+                <span class="hours-value">{{ heuresTravaillees(dispo) }}</span>
+              </td>
+              <td>
+                <span *ngIf="dispo.patientPrenom" class="patient-name">
+                  {{ dispo.patientPrenom }} {{ dispo.patientNom }}
+                </span>
+                <span *ngIf="!dispo.patientPrenom" class="muted">—</span>
+              </td>
+              <td>
+                <div class="action-btns">
+                  <button class="btn btn--sm btn--outline" (click)="openModal(dispo)">✏️</button>
+                  <button class="btn btn--sm btn--danger" (click)="deleteDisponibilite(dispo.id)">🗑️</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div><!-- /main-grid -->
+
+
+</div><!-- /page -->
+
+
+<!-- ════════════════════════════════════════════════
+     MODAL — Ajouter / Modifier Disponibilité
+════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+
+    <div class="modal__header">
+      <h2 class="modal__title">
+        {{ editingId ? '✏️ Modifier' : '➕ Nouvelle' }} disponibilité
+      </h2>
+      <button class="modal__close" (click)="closeModal()">✕</button>
+    </div>
+
+    <div class="modal__body">
+      <form [formGroup]="form" (ngSubmit)="submitForm()">
+
+        <!-- Date -->
+        <div class="form-group">
+          <label class="form-label">Date <span class="req">*</span></label>
+          <input class="form-input" [class.error]="isInvalid('date')"
+                 type="date" formControlName="date" />
+          <span class="form-error" *ngIf="isInvalid('date')">Date requise</span>
+        </div>
+
+        <!-- Heures -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Heure début <span class="req">*</span></label>
+            <input class="form-input" [class.error]="isInvalid('heureDebut')"
+                   type="time" formControlName="heureDebut" />
+            <span class="form-error" *ngIf="isInvalid('heureDebut')">Heure requise</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Heure fin <span class="req">*</span></label>
+            <input class="form-input" [class.error]="isInvalid('heureFin')"
+                   type="time" formControlName="heureFin" />
+            <span class="form-error" *ngIf="isInvalid('heureFin')">Heure requise</span>
+          </div>
+        </div>
+
+        <!-- Statut -->
+        <div class="form-group">
+          <label class="form-label">Statut <span class="req">*</span></label>
+          <div class="statut-toggle">
+            <label class="statut-option" [class.statut-option--active]="statutValue === 'libre'">
+              <input type="radio" formControlName="statut" value="libre" />
+              ✅ Libre
+            </label>
+            <label class="statut-option" [class.statut-option--active]="statutValue === 'réservé'">
+              <input type="radio" formControlName="statut" value="réservé" />
+              🔒 Réservé
+            </label>
+          </div>
+        </div>
+
+        <!-- Patient selector (only when réservé) -->
+        <div *ngIf="statutValue === 'réservé'">
+          <div class="form-divider"><span>Associer à un patient</span></div>
+
+          <div class="form-group">
+            <label class="form-label">Patient <span class="req">*</span></label>
+            <select class="form-input" [class.error]="isInvalid('patientId')" formControlName="patientId">
+              <option [ngValue]="null">-- Sélectionner un patient --</option>
+              <option *ngFor="let p of patients" [ngValue]="p.id">
+                {{ p.prenom }} {{ p.nom }}
+              </option>
+            </select>
+            <span class="form-error" *ngIf="isInvalid('patientId')">Veuillez sélectionner un patient</span>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <div class="modal__footer">
+      <p class="api-error" *ngIf="errorMessage">{{ errorMessage }}</p>
+      <button class="btn btn--outline" type="button" (click)="closeModal()">Annuler</button>
+      <button class="btn btn--primary" type="button" (click)="submitForm()" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Enregistrement...' : (editingId ? '💾 Enregistrer' : '✚ Créer') }}
+      </button>
+    </div>
+
+  </div>
+</div>

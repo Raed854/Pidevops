@@ -1,0 +1,205 @@
+<div class="test-page-container">
+    <!-- Phase 1: Instructions -->
+    <div *ngIf="currentPhase() === 'INSTRUCTIONS'" class="phase-container">
+        <div class="card-header-new">
+            <div class="header-top">
+                <h1 class="test-title">TEST DE MOTS CROISÉS - ID 6</h1>
+                <div class="phase-info">
+                    <span class="phase-label">INTRODUCTION</span>
+                    <span class="phase-count">Phase 1/4</span>
+                </div>
+            </div>
+            <div class="progress-dots">
+                <span class="dot active"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+        </div>
+
+        <div class="card-body centered">
+            <p class="intro-text">
+                Ce test évalue votre mémoire, votre vocabulaire et votre flexibilité mentale.
+            </p>
+
+            <div class="instructions-list">
+                <h3>Veuillez suivre ces instructions :</h3>
+                <ul>
+                    <li><span class="bullet">•</span> Complétez la grille de mots croisés</li>
+                    <li><span class="bullet">•</span> Les définitions sont listées à droite</li>
+                    <li><span class="bullet">•</span> Cliquez sur une case pour la sélectionner</li>
+                    <li><span class="bullet">•</span> Tapez une lettre au clavier</li>
+                    <li><span class="bullet">•</span> Utilisez les flèches pour naviguer</li>
+                </ul>
+            </div>
+
+            <div class="card-footer">
+                <button class="btn-primary" (click)="startTest()">
+                    COMMENCER LE TEST →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase 2: Play -->
+    <!-- tabindex="0" gardé pour compatibilité mais le clavier est géré par @HostListener -->
+    <div *ngIf="currentPhase() === 'PLAY'" class="phase-container" tabindex="0">
+        <div class="card-header-new">
+            <div class="header-top">
+                <h1 class="test-title">TEST DE MOTS CROISÉS - ID 6</h1>
+                <div class="phase-info">
+                    <span class="phase-label">RÉFLEXION</span>
+                    <span class="phase-count">Phase 2/4</span>
+                </div>
+            </div>
+            <div class="progress-dots">
+                <span class="dot active"></span>
+                <span class="dot active"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+        </div>
+
+        <header class="interface-header-sub">
+            <div class="timer-box">
+                <lucide-icon [img]="icons.Clock" size="20"></lucide-icon>
+                <span>Temps restant : {{ formatTime(timeLeftSeconds()) }}</span>
+            </div>
+        </header>
+
+        <div class="game-content">
+            <div class="lavender-focus-box">
+
+                <!-- Grille -->
+                <div class="grid-section">
+                    <div class="crossword-grid">
+                        <ng-container *ngFor="let row of grid(); let y = index">
+                            <div *ngFor="let cell of row; let x = index"
+                                class="grid-cell"
+                                [class.active]="selectedCell()?.x === x && selectedCell()?.y === y"
+                                [class.blocked]="cell.isBlocked"
+                                (click)="onCellClick(x, y)">
+                                <span class="cell-number" *ngIf="cell.number">{{ cell.number }}</span>
+                                <span class="cell-letter" *ngIf="!cell.isBlocked">{{ cell.letter }}</span>
+                            </div>
+                        </ng-container>
+                    </div>
+                </div>
+
+                <!-- Définitions -->
+                <div class="definitions-section">
+                    <div class="def-group">
+                        <h2 class="def-title">HORIZONTAUX</h2>
+                        <div class="def-list">
+                            <div *ngFor="let def of horizontalDefs" class="def-item">
+                                <span class="def-num">{{ def.id }}</span>
+                                <div class="def-text">
+                                    <span class="def-clue">{{ def.clue }}</span>
+                                    <span class="def-len">({{ def.length }} lettres)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="def-group mt-4">
+                        <h2 class="def-title">VERTICAUX</h2>
+                        <div class="def-list">
+                            <div *ngFor="let def of verticalDefs" class="def-item">
+                                <span class="def-num">{{ def.id }}</span>
+                                <div class="def-text">
+                                    <span class="def-clue">{{ def.clue }}</span>
+                                    <span class="def-len">({{ def.length }} lettres)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-footer">
+                <div class="grid-stats">
+                    <span>Cases remplies : {{ getFilledCount() }} / {{ getTotalPlayableCells() }}</span>
+                </div>
+                <div class="grid-actions">
+                    <button class="btn-outline" (click)="clearGrid()">EFFACER</button>
+                    <button class="btn-primary" (click)="validatePrompt()">VALIDER</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase 3: Validation -->
+    <div *ngIf="currentPhase() === 'VALIDATION'" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-body">
+                <div class="check-icon">
+                    <lucide-icon [img]="icons.ListChecks" size="48"></lucide-icon>
+                </div>
+                <h2>Grille complétée !</h2>
+                <p>Voulez-vous valider vos réponses ? Vous ne pourrez plus les modifier.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-outline" (click)="cancelValidation()">NON, REVENIR</button>
+                <button class="btn-primary" (click)="finishTest()">OUI, VALIDER</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase 4: Results -->
+    <div *ngIf="currentPhase() === 'RESULTS'" class="phase-container results-card">
+        <div class="card-header-new">
+            <div class="header-top">
+                <h1 class="test-title">RÉSULTATS DU TEST</h1>
+                <div class="phase-info">
+                    <span class="phase-label">BILAN</span>
+                    <span class="phase-count">Terminé</span>
+                </div>
+            </div>
+            <div class="progress-dots">
+                <span class="dot active"></span>
+                <span class="dot active"></span>
+                <span class="dot active"></span>
+                <span class="dot active"></span>
+            </div>
+        </div>
+
+        <div class="card-body centered">
+            <div class="lavender-focus-box results-box">
+                <span class="score-main-new">{{ totalScore() }}</span>
+                <span class="score-label">Points obtenus sur {{ maxScore }}</span>
+            </div>
+
+            <p class="secondary-info">Précision globale : {{ (totalScore() / maxScore * 100).toFixed(0) }}%</p>
+            <p class="secondary-info">Temps utilisé : {{ timeSpentStr }}</p>
+
+            <div class="table-container-new">
+                <table class="results-table-new">
+                    <thead>
+                        <tr>
+                            <th>MOT</th>
+                            <th>RÉPONSE</th>
+                            <th>STATUT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let res of results(); let i = index">
+                            <td class="word-id">{{ res.id }}</td>
+                            <td class="user-answer-new">{{ res.user || '-' }}</td>
+                            <td>
+                                <span class="status-icon"
+                                    [ngClass]="{'success': res.isCorrect, 'error': !res.isCorrect}">
+                                    {{ res.isCorrect ? '✓' : '✗' }}
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-footer">
+                <button class="btn-primary" (click)="exit()">
+                    RETOUR AU DASHBOARD →
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

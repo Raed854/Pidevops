@@ -1,0 +1,321 @@
+/* ── Page ── */
+.login-page {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Left: Form panel ── */
+.form-panel {
+  flex: 0 0 45%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  padding: 2.5rem 2rem;
+}
+
+.form-wrapper {
+  width: 100%;
+  max-width: 400px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+}
+
+.brand-logo {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6c2eb9, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+}
+
+.brand-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2e1a47;
+}
+
+.form-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.35rem;
+}
+
+.form-subtitle {
+  color: #64748b;
+  margin: 0 0 2rem;
+  font-size: 0.95rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.field label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.input-wrapper:focus-within {
+  border-color: #6c2eb9;
+  box-shadow: 0 0 0 3px rgba(108, 46, 185, 0.1);
+}
+
+.input-icon {
+  position: absolute;
+  left: 1rem;
+  color: #9ca3af;
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.form-input {
+  flex: 1;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  width: 100%;
+  outline: none;
+  color: #1f2937;
+}
+
+.form-input::placeholder {
+  color: #d1d5db;
+}
+
+.sign-in-button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #6c2eb9, #a855f7);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.sign-in-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(108, 46, 185, 0.3);
+}
+
+.sign-in-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.sign-in-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.field-error {
+  color: #ef4444;
+  font-size: 0.75rem;
+}
+
+.error-alert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.signup-link {
+  text-align: center;
+  margin-top: 1.75rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.signup-link a {
+  color: #6c2eb9;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.signup-link a:hover {
+  text-decoration: underline;
+}
+
+/* ── Right: Motivation panel ── */
+.info-panel {
+  flex: 1;
+  background: linear-gradient(145deg, #2e1a47 0%, #4c1d95 45%, #7c3aed 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.info-panel::before {
+  content: '';
+  position: absolute;
+  top: -90px;
+  right: -90px;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.info-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -70px;
+  left: -70px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.info-content {
+  position: relative;
+  z-index: 1;
+  max-width: 480px;
+  color: white;
+}
+
+.info-logo {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  backdrop-filter: blur(8px);
+}
+
+.info-logo-icon {
+  font-size: 2rem;
+  color: white;
+}
+
+.info-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.5px;
+}
+
+.info-tagline {
+  font-size: 1.1rem;
+  opacity: 0.85;
+  margin: 0;
+}
+
+.info-divider {
+  width: 3rem;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 2px;
+  margin: 1.5rem 0;
+}
+
+.info-description {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+}
+
+.info-features {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.feature {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.feature-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.feature strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.15rem;
+}
+
+.feature p {
+  font-size: 0.82rem;
+  opacity: 0.8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.info-quote {
+  font-size: 0.9rem;
+  font-style: italic;
+  opacity: 0.7;
+  border-left: 3px solid rgba(255, 255, 255, 0.4);
+  padding-left: 1rem;
+  margin: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .login-page { flex-direction: column; }
+  .form-panel { flex: none; padding: 2.5rem 1.5rem; }
+  .info-panel { padding: 2.5rem 1.5rem; }
+  .info-features { display: none; }
+}
+
+@media (max-width: 480px) {
+  .form-panel { padding: 2rem 1rem; }
+}

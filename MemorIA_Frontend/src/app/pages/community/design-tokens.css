@@ -1,0 +1,62 @@
+/* Creative Design Tokens for Messaging */
+:root {
+    --glass-purple: rgba(84, 26, 117, 0.08);
+    --glass-white: rgba(255, 255, 255, 0.6);
+    --bubble-sent: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    --bubble-received: rgba(255, 255, 255, 0.9);
+    --sidebar-bg: rgba(255, 255, 255, 0.4);
+    --accent-glow: 0 0 15px rgba(108, 92, 231, 0.3);
+}
+
+.premium-chat-layout {
+    display: flex;
+    height: calc(100vh - 120px);
+    background: radial-gradient(circle at top right, rgba(108, 92, 231, 0.05), transparent),
+        radial-gradient(circle at bottom left, rgba(84, 26, 117, 0.05), transparent);
+    border-radius: 24px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.chat-sidebar {
+    width: 320px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.message-bubble {
+    max-width: 75%;
+    padding: 12px 18px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.message-bubble.sent {
+    background: var(--bubble-sent);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.2);
+}
+
+.message-bubble.received {
+    background: var(--bubble-received);
+    color: #2d3436;
+    align-self: flex-end;
+    /* This is just a stub, will be corrected in actual CSS */
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}

@@ -1,0 +1,95 @@
+<div class="test-container" [class.complete]="isComplete()">
+  @if (!isComplete()) {
+  <!-- Header -->
+  <div class="test-header">
+    <div class="header-left">
+      <h1 class="test-title">TEST MMSE</h1>
+      <div class="section-pills">
+        @for (sec of sections; track sec; let i = $index) {
+        <span class="section-pill" [class.active]="sectionIndex() === i" [class.done]="sectionIndex() > i">
+          {{ sec }}
+        </span>
+        }
+      </div>
+    </div>
+    <div class="timer-box">
+      <span class="timer-icon">⏱️</span>
+      <span class="timer-text">{{ formattedTime() }}</span>
+    </div>
+  </div>
+
+  <!-- Patient + Score -->
+  <div class="patient-row">
+    <span class="patient-label">Patient : <strong>{{ patientName() }}</strong></span>
+    <span class="score-badge">Score : {{ currentScore() }} / 30</span>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-section">
+    <div class="progress-labels">
+      <span>Section : <strong>{{ currentSection() }}</strong></span>
+      <span>Question {{ currentIndex() + 1 }} / {{ totalQuestions() }}</span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar" [style.width.%]="progressPercentage()"></div>
+    </div>
+  </div>
+
+  <!-- Question -->
+  <div class="question-card">
+    <div class="section-tag">{{ currentQuestion().section }}</div>
+    <h2 class="question-text">{{ currentQuestion().questionText }}</h2>
+    <div class="max-score-badge">Max : {{ currentQuestion().maxScore }} pt{{ currentQuestion().maxScore > 1 ? 's' : ''
+      }}</div>
+
+    @if (currentQuestion().type === 'mcq') {
+    <div class="options-list">
+      @for (opt of currentQuestion().options || []; track opt) {
+      <button class="option-btn" [class.selected]="getAnswer(currentQuestion().id) === opt" (click)="selectOption(opt)">
+        {{ opt }}
+      </button>
+      }
+    </div>
+    } @else if (currentQuestion().type === 'text') {
+    <div class="text-input-wrapper">
+      <input type="text" class="text-input" placeholder="Votre réponse..." [value]="getAnswer(currentQuestion().id)"
+        (input)="setAnswer(currentQuestion().id, $any($event.target).value)" />
+    </div>
+    } @else if (currentQuestion().type === 'yesno') {
+    <div class="options-list">
+      <button class="option-btn" [class.selected]="getAnswer(currentQuestion().id) === 'Oui'"
+        (click)="selectOption('Oui')">✓ Réussi</button>
+      <button class="option-btn option-no" [class.selected]="getAnswer(currentQuestion().id) === 'Non'"
+        (click)="selectOption('Non')">✗ Non réussi</button>
+    </div>
+    }
+  </div>
+
+  <!-- Navigation -->
+  <div class="navigation">
+    <button class="btn-prev" [disabled]="currentIndex() === 0" (click)="goPrev()">← Précédent</button>
+    <button class="btn-next" (click)="goNext()">
+      {{ isLastQuestion() ? 'Terminer' : 'Suivant →' }}
+    </button>
+  </div>
+
+  } @else {
+  <!-- Results -->
+  <div class="results-card">
+    <div class="results-icon">🧠</div>
+    <h2 class="results-title">Test MMSE Terminé !</h2>
+    <div class="score-circle" [class.high]="finalScore() >= 24" [class.medium]="finalScore() >= 18 && finalScore() < 24"
+      [class.low]="finalScore() < 18">
+      <span class="score-value">{{ finalScore() }}</span>
+      <span class="score-max">/ 30</span>
+    </div>
+    <div class="score-interpretation">
+      @if (finalScore() >= 24) { <span class="interp-good">Normal (≥ 24)</span> }
+      @else if (finalScore() >= 18) { <span class="interp-medium">Troubles modérés (18–23)</span> }
+      @else { <span class="interp-bad">Troubles sévères (&lt; 18)</span> }
+    </div>
+    <p class="results-time">Durée : {{ formattedTime() }}</p>
+    <button class="btn-next" (click)="returnToDashboard()">Retour aux tests</button>
+  </div>
+  }
+</div>

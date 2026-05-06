@@ -1,0 +1,136 @@
+<div class="test-results-page">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <h2>Chargement des résultats...</h2>
+    </div>
+  </div>
+
+  <!-- Results Content -->
+  <div *ngIf="!isLoading && session && test" class="results-content">
+    <!-- Header -->
+    <header class="results-header">
+      <button class="btn-back" (click)="goBack()" title="Retour">
+        <lucide-icon [img]="icons.ArrowLeft" size="20"></lucide-icon>
+        Retour
+      </button>
+      
+      <div class="test-info">
+        <h1>{{ test.name }}</h1>
+        <p>Terminé le {{ session.endTime | date:'dd/MM/yyyy à HH:mm' }}</p>
+      </div>
+    </header>
+
+    <!-- Score Overview -->
+    <section class="score-overview">
+      <div class="score-display">
+        <div class="score-circle" [style.color]="getScoreColor()">
+          <span class="score-value">{{ session.score || 0 }}%</span>
+          <span class="score-label">Score</span>
+        </div>
+        
+        <div class="score-details">
+          <div class="performance-level">
+            <h2>{{ getPerformanceLevel() }}</h2>
+            <div class="star-rating">
+              <span 
+                *ngFor="let star of [1, 2, 3, 4, 5]" 
+                class="star"
+                [class.filled]="star <= getStarRating()">
+                ⭐
+              </span>
+            </div>
+          </div>
+          
+          <p class="performance-message">{{ getPerformanceMessage() }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Statistics -->
+    <section class="statistics-section">
+      <h3>Statistiques détaillées</h3>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <lucide-icon [img]="icons.CheckCircle" size="24"></lucide-icon>
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ getCorrectAnswers() }}/{{ test.totalQuestions }}</span>
+            <span class="stat-label">Réponses correctes</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <lucide-icon [img]="icons.Clock" size="24"></lucide-icon>
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ formatDuration(getTotalTime()) }}</span>
+            <span class="stat-label">Temps total</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <lucide-icon [img]="icons.Trophy" size="24"></lucide-icon>
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ getStarRating() }}/5</span>
+            <span class="stat-label">Étoiles gagnées</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <lucide-icon [img]="icons.TrendingUp" size="24"></lucide-icon>
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ session.progress }}%</span>
+            <span class="stat-label">Progression</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recommendations -->
+    <section class="recommendations-section">
+      <h3>Recommandations personnalisées</h3>
+      
+      <div class="recommendations-list">
+        <div *ngFor="let recommendation of getRecommendations()" class="recommendation-item">
+          <lucide-icon [img]="icons.AlertCircle" size="16"></lucide-icon>
+          <span>{{ recommendation }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Actions -->
+    <section class="actions-section">
+      <div class="actions-grid">
+        <button class="btn-primary" (click)="retakeTest()">
+          <lucide-icon [img]="icons.Trophy" size="16"></lucide-icon>
+          Recommencer le test
+        </button>
+        
+        <button class="btn-secondary" (click)="goBack()">
+          Retour au tableau de bord
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!isLoading && (!session || !test)" class="error-state">
+    <div class="error-content">
+      <lucide-icon [img]="icons.AlertCircle" size="48" class="error-icon"></lucide-icon>
+      <h2>Résultats non trouvés</h2>
+      <p>Les résultats de ce test ne sont pas disponibles.</p>
+      <button class="btn-primary" (click)="goBack()">
+        Retour au tableau de bord
+      </button>
+    </div>
+  </div>
+</div>

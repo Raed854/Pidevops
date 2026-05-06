@@ -1,0 +1,136 @@
+<app-navbar></app-navbar>
+
+<div class="doctor-planning-wrapper">
+  <app-sidebar-diagnostic></app-sidebar-diagnostic>
+
+  <div class="doctor-planning-container">
+
+  <!-- En-tête -->
+  <header class="planning-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-calendar-check"></i>
+        Planning & Rappels
+      </h1>
+      <p class="page-subtitle">Gestion des rappels patients</p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        *ngIf="selectedPatient"
+        type="button"
+        class="btn-add-reminder"
+        (click)="openAddReminderModal()">
+        <i class="fas fa-plus"></i>
+        Nouveau rappel
+      </button>
+
+      <!-- Bouton Export PDF -->
+      <button
+        *ngIf="selectedPatient"
+        type="button"
+        class="btn-export-pdf"
+        [disabled]="isExportingPdf"
+        (click)="exportPatientPdf()"
+        title="Exporter le rapport complet du patient en PDF">
+        <i class="fas" [ngClass]="isExportingPdf ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+        {{ isExportingPdf ? 'Génération…' : 'Export PDF' }}
+      </button>
+    </div>
+  </header>
+
+  <!-- Layout principal 3 colonnes -->
+  <div class="planning-layout">
+
+    <!-- Colonne gauche : Liste des patients -->
+    <aside class="patients-sidebar">
+      <app-patient-list
+        (patientSelected)="onPatientSelected($event)">
+      </app-patient-list>
+    </aside>
+
+    <!-- Colonne centrale : Calendrier -->
+    <main class="calendar-section">
+
+      <ng-container *ngIf="!selectedPatient; else calendarContent">
+        <div class="no-patient-selected">
+          <i class="fas fa-user-circle"></i>
+          <h3>Aucun patient sélectionné</h3>
+          <p>Sélectionnez un patient dans la liste pour afficher son calendrier</p>
+        </div>
+      </ng-container>
+
+      <ng-template #calendarContent>
+        <div *ngIf="isLoadingCalendar; else calendarReady">
+          <div class="loading-calendar">
+            <div class="spinner"></div>
+            <p>Chargement du calendrier...</p>
+          </div>
+        </div>
+
+        <ng-template #calendarReady>
+          <app-calendar-view
+            [events]="calendarEvents"
+            [currentMonth]="currentMonth"
+            [view]="calendarView"
+            [selectedPatient]="selectedPatient!"
+            (dayClicked)="onDayClicked($event)"
+            (monthChanged)="onMonthChanged($event)"
+            (viewChanged)="onViewChanged($event)">
+          </app-calendar-view>
+        </ng-template>
+      </ng-template>
+
+    </main>
+
+    <!-- Colonne droite : Statistiques -->
+    <aside class="stats-sidebar">
+
+      <ng-container *ngIf="!selectedPatient || !adherenceStats; else statsContent">
+        <div class="no-stats">
+          <i class="fas fa-chart-pie"></i>
+          <p>Statistiques disponibles après sélection d'un patient</p>
+        </div>
+      </ng-container>
+
+      <ng-template #statsContent>
+        <app-stats-panel
+          [metrics]="adherenceStats!"
+          [patient]="selectedPatient!">
+        </app-stats-panel>
+      </ng-template>
+
+    </aside>
+
+  </div>
+
+  <!-- Modales -->
+
+  <!-- Modal détail d'un jour -->
+  <app-day-detail-modal
+    *ngIf="showDayDetailModal && selectedDate && selectedPatient"
+    [date]="selectedDate"
+    [reminders]="calendarEvents"
+    [patient]="selectedPatient"
+    (close)="showDayDetailModal = false"
+    (reminderMarkedDone)="onReminderMarkedDone($event)"
+    (reminderDeleted)="onDeleteReminder($event)"
+    (reminderUpdated)="onReminderUpdated($event)"
+    (addReminderRequested)="onAddReminderRequested($event)">
+  </app-day-detail-modal>
+
+  <!-- Modal formulaire de rappel -->
+  <app-reminder-form-modal
+    *ngIf="showReminderFormModal && selectedPatient"
+    [patient]="selectedPatient!"
+    [selectedDate]="selectedDate || undefined"
+    [reminderMode]="editingReminder ? 'edit' : 'create'"
+    [selectedReminder]="$any(editingReminder)"
+    (reminderAdded)="onSaveReminder($event)"
+    (close)="showReminderFormModal = false">
+  </app-reminder-form-modal>
+
+  </div><!-- /doctor-planning-container -->
+
+</div><!-- /doctor-planning-wrapper -->
+

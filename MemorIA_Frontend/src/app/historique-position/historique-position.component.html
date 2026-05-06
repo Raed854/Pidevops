@@ -1,0 +1,244 @@
+<div class="hp-page">
+
+  <!-- Header -->
+  <div class="hp-header">
+    <div class="hp-header__left">
+      <h1 class="hp-title">📍 Historique des Positions</h1>
+      <span class="hp-count">{{ records.length }} enregistrement{{ records.length !== 1 ? 's' : '' }}</span>
+    </div>
+    <div class="hp-header__right">
+      <!-- Filter by traitement -->
+      <select class="hp-filter" [(ngModel)]="filterTraitementId" (change)="loadAll()">
+        <option [value]="0">Tous les traitements</option>
+        @for (t of traitements; track t.idTraitement) {
+          <option [value]="t.idTraitement">#{{ t.idTraitement }} — {{ t.titre }}</option>
+        }
+      </select>
+
+      <!-- Live refresh toggle -->
+      <button class="hp-btn"
+        [class.hp-btn--live]="liveMode"
+        [class.hp-btn--ghost]="!liveMode"
+        (click)="toggleLive()"
+        title="Actualisation automatique depuis le simulateur GPS">
+        @if (liveMode) {
+          <span class="hp-live-dot"></span> Live ({{ liveCount }})
+        } @else {
+          ⚡ Live
+        }
+      </button>
+
+      <button class="hp-btn hp-btn--ghost" (click)="loadAll()" title="Rafraîchir">🔄</button>
+      <button class="hp-btn hp-btn--primary" (click)="openForm()">➕ Ajouter</button>
+    </div>
+  </div>
+
+  <!-- Error -->
+  @if (error) {
+    <div class="hp-error">⚠️ {{ error }}</div>
+  }
+
+  <!-- Loading -->
+  @if (loading) {
+    <div class="hp-loading">
+      <span class="hp-spinner"></span> Chargement...
+    </div>
+  }
+
+  <!-- Grouped Table -->
+  @if (!loading) {
+    @if (records.length === 0) {
+      <div class="hp-empty">
+        <span class="hp-empty__icon">🗂️</span>
+        <p>Aucun historique de position enregistré.</p>
+        <button class="hp-btn hp-btn--primary" (click)="openForm()">Ajouter le premier</button>
+      </div>
+    } @else {
+      <div class="hp-table-wrap">
+        <table class="hp-table">
+          <thead>
+            <tr>
+              <th class="hp-th--toggle"></th>
+              <th>Traitement</th>
+              <th>Heure départ</th>
+              <th>Durée arrêt</th>
+              <th>Dist. préc.</th>
+              <th>Dist. suiv.</th>
+              <th>Enregistré le</th>
+              <th>Sur la carte</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (group of groupedDays; track group.dateKey) {
+
+              <!-- Day header row -->
+              <tr class="hp-day-row" (click)="toggleDay(group)">
+                <td class="hp-day-toggle">
+                  <span class="hp-chevron" [class.hp-chevron--open]="group.expanded">▶</span>
+                </td>
+                <td colspan="6" class="hp-day-label">
+                  <span class="hp-day-icon">📅</span>
+                  {{ group.label }}
+                  <span class="hp-day-count">{{ group.records.length }} point{{ group.records.length !== 1 ? 's' : '' }}</span>
+                </td>
+                <td class="hp-day-map-cell" (click)="$event.stopPropagation()">
+                  <button class="hp-btn-map" (click)="openMapPanel(group)" title="Voir le chemin sur la carte">
+                    🗺️ Voir sur la carte
+                  </button>
+                </td>
+                <td></td>
+              </tr>
+
+              <!-- Detail rows (visible when expanded) -->
+              @if (group.expanded) {
+                @for (r of group.records; track r.idHistoriquePosition) {
+                  <tr class="hp-detail-row">
+                    <td class="hp-td--id">{{ r.idHistoriquePosition }}</td>
+                    <td>
+                      @if (r.traitements) {
+                        <span class="hp-badge">{{ r.traitements.titre }}</span>
+                      } @else {
+                        <span class="hp-badge hp-badge--gray">—</span>
+                      }
+                    </td>
+                    <td>{{ fmt(r.heureDepart) }}</td>
+                    <td>
+                      @if (r.dureeArretMinute != null) {
+                        <span class="hp-pill">{{ r.dureeArretMinute }} min</span>
+                      } @else { — }
+                    </td>
+                    <td>{{ r.distancePointPrecedent != null ? (r.distancePointPrecedent + ' m') : '—' }}</td>
+                    <td>{{ r.distancePointSuivant  != null ? (r.distancePointSuivant  + ' m') : '—' }}</td>
+                    <td class="hp-td--date">{{ fmt(r.dateEnregistrement) }}</td>
+                    <td>
+                      <span class="hp-td--mono hp-coords">{{ r.latitude.toFixed(4) }}, {{ r.longitude.toFixed(4) }}</span>
+                    </td>
+                    <td>
+                      <button class="hp-btn-del" (click)="delete(r.idHistoriquePosition)" title="Supprimer">🗑</button>
+                    </td>
+                  </tr>
+                }
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Map Panel -->
+  @if (showMapPanel) {
+    <div class="hp-overlay" (click)="closeMapPanel()"></div>
+    <div class="hp-map-panel">
+      <div class="hp-map-header">
+        <div class="hp-map-header__left">
+          <span class="hp-map-icon">🗺️</span>
+          <div>
+            <div class="hp-map-title">Chemin du {{ mapDayGroup?.label }}</div>
+            <div class="hp-map-sub">{{ mapDayGroup?.records?.length }} point{{ (mapDayGroup?.records?.length ?? 0) !== 1 ? 's' : '' }} GPS</div>
+          </div>
+        </div>
+        <button class="hp-form-close" (click)="closeMapPanel()">✕</button>
+      </div>
+      <div id="hp-map-container" class="hp-map-container"></div>
+      <div class="hp-map-legend">
+        <span class="hp-legend-dot hp-legend-dot--start"></span> Départ
+        <span class="hp-legend-dot hp-legend-dot--mid"></span> Passage
+        <span class="hp-legend-dot hp-legend-dot--end"></span> Arrivée
+      </div>
+    </div>
+  }
+
+  <!-- Form overlay -->
+  @if (showForm) {
+    <div class="hp-overlay" (click)="closeForm()"></div>
+    <div class="hp-form-panel">
+      <div class="hp-form-header">
+        <span>➕ Nouvel Historique de Position</span>
+        <button class="hp-form-close" (click)="closeForm()">✕</button>
+      </div>
+
+      <div class="hp-form-body">
+        <!-- Row 1: lat/lon -->
+        <div class="hp-form-row">
+          <label class="hp-field">
+            <span>Latitude *</span>
+            <input type="number" step="0.00001" [(ngModel)]="form.latitude" placeholder="Ex: 48.8566" />
+          </label>
+          <label class="hp-field">
+            <span>Longitude *</span>
+            <input type="number" step="0.00001" [(ngModel)]="form.longitude" placeholder="Ex: 2.3522" />
+          </label>
+        </div>
+
+        <!-- Row 2: arrivée / départ -->
+        <div class="hp-form-row">
+          <label class="hp-field">
+            <span>Heure arrivée</span>
+            <input type="datetime-local" [(ngModel)]="form.heureArrive" />
+          </label>
+          <label class="hp-field">
+            <span>Heure départ</span>
+            <input type="datetime-local" [(ngModel)]="form.heureDepart" />
+          </label>
+        </div>
+
+        <!-- Row 3: durée + date enregistrement -->
+        <div class="hp-form-row">
+          <label class="hp-field">
+            <span>Durée arrêt (min)</span>
+            <input type="number" min="0" [(ngModel)]="form.dureeArretMinute" />
+          </label>
+          <label class="hp-field">
+            <span>Date enregistrement</span>
+            <input type="datetime-local" [(ngModel)]="form.dateEnregistrement" />
+          </label>
+        </div>
+
+        <!-- Row 4: distances -->
+        <div class="hp-form-row">
+          <label class="hp-field">
+            <span>Distance point précédent (m)</span>
+            <input type="number" min="0" step="0.1" [(ngModel)]="form.distancePointPrecedent" />
+          </label>
+          <label class="hp-field">
+            <span>Distance point suivant (m)</span>
+            <input type="number" min="0" step="0.1" [(ngModel)]="form.distancePointSuivant" />
+          </label>
+        </div>
+
+        <!-- Traitement -->
+        <label class="hp-field hp-field--full">
+          <span>Traitement *</span>
+          @if (traitements.length === 0) {
+            <div class="hp-form-warn">⚠️ Aucun traitement disponible</div>
+          } @else {
+            <select [(ngModel)]="form.idTraitement">
+              @for (t of traitements; track t.idTraitement) {
+                <option [value]="t.idTraitement">#{{ t.idTraitement }} — {{ t.titre }}</option>
+              }
+            </select>
+          }
+        </label>
+      </div>
+
+      @if (saveSuccess) {
+        <div class="hp-status hp-status--ok">✅ Enregistré avec succès !</div>
+      }
+      @if (saveError) {
+        <div class="hp-status hp-status--err">❌ {{ saveError }}</div>
+      }
+
+      <div class="hp-form-footer">
+        <button class="hp-btn hp-btn--ghost" (click)="closeForm()">Annuler</button>
+        <button class="hp-btn hp-btn--primary"
+          [disabled]="saving"
+          (click)="save()">
+          {{ saving ? '⏳ Enregistrement...' : '💾 Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  }
+
+</div>

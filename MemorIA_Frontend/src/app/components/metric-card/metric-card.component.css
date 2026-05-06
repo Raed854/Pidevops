@@ -1,0 +1,142 @@
+.metric-card {
+    background-color: white;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+}
+
+.metric-card-blue::before {
+    background: linear-gradient(90deg, #4A90E2, #5BA3F5);
+}
+
+.metric-card-green::before {
+    background: linear-gradient(90deg, #00C9A7, #00D4AA);
+}
+
+.metric-card-orange::before {
+    background: linear-gradient(90deg, #FFA726, #FFB74D);
+}
+
+.metric-card-red::before {
+    background: linear-gradient(90deg, #EF5350, #F06292);
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--shadow);
+}
+
+.metric-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.metric-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.metric-card-blue .metric-icon {
+    background-color: rgba(74, 144, 226, 0.1);
+    color: #4A90E2;
+}
+
+.metric-card-green .metric-icon {
+    background-color: rgba(0, 201, 167, 0.1);
+    color: #00C9A7;
+}
+
+.metric-card-orange .metric-icon {
+    background-color: rgba(255, 167, 38, 0.1);
+    color: #FFA726;
+}
+
+.metric-card-red .metric-icon {
+    background-color: rgba(239, 83, 80, 0.1);
+    color: #EF5350;
+}
+
+.metric-title {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--text-medium);
+    margin: 0;
+}
+
+.metric-body {
+    margin-top: var(--spacing-sm);
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    font-family: 'Montserrat', sans-serif;
+    line-height: 1;
+    margin-bottom: var(--spacing-xs);
+}
+
+.metric-card-blue .metric-value {
+    color: #4A90E2;
+}
+
+.metric-card-green .metric-value {
+    color: #00C9A7;
+}
+
+.metric-card-orange .metric-value {
+    color: #FFA726;
+}
+
+.metric-card-red .metric-value {
+    color: #EF5350;
+}
+
+.metric-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+}
+
+.metric-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
+.metric-trend {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--success);
+}
+
+/* RESPONSIVE */
+@media (max-width: 767px) {
+    .metric-value {
+        font-size: 2rem;
+    }
+
+    .metric-icon {
+        width: 40px;
+        height: 40px;
+    }
+}

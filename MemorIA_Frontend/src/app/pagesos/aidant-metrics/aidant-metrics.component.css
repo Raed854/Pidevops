@@ -1,0 +1,7 @@
+/* Styles pour les icônes Lucide si besoin */
+lucide-icon {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: middle;
+}

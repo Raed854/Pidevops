@@ -1,0 +1,87 @@
+<div class="modal-overlay" (click)="onOverlayClick($event)">
+  <div class="modal-panel">
+    <button class="close-btn" (click)="onClose()">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Group Header -->
+    <div class="group-header">
+      <div class="group-avatar">
+        <i class="fas fa-users"></i>
+      </div>
+      <h2 class="group-name">{{ groupName }}</h2>
+      <span class="member-count">{{ members.length }} membres</span>
+      <p class="group-desc" *ngIf="groupDescription">{{ groupDescription }}</p>
+      <div class="group-tags" *ngIf="groupTags">
+        <span class="tag" *ngFor="let tag of groupTags.split(',')">{{ tag.trim() }}</span>
+      </div>
+    </div>
+
+    <!-- Meta Info -->
+    <div class="group-meta" *ngIf="createdBy || createdAt">
+      <div class="meta-item" *ngIf="createdBy">
+        <i class="fas fa-user-shield"></i>
+        <span>Créé par <strong>{{ createdBy }}</strong></span>
+      </div>
+      <div class="meta-item" *ngIf="createdAt">
+        <i class="fas fa-calendar"></i>
+        <span>{{ createdAt }}</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button [class.active]="activeTab === 'members'" (click)="activeTab = 'members'">
+        <i class="fas fa-users"></i> Membres ({{ members.length }})
+      </button>
+      <button [class.active]="activeTab === 'media'" (click)="activeTab = 'media'">
+        <i class="fas fa-photo-video"></i> Médias ({{ mediaMessages.length }})
+      </button>
+    </div>
+
+    <!-- Members Tab -->
+    <div class="tab-content" *ngIf="activeTab === 'members'">
+      <div class="member-list">
+        <div class="member-item" *ngFor="let member of members" (click)="onMemberClick(member)">
+          <div class="member-avatar">
+            {{ getMemberName(member).charAt(0) }}
+            <span class="online-dot" [class.online]="isMemberOnline(member.id)" [class.offline]="!isMemberOnline(member.id)"></span>
+          </div>
+          <div class="member-info">
+            <span class="member-name">{{ getMemberName(member) }}</span>
+            <span class="member-role">{{ getRoleLabel(member.role) }}</span>
+          </div>
+          <span class="status-badge" [class.online]="isMemberOnline(member.id)">
+            {{ isMemberOnline(member.id) ? 'En ligne' : 'Hors ligne' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Media Tab -->
+    <div class="tab-content" *ngIf="activeTab === 'media'">
+      <div class="media-grid" *ngIf="imageMedia.length > 0">
+        <h4 class="media-section-title"><i class="fas fa-image"></i> Images</h4>
+        <div class="image-grid">
+          <div class="media-thumb" *ngFor="let msg of imageMedia" (click)="openImage(getFileUrl(msg.fileUrl))">
+            <img [src]="getFileUrl(msg.fileUrl)" [alt]="getFileName(msg)" loading="lazy">
+          </div>
+        </div>
+      </div>
+      <div class="file-list" *ngIf="fileMedia.length > 0">
+        <h4 class="media-section-title"><i class="fas fa-file"></i> Fichiers</h4>
+        <div class="file-item" *ngFor="let msg of fileMedia">
+          <i class="fas fa-file-alt"></i>
+          <span class="file-name">{{ getFileName(msg) }}</span>
+          <a [href]="getFileUrl(msg.fileUrl)" target="_blank" class="download-btn">
+            <i class="fas fa-download"></i>
+          </a>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="mediaMessages.length === 0">
+        <i class="fas fa-photo-video"></i>
+        <span>Aucun média partagé</span>
+      </div>
+    </div>
+  </div>
+</div>

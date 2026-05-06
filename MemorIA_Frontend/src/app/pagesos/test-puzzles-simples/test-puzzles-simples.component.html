@@ -1,0 +1,137 @@
+<div class="test-container">
+
+  @if (!isComplete()) {
+
+    <!-- Page header -->
+    <div class="page-header">
+      <h1 class="page-title">Puzzles Simples</h1>
+      <p class="page-subtitle">{{ correctCount() }} pièce(s) correctement placée(s) sur {{ currentPuzzle().pieces.length }}</p>
+    </div>
+
+    <!-- Step tabs like "Toutes / Critiques / ..." -->
+    <div class="step-tabs">
+      @for (p of puzzles; track p.id; let i = $index) {
+        <span class="step-tab"
+              [class.active]="activeStep() === i"
+              [class.done]="activeStep() > i">
+          {{ p.title }}
+        </span>
+      }
+    </div>
+
+    <!-- Puzzle info + timer -->
+    <div class="puzzle-info-row">
+      <div class="puzzle-info-left">
+        <div class="puzzle-step-label">Puzzle {{ activeStep() + 1 }} / {{ totalPuzzles }}</div>
+        <div class="puzzle-title">{{ currentPuzzle().title }}</div>
+        <div class="puzzle-description">{{ currentPuzzle().description }}</div>
+      </div>
+      <div class="timer-box">⏱ {{ formattedTime() }}</div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span>Progression</span>
+        <span>{{ progressPercentage() }}%</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" [style.width.%]="progressPercentage()"></div>
+      </div>
+    </div>
+
+    <!-- Puzzle area -->
+    <div class="puzzle-area">
+
+      <!-- Drop zones -->
+      <div class="card">
+        <div class="card-header">Zone d'assemblage</div>
+        <div class="card-body">
+          <div class="drop-zones-grid">
+            @for (zone of dropZones; track $index; let i = $index) {
+              <div class="drop-zone"
+                   [class.occupied]="dropZones[i] !== null"
+                   [class.correct]="isZoneCorrect(i)"
+                   [class.incorrect-zone]="dropZones[i] !== null && !isZoneCorrect(i)"
+                   (dragover)="onDragOver($event)"
+                   (drop)="onDropOnZone($event, i)">
+
+                @if (getDropZonePiece(i); as piece) {
+                  <div class="piece-in-zone"
+                       [style.background]="piece.color"
+                       draggable="true"
+                       (dragstart)="onDragStart(piece.id)">
+                    <span class="piece-emoji">{{ piece.emoji }}</span>
+                    <span class="piece-label">{{ piece.label }}</span>
+                    @if (isZoneCorrect(i)) {
+                      <span class="correct-badge">✓</span>
+                    }
+                  </div>
+                } @else {
+                  <span class="zone-position">Position {{ i + 1 }}</span>
+                  <span class="zone-expected-label">{{ getExpectedPieceLabel(i) }}</span>
+                  <span class="zone-drag-hint">Glissez ici</span>
+                }
+
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Pieces pool -->
+      <div class="card"
+           (dragover)="onDragOver($event)"
+           (drop)="onDropOnPool($event)">
+        <div class="card-header">Pièces disponibles</div>
+        <div class="card-body">
+          <div class="pieces-pool">
+            @for (piece of getAvailablePieces(); track piece.id) {
+              <div class="puzzle-piece"
+                   [style.border-left-color]="piece.color"
+                   draggable="true"
+                   (dragstart)="onDragStart(piece.id)">
+                <span class="piece-emoji">{{ piece.emoji }}</span>
+              </div>
+            }
+            @if (getAvailablePieces().length === 0) {
+              <div class="pool-empty">✓ Toutes les pièces sont placées</div>
+            }
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation">
+      <button class="btn-prev"
+              [disabled]="activeStep() === 0"
+              (click)="goPrevPuzzle()">
+        ← Précédent
+      </button>
+      <button class="btn-next" (click)="goNextPuzzle()">
+        {{ activeStep() === totalPuzzles - 1 ? 'TERMINER →' : 'SUIVANT →' }}
+      </button>
+    </div>
+
+  } @else {
+
+    <!-- Results -->
+    <div class="results-card">
+      <div class="results-icon">🧩</div>
+      <h2 class="results-title">Test Terminé !</h2>
+      <div class="score-circle">
+        <span class="score-value">{{ finalScore() }}</span>
+        <span class="score-max">/ {{ totalPuzzles * 4 }} pts</span>
+      </div>
+      <div class="score-detail">
+        {{ finalScore() }} bonne(s) réponse(s) sur {{ totalPuzzles * 4 }} pièces au total
+      </div>
+      <p class="results-time">⏱ Durée totale : {{ formattedTime() }}</p>
+      <button class="btn-next" (click)="returnToDashboard()">Retour aux tests</button>
+    </div>
+
+  }
+
+</div>

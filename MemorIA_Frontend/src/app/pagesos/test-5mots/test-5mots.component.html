@@ -1,0 +1,298 @@
+<div class="test-5mots-container">
+
+  <!-- ── HEADER (toujours visible) ── -->
+  <div class="test-header">
+    <div class="header-left">
+      <h1 class="test-title">Test des 5 Mots</h1>
+      <div class="progress-dots">
+        <span class="progress-dot" [class.done]="currentPhaseIndex() > 1" [class.active]="currentPhaseIndex() === 1"></span>
+        <span class="progress-dot" [class.done]="currentPhaseIndex() > 2" [class.active]="currentPhaseIndex() === 2"></span>
+        <span class="progress-dot" [class.done]="currentPhaseIndex() > 3" [class.active]="currentPhaseIndex() === 3"></span>
+        <span class="progress-dot" [class.done]="currentPhaseIndex() > 4" [class.active]="currentPhaseIndex() === 4"></span>
+        <span class="progress-dot" [class.done]="currentPhaseIndex() > 5" [class.active]="currentPhaseIndex() === 5"></span>
+      </div>
+    </div>
+    <div class="phase-block">
+      <div class="phase-label">{{ currentPhaseLabel() }}</div>
+      <div class="phase-value">Phase {{ currentPhaseIndex() }}/5</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════
+       PHASE 1 — ENCODAGE
+  ══════════════════════════════════ -->
+  @if (currentPhase() === 'ENCODAGE') {
+    <div class="phase-container">
+
+      @if (currentEncodageWord()) {
+        <div class="word-display-card">
+          <div class="word-text">{{ currentEncodageWord()!.word }}</div>
+          <div class="word-category">C'est {{ currentEncodageWord()!.category }}</div>
+        </div>
+
+        <p class="instruction-text">Lisez le mot et sa catégorie.</p>
+        <p class="word-counter">Mot {{ currentEncodageIndex() + 1 }} / {{ mots().length }}</p>
+
+        <div class="navigation nav-single">
+          <button class="btn-primary" (click)="nextEncodageWord()">
+            {{ isLastEncodageWord() ? 'PHASE SUIVANTE →' : 'SUIVANT →' }}
+          </button>
+        </div>
+      } @else {
+        <p class="instruction-text">Chargement des mots...</p>
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════
+       PHASE 2 — RAPPEL IMMÉDIAT
+  ══════════════════════════════════ -->
+  @if (currentPhase() === 'RAPPEL_IMMEDIAT') {
+    <div class="phase-container">
+
+      <div class="instruction-large">
+        Écrivez les {{ mots().length }} mots que vous venez de voir
+      </div>
+
+      <div class="answers-grid">
+        @for (mot of mots(); track mot.id; let idx = $index) {
+          <div class="answer-field">
+            <span class="field-label">Mot {{ idx + 1 }} :</span>
+            <input type="text"
+                   class="answer-input"
+                   [(ngModel)]="rappelImmediatAnswers[idx]"
+                   placeholder="Votre réponse..." />
+          </div>
+        }
+      </div>
+
+      <div class="navigation">
+        <button class="btn-prev" (click)="returnToDashboard()">← Retour</button>
+        <button class="btn-next"
+                (click)="submitRappelImmediat()"
+                [disabled]="!canSubmitRappelImmediat()">
+          VALIDER →
+        </button>
+      </div>
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════
+       PHASE 3 — DISTRACTEUR
+  ══════════════════════════════════ -->
+  @if (currentPhase() === 'DISTRACTEUR') {
+    <div class="phase-container">
+
+      <div class="instruction-large">
+        Comptez à rebours à partir de 100
+      </div>
+
+      <div class="timer-card">
+        <div class="timer-display">
+          <span class="timer-icon">⏱</span>
+          {{ formattedDistracteurTime() }}
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" [style.width.%]="distracteurProgressPct()"></div>
+        </div>
+      </div>
+
+      <div class="counting-box">
+        <div class="counting-title">Comptez à rebours silencieusement</div>
+        <div class="counting-example">100… 99… 98… 97…</div>
+      </div>
+
+      <div class="warning-box">⚠️ Ne pas essayer de se souvenir des mots</div>
+
+      @if (distracteurDone()) {
+        <div class="done-card">
+          <div class="done-title">⏰ Temps écoulé !</div>
+          <div class="done-sub">La phase de distraction est terminée.</div>
+        </div>
+        <div class="navigation nav-single">
+          <button class="btn-next" (click)="finishDistracteur()">PHASE SUIVANTE →</button>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════
+       PHASE 4 — RAPPEL LIBRE
+  ══════════════════════════════════ -->
+  @if (currentPhase() === 'RAPPEL_LIBRE') {
+    <div class="phase-container">
+
+      <div class="instruction-large">
+        Écrivez tous les mots dont vous vous souvenez
+      </div>
+
+      <div class="answers-grid">
+        @for (mot of mots(); track mot.id; let idx = $index) {
+          <div class="answer-field">
+            <span class="field-label">Mot {{ idx + 1 }} :</span>
+            <input type="text"
+                   class="answer-input"
+                   [(ngModel)]="rappelLibreAnswers[idx]"
+                   placeholder="Votre réponse..." />
+          </div>
+        }
+      </div>
+
+      <div class="tip-box">💡 Laissez vide si vous ne vous souvenez pas</div>
+
+      <div class="navigation">
+        <button class="btn-prev" (click)="returnToDashboard()">← Retour</button>
+        <button class="btn-next"
+                (click)="submitRappelLibre()"
+                [disabled]="!canSubmitRappelLibre()">
+          VALIDER →
+        </button>
+      </div>
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════
+       PHASE 5 — RAPPEL INDICÉ
+  ══════════════════════════════════ -->
+  @if (currentPhase() === 'RAPPEL_INDICE') {
+    <div class="phase-container">
+
+      <div class="instruction-large">
+        Je vais vous donner des indices pour les mots oubliés
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-item">
+          <span class="summary-label">Déjà rappelés</span>
+          <span class="summary-value">{{ motsAlreadyRecalled() }}/{{ mots().length }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Avec indice</span>
+          <span class="summary-value">{{ motsForIndice().length }}</span>
+        </div>
+      </div>
+
+      @if (motsForIndice().length === 0) {
+        <div class="all-found-card">
+          <span class="all-found-icon">✅</span>
+          <div class="all-found-title">Parfait ! Tous les mots ont été retrouvés.</div>
+          <div class="all-found-sub">Cliquez pour voir vos résultats.</div>
+        </div>
+        <div class="navigation nav-single">
+          <button class="btn-next" (click)="finishTest()">VOIR LES RÉSULTATS →</button>
+        </div>
+      } @else {
+        <div class="indice-list">
+          @for (mot of motsForIndice(); track mot.id; let idx = $index) {
+            <div class="indice-card">
+              <div class="indice-header">Indice {{ idx + 1 }} / {{ motsForIndice().length }}</div>
+              <div class="indice-text">C'est {{ mot.category }}</div>
+              <input type="text"
+                     class="answer-input"
+                     [(ngModel)]="rappelIndiceAnswers[mot.id]"
+                     placeholder="Votre réponse..." />
+            </div>
+          }
+        </div>
+
+        <div class="navigation">
+          <button class="btn-secondary" (click)="finishTest()">Passer</button>
+          <button class="btn-next" (click)="submitRappelIndice()">VALIDER →</button>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════
+       PHASE 6 — RÉSULTATS
+  ══════════════════════════════════ -->
+  @if (currentPhase() === 'TERMINE') {
+    <div class="phase-container">
+
+      <div class="results-header">
+        <h2 class="results-title">Résultats du Test des 5 Mots</h2>
+      </div>
+
+      <div class="patient-info">
+        <div class="info-row">
+          <span class="info-label">Date</span>
+          <span class="info-value">{{ todayDate() }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Score total</span>
+          <span class="info-value">{{ totalScore() }} / {{ mots().length * 2 }}</span>
+        </div>
+      </div>
+
+      <div class="score-box">
+        <div class="score-box-label">Score Total</div>
+        <div class="score-box-value">{{ totalScore() }} / {{ mots().length * 2 }}</div>
+        <div class="score-box-interp">{{ interpretation() }}</div>
+      </div>
+
+      <div class="table-title">Détail des réponses</div>
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Mot</th>
+            <th style="text-align:center">Rappel libre</th>
+            <th style="text-align:center">Rappel indicé</th>
+            <th style="text-align:center">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (result of testResults(); track result.word) {
+            <tr>
+              <td>
+                <div class="word-main">{{ result.word }}</div>
+                <div class="word-cat">{{ result.category }}</div>
+              </td>
+              <td class="recall-cell">
+                @if (result.rappelLibre) { <span class="check-mark">✓</span> }
+                @else { <span class="dash">–</span> }
+                @if (result.rappelLibreReponse) {
+                  <div class="resp-text">{{ result.rappelLibreReponse }}</div>
+                }
+              </td>
+              <td class="recall-cell">
+                @if (result.rappelIndice) { <span class="check-mark">✓</span> }
+                @else { <span class="dash">–</span> }
+                @if (result.rappelIndiceReponse) {
+                  <div class="resp-text">{{ result.rappelIndiceReponse }}</div>
+                }
+              </td>
+              <td class="score-cell">
+                <span class="score-badge"
+                      [class.s2]="result.score === 2"
+                      [class.s1]="result.score === 1"
+                      [class.s0]="result.score === 0">
+                  {{ result.score }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="legend-row">
+        <div class="legend-item"><span class="score-badge s2">2</span> Rappel libre</div>
+        <div class="legend-item"><span class="score-badge s1">1</span> Rappel indicé</div>
+        <div class="legend-item"><span class="score-badge s0">0</span> Non rappelé</div>
+      </div>
+
+      <div class="results-actions">
+        <button class="btn-secondary" (click)="returnToDashboard()">Retour aux tests</button>
+        <button class="btn-next" (click)="restartTest()">Nouveau test →</button>
+      </div>
+
+    </div>
+  }
+
+</div>

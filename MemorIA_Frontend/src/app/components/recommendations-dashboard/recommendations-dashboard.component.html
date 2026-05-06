@@ -1,0 +1,149 @@
+<div class="recommendations-dashboard">
+    <!-- En-tête -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <h1>Mes recommandations</h1>
+            <p class="clinician-name">Dr. {{ clinicianName }}</p>
+        </div>
+        <button mat-raised-button color="primary" (click)="openNewRecommendationDialog()" class="new-recommendation-btn">
+            <mat-icon>add</mat-icon>
+            Nouvelle recommandation
+        </button>
+    </div>
+
+    <!-- Indicateurs */
+    <div class="indicators">
+        <div class="indicator">
+            <mat-icon class="indicator-icon">assignment</mat-icon>
+            <div class="indicator-content">
+                <span class="indicator-number">{{ recommendations.length }}</span>
+                <span class="indicator-label">Recommandations au total</span>
+            </div>
+        </div>
+        <div class="indicator">
+            <mat-icon class="indicator-icon urgent">warning</mat-icon>
+            <div class="indicator-content">
+                <span class="indicator-number">{{ getUrgentCount() }}</span>
+                <span class="indicator-label">Actions urgentes</span>
+            </div>
+        </div>
+        <div class="indicator">
+            <mat-icon class="indicator-icon">check_circle</mat-icon>
+            <div class="indicator-content">
+                <span class="indicator-number">{{ getCompletedCount() }}</span>
+                <span class="indicator-label">Complétées</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglets de filtrage -->
+    <div class="tabs">
+        <button *ngFor="let tab of statusTabs"
+            (click)="onStatusTabChange(tab.value)"
+            [class.active]="selectedStatus === tab.value"
+            class="tab">
+            <span class="tab-label">{{ tab.label }}</span>
+            <span class="tab-badge" *ngIf="tab.count > 0">{{ tab.count }}</span>
+        </button>
+    </div>
+
+    <!-- Zone de chargement -->
+    <div *ngIf="loading" class="loading-state">
+        <mat-icon class="spinner">hourglass_top</mat-icon>
+        <p>Chargement des recommandations...</p>
+    </div>
+
+    <!-- Liste vide -->
+    <div *ngIf="!loading && filteredRecommendations.length === 0" class="empty-state">
+        <mat-icon class="empty-icon">folder_open</mat-icon>
+        <p class="empty-title">Aucune recommandation</p>
+        <p class="empty-text">
+            {{ selectedStatus === 'ALL' ? 'Créez une nouvelle recommandation pour commencer' : 'Aucune recommandation avec ce statut' }}
+        </p>
+        <button mat-stroked-button (click)="openNewRecommendationDialog()" *ngIf="selectedStatus === 'ALL'">
+            <mat-icon>add</mat-icon>
+            Créer une recommandation
+        </button>
+    </div>
+
+    <!-- Liste des recommandations -->
+    <div *ngIf="!loading && filteredRecommendations.length > 0" class="recommendations-list">
+        <div *ngFor="let recommendation of filteredRecommendations" class="recommendation-card" [class.new]="recommendation.isNew">
+            <!-- Badge "NEW" -->
+            <div *ngIf="recommendation.isNew" class="new-badge">
+                <span>NOUVEAU</span>
+            </div>
+
+            <!-- Contenu de la carte -->
+            <div class="card-content">
+                <!-- Ligne 1: Patient et priorité -->
+                <div class="card-header">
+                    <div class="patient-info">
+                        <mat-icon class="patient-icon">person</mat-icon>
+                        <span class="patient-name">{{ recommendation.action }}</span>
+                    </div>
+                    <div class="priority-badge">
+                        <span class="priority-emoji">{{ getPriorityEmoji(recommendation.priority) }}</span>
+                        <span class="priority-text">{{ getPriorityLabel(recommendation.priority) }}</span>
+                    </div>
+                </div>
+
+                <!-- Ligne 2: Description de l'action -->
+                <div class="card-action">
+                    <p class="action-text">{{ recommendation.action }}</p>
+                </div>
+
+                <!-- Ligne 3: Statut et deadline -->
+                <div class="card-footer">
+                    <div class="status-info">
+                        <mat-icon class="status-icon" [style.color]="getStatusColor(recommendation.status)">
+                            {{ recommendation.status === 'PENDING' ? 'schedule' : recommendation.status === 'IN_PROGRESS' ? 'pending_actions' : recommendation.status === 'COMPLETED' ? 'check_circle' : 'cancel' }}
+                        </mat-icon>
+                        <span class="status-label">{{ getStatusLabel(recommendation.status) }}</span>
+                    </div>
+
+                    <!-- Deadline avec indicateur de temps -->
+                    <div class="deadline-info" *ngIf="recommendation.deadline">
+                        <mat-icon class="deadline-icon">schedule</mat-icon>
+                        <div class="deadline-content">
+                            <span class="deadline-date">{{ formatDeadline(recommendation.deadline) }}</span>
+                            <span class="deadline-time" *ngIf="getTimeString(recommendation.deadline)">
+                                {{ getTimeString(recommendation.deadline) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card-actions">
+                <button mat-icon-button 
+                    [matMenuTriggerFor]="menu"
+                    matTooltip="Plus d'options"
+                    class="actions-menu">
+                    <mat-icon>more_vert</mat-icon>
+                </button>
+
+                <mat-menu #menu="matMenu">
+                    <button mat-menu-item (click)="viewDetails(recommendation)">
+                        <mat-icon>visibility</mat-icon>
+                        <span>Voir les détails</span>
+                    </button>
+                    <button mat-menu-item 
+                        (click)="editRecommendation(recommendation)"
+                        [disabled]="recommendation.status !== 'PENDING'">
+                        <mat-icon>edit</mat-icon>
+                        <span>Modifier</span>
+                    </button>
+                    <mat-divider *ngIf="recommendation.status === 'PENDING'"></mat-divider>
+                    <button mat-menu-item 
+                        (click)="deleteRecommendation(recommendation.id)"
+                        class="delete-option">
+                        <mat-icon>delete</mat-icon>
+                        <span>Supprimer</span>
+                    </button>
+                </mat-menu>
+            </div>
+        </div>
+    </div>
+</div>

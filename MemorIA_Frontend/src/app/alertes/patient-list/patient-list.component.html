@@ -1,0 +1,120 @@
+<div class="patient-list-page">
+  <div class="patient-list-container">
+    <!-- Header -->
+    <div class="page-header">
+      <h1>Liste des Patients</h1>
+      <p class="subtitle">Gestion des patients associés</p>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Chargement des patients...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !loading" class="error-container">
+      <p class="error-message">{{ error }}</p>
+      <button (click)="loadPatients()" class="btn-retry">Réessayer</button>
+    </div>
+
+    <!-- Content -->
+    <div *ngIf="!loading && !error">
+      <!-- Search Box -->
+      <div class="search-section">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearchChange()"
+            placeholder="Rechercher par nom ou prénom..."
+            class="search-input">
+        </div>
+        <div class="results-count">
+          {{ filteredPatients.length }} patient{{ filteredPatients.length !== 1 ? 's' : '' }}
+        </div>
+      </div>
+
+      <!-- Patients List -->
+      <div *ngIf="filteredPatients.length > 0; else noResults" class="patients-table">
+        <div class="table-header">
+          <div class="col-patient">Patient</div>
+          <div class="col-age">Âge</div>
+          <div class="col-stage">Stade</div>
+          <div class="col-adherence">Adhérence</div>
+          <div class="col-alerts">Alertes</div>
+        </div>
+
+        <div class="table-body">
+          <div *ngFor="let patient of filteredPatients" class="patient-row">
+            <!-- Patient Info -->
+            <div class="col-patient">
+              <div class="patient-cell">
+                <div class="patient-avatar">
+                  <img *ngIf="patient.photo" [src]="patient.photo" [alt]="patient.nom" class="avatar-img">
+                  <span *ngIf="!patient.photo" class="avatar-initials">
+                    {{ patient.initials }}
+                  </span>
+                </div>
+                <div class="patient-name">
+                  <div class="name">{{ patient.prenom }} {{ patient.nom }}</div>
+                  <div class="patient-id" *ngIf="patient.id">ID: {{ patient.id }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Age -->
+            <div class="col-age">
+              <span class="age-badge">{{ patient.age }} ans</span>
+            </div>
+
+            <!-- Stage -->
+            <div class="col-stage">
+              <span class="stage-badge" [class]="'badge-' + getStageClass(patient.stage)">
+                {{ getStageLabel(patient.stage) }}
+              </span>
+            </div>
+
+            <!-- Adherence -->
+            <div class="col-adherence">
+              <div class="adherence-indicator">
+                <div class="adherence-circle" [style.border-color]="getAdherenceColor(patient.adherenceRate)">
+                  <span [style.color]="getAdherenceColor(patient.adherenceRate)">
+                    {{ patient.adherenceRate | number:'1.0-0' }}%
+                  </span>
+                </div>
+                <div class="adherence-bar">
+                  <div class="bar-fill" [style.width]="patient.adherenceRate + '%'" [style.background-color]="getAdherenceColor(patient.adherenceRate)"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alerts -->
+            <div class="col-alerts">
+              <span class="alerts-badge" *ngIf="patient.numberOfAlerts && patient.numberOfAlerts > 0; else noAlerts">
+                <i class="fas fa-exclamation-circle"></i>
+                {{ patient.numberOfAlerts }}
+              </span>
+              <ng-template #noAlerts>
+                <span class="alerts-badge no-alerts">
+                  <i class="fas fa-check-circle"></i>
+                  OK
+                </span>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Results -->
+      <ng-template #noResults>
+        <div class="empty-state">
+          <i class="fas fa-users"></i>
+          <p>Aucun patient trouvé</p>
+          <small>Essayez une autre recherche</small>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>

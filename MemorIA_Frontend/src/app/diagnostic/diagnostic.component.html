@@ -1,0 +1,367 @@
+<div class="diagnostic-container">
+  <!-- Header -->
+  <div class="header">
+    <h1 class="title">Test Diagnostic</h1>
+    <div class="header-right">
+      <div class="progress-info">
+        <span class="progress-text">{{ progressPercentage }}% completed</span>
+      </div>
+    
+    </div>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="progress-bar-container">
+    <div class="progress-bar" [style.width.%]="progressPercentage"></div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-section">
+    <p>Loading questions...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && errorMessage" class="error-section">
+    <p>{{ errorMessage }}</p>
+    <button class="btn btn-primary" (click)="loadQuestions()">Retry</button>
+  </div>
+
+  <!-- No questions -->
+  <div *ngIf="!loading && !errorMessage && questions.length === 0" class="empty-section">
+    <p>No questions available. Import questions from an Excel file.</p>
+  </div>
+
+  <!-- Question Card -->
+  <div class="question-card" *ngIf="!loading && !errorMessage && questions.length > 0">
+    <div class="question-header">
+      <span class="question-number">Question {{ currentQuestionNumber }} / {{ totalQuestions }}</span>
+    </div>
+
+    <div class="question-content">
+      <div class="question-text-row">
+        <h2 class="question-text">{{ currentQuestion.text }}</h2>
+        <button
+          class="btn-speech"
+          [class.active]="isSpeaking"
+          (click)="speakQuestion()"
+          title="Read question"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path *ngIf="!isSpeaking" d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path *ngIf="!isSpeaking" d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            <line *ngIf="isSpeaking" x1="23" y1="9" x2="17" y2="15"/>
+            <line *ngIf="isSpeaking" x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        </button>
+        <div class="translate-group">
+          <select class="language-select" [(ngModel)]="selectedLanguage" (ngModelChange)="onLanguageChange()" title="Langue de traduction">
+            <option value="ar">العربية</option>
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+            <option value="de">Deutsch</option>
+            <option value="zh">中文</option>
+            <option value="pt">Português</option>
+            <option value="it">Italiano</option>
+            <option value="nl">Nederlands</option>
+            <option value="ru">Русский</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+            <option value="tr">Türkçe</option>
+            <option value="hi">हिन्दी</option>
+            <option value="amazigh">ⵜⴰⵎⴰⵣⵉⵖⵜ (non disponible)</option>
+          </select>
+          <button
+            class="btn-translate"
+            [class.active]="isTranslating"
+            (click)="translateQuestion()"
+            title="Translate question"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 8l6 6"/>
+              <path d="M4 14l6-6 2-3"/>
+              <path d="M2 5h12"/>
+              <path d="M7 2h1"/>
+              <path d="M22 22l-5-10-5 10"/>
+              <path d="M14 18h6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Translated text -->
+      <div class="translated-text" *ngIf="translatedText">
+        <span class="translated-label">{{ getLanguageName(selectedLanguage) }} :</span>
+        <p [dir]="selectedLanguage === 'ar' ? 'rtl' : 'ltr'">{{ translatedText }}</p>
+        <button class="btn-close-translation" (click)="translatedText = ''" title="Close">&times;</button>
+      </div>
+
+      <div class="answer-section">
+        <!-- TEXT : text field -->
+        <div *ngIf="currentQuestion.type === 'TEXT'" class="text-answer">
+          <label class="answer-label">Your answer:</label>
+          <input
+            type="text"
+            class="answer-input-text"
+            [(ngModel)]="currentQuestion.selectedAnswer"
+            placeholder="Enter your answer here..."
+          />
+        </div>
+
+        <!-- DATE_CHECK : saisie libre de la date -->
+        <div *ngIf="currentQuestion.type === 'DATE_CHECK'" class="text-answer">
+          <label class="answer-label">Enter the date:</label>
+          <input
+            type="text"
+            class="answer-input-text"
+            [(ngModel)]="currentQuestion.selectedAnswer"
+            placeholder="Ex: 25/02/2026"
+          />
+        </div>
+
+        <!-- DAY_CHECK : day of the week -->
+        <div *ngIf="currentQuestion.type === 'DAY_CHECK'" class="text-answer">
+          <label class="answer-label">Your answer:</label>
+          <input
+            type="text"
+            class="answer-input-text"
+            [(ngModel)]="currentQuestion.selectedAnswer"
+            placeholder="E.g.: Monday, Tuesday, Wednesday..."
+          />
+        </div>
+
+        <!-- MONTH_CHECK : month -->
+        <div *ngIf="currentQuestion.type === 'MONTH_CHECK'" class="text-answer">
+          <label class="answer-label">Your answer:</label>
+          <input
+            type="text"
+            class="answer-input-text"
+            [(ngModel)]="currentQuestion.selectedAnswer"
+            placeholder="E.g.: January, February, March..."
+          />
+        </div>
+
+        <!-- YEAR_CHECK : year -->
+        <div *ngIf="currentQuestion.type === 'YEAR_CHECK'" class="text-answer">
+          <label class="answer-label">Your answer:</label>
+          <input
+            type="number"
+            class="answer-input-text"
+            [(ngModel)]="currentQuestion.selectedAnswer"
+            placeholder="E.g.: 2026"
+          />
+        </div>
+
+        <!-- SEASON_CHECK : season -->
+        <div *ngIf="currentQuestion.type === 'SEASON_CHECK'" class="text-answer">
+          <label class="answer-label">Your answer:</label>
+          <input
+            type="text"
+            class="answer-input-text"
+            [(ngModel)]="currentQuestion.selectedAnswer"
+            placeholder="E.g.: Winter, Spring, Summer, Fall"
+          />
+        </div>
+
+        <!-- Fallback : textarea for other types (IMAGE, AUDIO, etc.) -->
+        <div *ngIf="!isKnownType(currentQuestion.type)" class="text-answer">
+          <label class="answer-label">Your answer:</label>
+          <textarea
+            class="answer-input"
+            [(ngModel)]="currentQuestion.selectedAnswer"
+            placeholder="Enter your answer here..."
+            rows="4"
+          ></textarea>
+        </div>
+
+        <!-- Mic button for voice input -->
+        <div class="mic-wrapper">
+          <button
+            class="btn-mic"
+            [class.active]="isListening"
+            (click)="toggleListening()"
+            title="Dictate your answer"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+            <span class="mic-label" *ngIf="!isListening">Dictate</span>
+            <span class="mic-label listening-dots" *ngIf="isListening">Listening</span>
+          </button>
+
+          <!-- Live transcript preview -->
+          <div class="live-transcript" *ngIf="isListening && liveTranscript">
+            <span class="live-transcript-text">{{ liveTranscript }}</span>
+          </div>
+
+          <!-- Mic error message -->
+          <div class="mic-error" *ngIf="speechError">
+            <span>{{ speechError }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="navigation-buttons">
+      <button
+        class="btn btn-secondary"
+        (click)="previousQuestion()"
+        [disabled]="currentQuestionIndex === 0"
+      >
+        Previous
+      </button>
+
+      <button
+        class="btn btn-primary"
+        (click)="nextQuestion()"
+      >
+        {{ currentQuestionIndex === totalQuestions - 1 ? 'Finish Test' : 'Next' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Maze Bonus ─────────────────────────────────────── -->
+<div class="maze-overlay" *ngIf="showMaze">
+  <div class="maze-card">
+
+    <!-- Header -->
+    <div class="maze-header">
+      <div class="maze-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M9 3v5M9 11v5M15 3v2M15 9v2M15 15v4M3 9h5M11 9h3M3 15h3M9 15h3M15 15h3"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="maze-title">Bonus — Labyrinthe</h2>
+        <p class="maze-subtitle">Trouvez la sortie pour gagner <strong>+10%</strong> sur votre score</p>
+      </div>
+    </div>
+
+    <!-- Maze solved banner -->
+    <div class="maze-success" *ngIf="mazeCompleted">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      Labyrinthe résolu ! +10% ajouté à votre score
+    </div>
+
+    <!-- Grid -->
+    <div class="maze-grid">
+      <div *ngFor="let row of maze; let r = index" class="maze-row">
+        <div
+          *ngFor="let cell of row; let c = index"
+          class="maze-cell"
+          [class.cell-wall]="cell === 1"
+          [class.cell-path]="cell === 0"
+          [class.cell-player]="r === playerRow && c === playerCol"
+          [class.cell-exit]="r === mazeEndRow && c === mazeEndCol && !(r === playerRow && c === playerCol)"
+        >
+          <!-- Player icon -->
+          <svg *ngIf="r === playerRow && c === playerCol" xmlns="http://www.w3.org/2000/svg"
+               width="22" height="22" viewBox="0 0 24 24"
+               fill="currentColor" stroke="none">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+          </svg>
+          <!-- Exit icon -->
+          <svg *ngIf="r === mazeEndRow && c === mazeEndCol && !(r === playerRow && c === playerCol)"
+               xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 8 21 12 17 16"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow controls -->
+    <div class="maze-controls" *ngIf="!mazeCompleted">
+      <div class="ctrl-row">
+        <button class="btn-dir" (click)="movePlayer(-1, 0)" title="Up">▲</button>
+      </div>
+      <div class="ctrl-row">
+        <button class="btn-dir" (click)="movePlayer(0, -1)" title="Left">◄</button>
+        <button class="btn-dir" (click)="movePlayer(1,  0)" title="Down">▼</button>
+        <button class="btn-dir" (click)="movePlayer(0,  1)" title="Right">►</button>
+      </div>
+      <p class="ctrl-hint">Utilisez les flèches du clavier ou les boutons</p>
+    </div>
+
+    <!-- Footer actions -->
+    <div class="maze-footer">
+      <button class="btn btn-secondary" (click)="skipMaze()">Passer</button>
+      <button class="btn btn-primary" *ngIf="mazeCompleted" (click)="finishMaze()">Continuer</button>
+    </div>
+
+  </div>
+</div>
+<!-- ────────────────────────────────────────────────────── -->
+
+<!-- Modal Pop-up -->
+<div class="modal-overlay" *ngIf="showModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">Test Completed</h2>
+      <button class="close-btn" (click)="closeModal()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="score-section">
+        <div class="score-circle">
+          <span class="score-percentage">{{ score }}%</span>
+        </div>
+        <p class="score-label">Your Score</p>
+      </div>
+
+      <div class="mri-section">
+        <label class="mri-label">Upload MRI Image (Optional)</label>
+
+        <div class="image-upload-container">
+          <input
+            type="file"
+            id="mri-upload"
+            accept="image/*"
+            (change)="onImageSelected($event)"
+            class="file-input"
+          />
+          <label for="mri-upload" class="upload-label">
+            <span *ngIf="!mriImage">+ Add MRI Image</span>
+            <span *ngIf="mriImage">Change Image</span>
+          </label>
+        </div>
+
+        <div class="image-preview" *ngIf="mriImage">
+          <img [src]="mriImage" alt="MRI Preview" />
+        </div>
+      </div>
+
+      <!-- Submit message -->
+      <div class="submit-message" *ngIf="submitMessage"
+           [class.success]="!submitMessage.includes('Error')"
+           [class.error]="submitMessage.includes('Error')">
+        {{ submitMessage }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeModal()" [disabled]="isSubmitting">Cancel</button>
+      <button class="btn btn-primary" (click)="submitDiagnostic()" [disabled]="isSubmitting">
+        <span *ngIf="!isSubmitting">Submit</span>
+        <span *ngIf="isSubmitting">Submitting...</span>
+      </button>
+    </div>
+  </div>
+</div>

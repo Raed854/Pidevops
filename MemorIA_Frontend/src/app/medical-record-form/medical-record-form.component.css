@@ -1,0 +1,560 @@
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS — matches home page palette
+   ═══════════════════════════════════════════ */
+:host {
+  --purple:      #6C2EB9;
+  --purple-dark: #2E1A47;
+  --purple-deep: #1a0a3c;
+  --purple-light:#CFC6E6;
+  --purple-soft: #f3f0ff;
+  --sky:         #0ea5e9;
+  --sky-light:   #38bdf8;
+  --green:       #10b981;
+  --amber:       #f59e0b;
+  --red:         #ef4444;
+
+  --text-primary:   #1e1b4b;
+  --text-secondary: #4b5563;
+  --text-muted:     #6b7280;
+  --text-light:     #9ca3af;
+
+  --bg-page: #f8f7ff;
+  --bg-card: #ffffff;
+  --border:      #e8e0ff;
+  --border-soft: #f0ecff;
+
+  --shadow-sm: 0 1px 3px rgba(46, 26, 71, 0.06);
+  --shadow-md: 0 8px 24px rgba(46, 26, 71, 0.08);
+  --shadow-lg: 0 16px 40px rgba(108, 46, 185, 0.12);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  --t-fast: 0.15s ease;
+  --t-base: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --gradient-primary: linear-gradient(135deg, #6C2EB9, #0ea5e9);
+  --gradient-dark:    linear-gradient(135deg, #2E1A47, #1a0a3c);
+  --gradient-text:    linear-gradient(90deg, #a78bfa, #38bdf8);
+  --gradient-soft:    linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);
+}
+
+* { box-sizing: border-box; }
+
+::selection      { background: var(--purple); color: #fff; }
+::-moz-selection { background: var(--purple); color: #fff; }
+
+*:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════ */
+@keyframes fadeIn    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp   { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse     { 0%, 100% { transform: scale(1); opacity: 0.2; } 50% { transform: scale(1.1); opacity: 0.3; } }
+
+/* ═══════════════════════════════════════════
+   PAGE / WRAPPER
+   ═══════════════════════════════════════════ */
+:host {
+  display: block;
+  min-height: 100vh;
+  background: var(--bg-page);
+  font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text-primary);
+  position: relative;
+  overflow-x: hidden;
+}
+
+:host::before,
+:host::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+  animation: pulse 9s ease-in-out infinite;
+}
+
+:host::before {
+  width: 420px; height: 420px;
+  background: var(--purple);
+  top: -180px; right: -140px;
+}
+
+:host::after {
+  width: 320px; height: 320px;
+  background: var(--sky);
+  bottom: -120px; left: -100px;
+  animation-delay: -4s;
+}
+
+.form-wrapper {
+  position: relative;
+  z-index: 1;
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 0 1.25rem 3rem;
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* ═══════════════════════════════════════════
+   HEADER — gradient banner (hero-inspired)
+   ═══════════════════════════════════════════ */
+.form-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1.75rem 2rem;
+  background: var(--gradient-dark);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 12px 32px rgba(46, 26, 71, 0.25);
+  overflow: hidden;
+  animation: slideDown 0.45s ease-out;
+}
+
+.form-header::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  left: -60px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: var(--purple);
+  filter: blur(70px);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.form-header::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  right: -40px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: var(--sky);
+  filter: blur(70px);
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.form-header-icon {
+  position: relative;
+  z-index: 1;
+  font-size: 1.5rem;
+  color: #fff;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+}
+
+.form-header-text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.form-header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.form-header-sub {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--purple-light);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.form-header-sub .required {
+  color: #fca5a5;
+  font-weight: 700;
+  margin: 0 2px;
+}
+
+/* ═══════════════════════════════════════════
+   FORM LAYOUT
+   ═══════════════════════════════════════════ */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ═══════════════════════════════════════════
+   CARDS — with top accent bar
+   ═══════════════════════════════════════════ */
+:host ::ng-deep .form-card.p-card,
+:host ::ng-deep .form-card .p-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--t-base), box-shadow var(--t-base), border-color var(--t-base);
+  overflow: hidden;
+  animation: slideUp 0.5s ease-out;
+}
+
+:host ::ng-deep .form-card.p-card::before,
+:host ::ng-deep .form-card .p-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gradient-primary);
+  z-index: 1;
+}
+
+:host ::ng-deep .form-card.p-card:hover,
+:host ::ng-deep .form-card .p-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--purple-light);
+}
+
+:host ::ng-deep .form-card .p-card-body { padding: 0; }
+:host ::ng-deep .form-card .p-card-content { padding: 1.25rem 1.5rem 1.5rem; }
+
+/* Section header inside each card */
+.card-section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1rem 1.5rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--purple-dark);
+  background: var(--gradient-soft);
+  border-bottom: 1px solid var(--border-soft);
+  letter-spacing: -0.2px;
+}
+
+.card-section-label i {
+  font-size: 1.05rem;
+  color: var(--purple);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: rgba(108, 46, 185, 0.12);
+}
+
+/* ═══════════════════════════════════════════
+   FIELDS
+   ═══════════════════════════════════════════ */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.1rem 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.field.full-width { grid-column: 1 / -1; }
+
+.field label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--purple-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.required {
+  color: var(--red);
+  margin-left: 3px;
+  font-weight: 700;
+}
+
+/* Inputs & textareas */
+:host ::ng-deep .field .p-inputtext,
+:host ::ng-deep .field input.p-inputtext,
+:host ::ng-deep .field textarea.p-inputtextarea,
+:host ::ng-deep .field textarea {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 1.5px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  font-size: 0.95rem;
+  background: #fff !important;
+  color: var(--text-primary) !important;
+  font-family: inherit;
+  transition: border-color var(--t-base), box-shadow var(--t-base), background var(--t-base);
+}
+
+:host ::ng-deep .field .p-inputtext::placeholder,
+:host ::ng-deep .field textarea::placeholder {
+  color: var(--text-light);
+}
+
+:host ::ng-deep .field .p-inputtext:hover,
+:host ::ng-deep .field textarea:hover {
+  border-color: var(--purple) !important;
+}
+
+:host ::ng-deep .field .p-inputtext:focus,
+:host ::ng-deep .field textarea:focus {
+  border-color: var(--purple) !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(108, 46, 185, 0.15) !important;
+  outline: none !important;
+}
+
+:host ::ng-deep .field input[type="date"] {
+  color: var(--text-primary) !important;
+}
+
+:host ::ng-deep .field textarea {
+  min-height: 80px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+/* Invalid state */
+:host ::ng-deep .field .ng-invalid.ng-touched.p-inputtext,
+:host ::ng-deep .field .ng-invalid.ng-touched textarea {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}
+
+.error-msg {
+  color: var(--red);
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  animation: slideUp 0.2s ease-out;
+}
+
+.error-msg::before { content: '⚠'; }
+
+/* Dropdown */
+:host ::ng-deep .field .p-dropdown,
+:host ::ng-deep .field .p-select {
+  width: 100% !important;
+  border: 1.5px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  background: #fff !important;
+  transition: border-color var(--t-base), box-shadow var(--t-base) !important;
+}
+
+:host ::ng-deep .field .p-dropdown:hover { border-color: var(--purple) !important; }
+
+:host ::ng-deep .field .p-dropdown.p-focus,
+:host ::ng-deep .field .p-dropdown:not(.p-disabled).p-focus {
+  border-color: var(--purple) !important;
+  box-shadow: 0 0 0 3px rgba(108, 46, 185, 0.15) !important;
+}
+
+:host ::ng-deep .field .p-dropdown .p-dropdown-label {
+  padding: 0.7rem 0.9rem !important;
+  font-size: 0.95rem !important;
+  color: var(--text-primary);
+}
+
+:host ::ng-deep .field .p-dropdown .p-dropdown-label.p-placeholder {
+  color: var(--text-light);
+}
+
+:host ::ng-deep .field .p-dropdown .p-dropdown-trigger {
+  color: var(--purple);
+}
+
+/* Dropdown panel */
+:host ::ng-deep .p-dropdown-panel {
+  border-radius: var(--radius-md) !important;
+  border: 1.5px solid var(--border-soft) !important;
+  box-shadow: var(--shadow-md) !important;
+  overflow: hidden;
+}
+
+:host ::ng-deep .p-dropdown-panel .p-dropdown-item:hover {
+  background: var(--purple-soft) !important;
+  color: var(--purple-dark) !important;
+}
+
+:host ::ng-deep .p-dropdown-panel .p-dropdown-item.p-highlight {
+  background: var(--gradient-primary) !important;
+  color: #fff !important;
+}
+
+/* ═══════════════════════════════════════════
+   ACTIONS
+   ═══════════════════════════════════════════ */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 0 0.5rem;
+  flex-wrap: wrap;
+  animation: slideUp 0.6s ease-out;
+}
+
+:host ::ng-deep .form-actions .p-button {
+  border-radius: var(--radius-sm) !important;
+  font-weight: 600 !important;
+  padding: 0.7rem 1.5rem !important;
+  transition: transform var(--t-base), box-shadow var(--t-base) !important;
+}
+
+:host ::ng-deep .form-actions .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary) {
+  background: var(--gradient-primary) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(108, 46, 185, 0.3);
+}
+
+:host ::ng-deep .form-actions .p-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(108, 46, 185, 0.35) !important;
+}
+
+:host ::ng-deep .form-actions .p-button.p-button-outlined {
+  background: transparent !important;
+  border: 1.5px solid var(--purple-light) !important;
+  color: var(--purple-dark) !important;
+}
+
+:host ::ng-deep .form-actions .p-button.p-button-outlined:hover {
+  background: var(--purple-soft) !important;
+  border-color: var(--purple) !important;
+  color: var(--purple) !important;
+  box-shadow: 0 4px 12px rgba(108, 46, 185, 0.15) !important;
+}
+
+/* ═══════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════ */
+:host ::ng-deep .p-toast .p-toast-message {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* ═══════════════════════════════════════════
+   ACCESSIBILITY
+   ═══════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .form-wrapper {
+    margin: 1rem auto;
+    padding: 0 0.75rem 2rem;
+  }
+
+  .form-header {
+    padding: 1.25rem 1.25rem;
+    gap: 0.8rem;
+  }
+
+  .form-header-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+  }
+
+  .form-header h1 { font-size: 1.35rem; }
+
+  .card-section-label {
+    padding: 0.85rem 1.1rem;
+    font-size: 0.88rem;
+  }
+
+  :host ::ng-deep .form-card .p-card-content {
+    padding: 1rem 1.1rem 1.15rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: 1fr; gap: 0.9rem; }
+  .field.full-width { grid-column: 1; }
+
+  .form-actions {
+    justify-content: stretch;
+    flex-direction: column-reverse;
+  }
+  :host ::ng-deep .form-actions .p-button { width: 100%; }
+
+  :host ::ng-deep .field .p-inputtext,
+  :host ::ng-deep .field textarea {
+    font-size: 16px; /* prevents iOS zoom */
+  }
+}
+
+@media (max-width: 420px) {
+  .form-header { flex-direction: column; align-items: flex-start; }
+  .form-header h1 { font-size: 1.2rem; }
+  :host::before, :host::after { opacity: 0.1; }
+}
+
+/* ═══════════════════════════════════════════
+   PRINT
+   ═══════════════════════════════════════════ */
+@media print {
+  :host { background: #fff; }
+  :host::before, :host::after { display: none; }
+  .form-header {
+    background: #fff;
+    color: #000;
+    box-shadow: none;
+    border: 1px solid #999;
+  }
+  .form-header h1 {
+    background: none;
+    -webkit-text-fill-color: #1e1b4b;
+    color: #1e1b4b;
+  }
+  .form-actions { display: none; }
+  :host ::ng-deep .form-card .p-card {
+    box-shadow: none;
+    border: 1px solid #999;
+    page-break-inside: avoid;
+  }
+}

@@ -1,0 +1,282 @@
+<div class="main-content">
+
+  <!-- ══════════ NOTIFICATIONS ══════════ -->
+  <div class="notification-toast" *ngIf="notificationMessage">
+    <i class="fas fa-magic"></i>
+    <span>{{ notificationMessage }}</span>
+  </div>
+
+  <!-- ══════════ CREATIVE NAVIGATION HEADER ══════════ -->
+  <div class="workspace-nav">
+    <button class="tab-item" [class.active]="currentWorkspace === 'monitor'" (click)="setWorkspace('monitor')">
+      <i class="fas fa-chart-line"></i>
+      Monitor & Insights
+    </button>
+    <button class="tab-item" [class.active]="currentWorkspace === 'library'" (click)="setWorkspace('library')">
+      <i class="fas fa-book-medical"></i>
+      Therapeutic Library
+    </button>
+    <button class="tab-item" [class.active]="currentWorkspace === 'calendar'" (click)="setWorkspace('calendar')">
+      <i class="fas fa-calendar-alt"></i>
+      Schedule Terminal
+    </button>
+  </div>
+
+  <!-- ══════════ WORKSPACE: MONITOR & INSIGHTS ══════════ -->
+  <div class="workspace-area animate-fade" *ngIf="currentWorkspace === 'monitor'">
+    <!-- Stats Mini Grid -->
+    <div class="stats-mini-grid" *ngIf="stats">
+      <div class="mini-card purple">
+        <div class="mini-icon"><i class="fas fa-running"></i></div>
+        <div class="mini-info">
+          <h4>Activités Actives</h4>
+          <div class="value">{{ stats.totalActivities }}</div>
+        </div>
+      </div>
+      <div class="mini-card teal">
+        <div class="mini-icon"><i class="fas fa-calendar-check"></i></div>
+        <div class="mini-info">
+          <h4>Planning</h4>
+          <div class="value">{{ stats.availableSessions }} / {{ stats.totalSessions }} <small>Slots</small></div>
+        </div>
+      </div>
+      <div class="mini-card orange">
+        <div class="mini-icon"><i class="fas fa-user-clock"></i></div>
+        <div class="mini-info">
+          <h4>Demandes</h4>
+          <div class="value">{{ stats.totalReservations }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reservations Table -->
+    <h2 class="section-title">Pending Booking Terminal</h2>
+    <div class="table-wrapper mb-12">
+      <table class="res-table">
+        <thead>
+          <tr>
+            <th>Accompagnant</th>
+            <th>Activité concernée</th>
+            <th>Date & Heure</th>
+            <th>Statut Audit</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let res of reservations">
+            <td>
+              <div class="user-cell">
+                <div class="user-avatar text-white" style="background: var(--primary-gradient)">{{ (res.accompagnant?.nom || 'U').charAt(0) }}</div>
+                <div>
+                  <div class="font-bold text-dark">{{ res.accompagnant?.nom }} {{ res.accompagnant?.prenom }}</div>
+                  <div class="text-xs text-muted">#RES-{{ res.id }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="fw-bold text-primary">{{ res.seance?.activite?.titre }}</span></td>
+            <td>
+              <div class="text-sm">
+                <span class="block fw-extrabold">{{ res.seance?.date | date:'dd MMM yyyy' }}</span>
+                <span class="text-muted">{{ res.seance?.heureDebut | slice:0:5 }} - {{ res.seance?.heureFin | slice:0:5 }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="status-badge" [class]="res.statut">
+                {{ (res.statut || '').replace('_', ' ') }}
+              </span>
+            </td>
+            <td>
+              <div class="action-btns" *ngIf="res.statut === 'EN_ATTENTE'">
+                <button class="btn-circle check" (click)="accepterReservation(res.id!)" title="Approve Request">
+                  <i class="fas fa-check"></i>
+                </button>
+                <button class="btn-circle cross" (click)="refuserReservation(res.id!)" title="Decline Request">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div class="action-btns" *ngIf="res.statut === 'ACCEPTEE'">
+                <div class="presence-group">
+                  <button class="btn btn-sm btn-outline-success border-2 fw-bold" (click)="marquerPresence(res.id!, true)">Present</button>
+                  <button class="btn btn-sm btn-outline-danger border-2 fw-bold" (click)="marquerPresence(res.id!, false)">Absent</button>
+                </div>
+                <!-- 🚀 New: Revoke Action -->
+                <button class="btn-circle revoke" (click)="annulerReservation(res.id!)" title="Revoke/Cancel Session">
+                  <i class="fas fa-minus-circle"></i>
+                </button>
+              </div>
+              <span class="text-muted italic small opacity-50" *ngIf="!['EN_ATTENTE','ACCEPTEE'].includes(res.statut)">
+                <i class="fas fa-history me-1"></i> Processed
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="reservations.length === 0">
+            <td colspan="5" class="py-12 text-center text-muted italic">Clear queue. No reservations pending.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════ WORKSPACE: THERAPEUTIC LIBRARY ══════════ -->
+  <div class="workspace-area animate-fade" *ngIf="currentWorkspace === 'library'">
+    
+    <!-- Creative Control Hub -->
+    <div class="activity-control-hub">
+      <div class="hub-search-wrapper">
+        <i class="fas fa-search me-3 text-muted"></i>
+        <input type="text" [(ngModel)]="searchTerm" placeholder="Search therapeutic programs..." style="border:none; background:transparent; width:100%; outline:none; font-weight:600;">
+      </div>
+
+      <div class="hub-filter-box">
+        <i class="fas fa-filter text-primary"></i>
+        <select [(ngModel)]="filterType" style="border:none; background:transparent; outline:none; font-weight:700; color:var(--text-main); cursor:pointer;">
+          <option value="">All Categories</option>
+          <option *ngFor="let t of activityTypes" [value]="t">{{ t }}</option>
+        </select>
+      </div>
+
+      <div class="view-toggle-mini">
+        <button class="toggle-btn-mini" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'"><i class="fas fa-th-large"></i></button>
+        <button class="toggle-btn-mini" [class.active]="viewMode === 'calendar'" (click)="viewMode = 'calendar'"><i class="fas fa-calendar-alt"></i></button>
+      </div>
+
+      <button class="btn-add-activity-pro" (click)="resetForm(); showForm = !showForm">
+        <i class="fas fa-plus"></i>
+        Create Activity
+      </button>
+    </div>
+
+    <!-- Creator Form -->
+    <div class="form-card" *ngIf="showForm">
+      <h3 class="mb-4 font-bold text-xl flex items-center gap-3">
+        <i class="fas" [ngClass]="isEditing ? 'fa-edit' : 'fa-magic'" style="color: var(--primary)"></i>
+        {{ isEditing ? 'Edit Program' : 'New Therapeutic Activity' }}
+      </h3>
+      <form (ngSubmit)="saveActivite()">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Program Title</label>
+            <input type="text" [(ngModel)]="currentActivite.titre" name="titre" required class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Therapy Category</label>
+            <select [(ngModel)]="currentActivite.type" name="type" class="form-control" required>
+              <option value="">-- Selective --</option>
+              <option *ngFor="let t of activityTypes" [value]="t">{{ t }}</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Objectives & Description</label>
+            <textarea [(ngModel)]="currentActivite.description" name="description" rows="3" class="form-control"></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label>Visual Identity & Therapeutic Branding</label>
+            <div class="media-dropzone-pro" (click)="fileInput.click()">
+              <!-- Hidden Native Input -->
+              <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" style="display: none" />
+              
+              <!-- Content Area -->
+              <div class="dropzone-content">
+                <div class="preview-container-pro" [class.has-media]="selectedFilePreview || currentActivite.image">
+                  <img *ngIf="selectedFilePreview" [src]="selectedFilePreview" alt="Upload Preview" class="preview-img animate-scaleIn" />
+                  <img *ngIf="!selectedFilePreview && currentActivite.image" [src]="getMediaUrl(currentActivite.image)" 
+                       alt="Current Media" class="preview-img" (error)="$any($event.target).src='https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=1000&auto=format&fit=crop'" />
+                  
+                  <div class="empty-placeholder" *ngIf="!selectedFilePreview && !currentActivite.image">
+                    <div class="icon-stack">
+                      <i class="fas fa-image main-icon"></i>
+                      <i class="fas fa-plus sub-icon"></i>
+                    </div>
+                    <span class="primary-text">Choisir une image d'illustration</span>
+                    <span class="secondary-text">JPG, PNG ou GIF (Recommandé: 1200x800)</span>
+                  </div>
+                </div>
+
+                <div class="dropzone-actions" *ngIf="selectedFilePreview || currentActivite.image">
+                   <button type="button" class="btn-change-media">
+                     <i class="fas fa-sync-alt"></i> Modifier le visuel
+                   </button>
+                   <div class="media-type-pill success" *ngIf="selectedFile">Fichier prêt à l'envoi</div>
+                   <div class="media-type-pill warning" *ngIf="!selectedFile && currentActivite.image">Lien distant actif</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" (click)="resetForm(); showForm = false" [disabled]="isSaving">Annuler</button>
+          <button type="submit" class="btn-add-activity-pro px-5" style="height:auto; padding:12px 30px;" [disabled]="isSaving">
+            <span *ngIf="isSaving" class="fas fa-spinner fa-spin me-2"></span>
+            {{ isSaving ? 'Publishing...' : 'Save & Active' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Activity Library Grid -->
+    <div class="activities-grid" *ngIf="viewMode === 'grid'">
+      <div class="activity-card" *ngFor="let act of filteredActivites">
+        <div class="card-media">
+          <img *ngIf="act.image && isImage(act.image)" [src]="getMediaUrl(act.image)" [alt]="act.titre" 
+               (error)="$any($event.target).src='https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=1000&auto=format&fit=crop'" />
+          
+          <video *ngIf="act.image && isVideo(act.image)" [src]="getMediaUrl(act.image)" 
+                 class="w-full h-full object-cover" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
+          
+          <div *ngIf="!act.image || (!isImage(act.image) && !isVideo(act.image))" class="w-full h-full bg-slate-50 flex items-center justify-center text-slate-200">
+            <i class="fas fa-image fa-3x"></i>
+          </div>
+          <span class="type-badge">{{ act.type }}</span>
+        </div>
+        
+        <div class="card-body">
+          <h4>{{ act.titre }}</h4>
+          <p class="description">{{ act.description }}</p>
+
+          <!-- Sessions Panel -->
+          <div class="sessions-panel" *ngIf="selectedActivite?.id === act.id">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-xs fw-extrabold uppercase text-primary tracking-tighter">Live Session Terminal</span>
+              <button class="text-muted hover:text-danger" (click)="selectedActivite = null"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="max-h-48 overflow-y-auto pr-2">
+              <div class="session-item" *ngFor="let s of getSeancesForActivite(act.id!)">
+                <div class="text-xs">
+                  <span class="fw-bold d-block">{{ s.date | date:'dd MMM' }}</span>
+                  <span class="text-muted">{{ s.heureDebut | slice:0:5 }} - {{ s.heureFin | slice:0:5 }}</span>
+                </div>
+                <button class="btn-sm btn-icon border-0 bg-transparent text-danger p-0" (click)="deleteSeance(s.id!)"><i class="fas fa-trash-alt"></i></button>
+              </div>
+              <p class="text-center text-xs text-muted py-4" *ngIf="getSeancesForActivite(act.id!).length === 0">No sessions scheduled.</p>
+            </div>
+            <div class="add-session-inline">
+              <input type="date" [(ngModel)]="newSeanceDate" class="py-1">
+              <div class="flex gap-1">
+                <input type="time" [(ngModel)]="newHeureDebut" class="py-1">
+                <input type="time" [(ngModel)]="newHeureFin" class="py-1">
+              </div>
+              <button class="btn btn-primary btn-sm rounded-pill w-full mt-2" (click)="addSeance(act)">Update Slots</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn-icon" (click)="editActivite(act)" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+          <button class="btn-icon delete" (click)="deleteActivite(act.id!)" title="Delete"><i class="fas fa-trash"></i></button>
+          <button class="btn-sessions" (click)="selectActivite(act)" [class.active]="selectedActivite?.id === act.id">
+            <i class="fas" [ngClass]="selectedActivite?.id === act.id ? 'fa-chevron-up' : 'fa-calendar'"></i>
+            Terminal
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ WORKSPACE: SCHEDULE TERMINAL ══════════ -->
+  <div class="workspace-area animate-fade" *ngIf="currentWorkspace === 'calendar'">
+    <div class="glass-card p-6 rounded-3xl" style="background: white; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+        <app-calendrier-doctor></app-calendrier-doctor>
+    </div>
+  </div>
+
+</div>

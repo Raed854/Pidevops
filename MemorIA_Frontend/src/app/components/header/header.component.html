@@ -1,0 +1,199 @@
+<header class="main-header">
+  <!-- Search bar -->
+  <div class="header-search">
+    <lucide-icon [name]="icons.Search" class="search-icon" size="20"></lucide-icon>
+    <input
+      type="search"
+      placeholder="Rechercher un patient, un test..."
+      [ngModel]="searchQuery()"
+      (ngModelChange)="searchQuery.set($event)"
+      class="search-input"
+      aria-label="Rechercher"
+    />
+  </div>
+
+  <!-- Actions -->
+  <div class="header-actions">
+
+    <!-- Notifications -->
+    <div class="notif-wrapper">
+      <button
+        class="header-action-btn"
+        [class.active]="showPanel()"
+        (click)="togglePanel($event)"
+        aria-label="Notifications"
+      >
+        <lucide-icon [name]="icons.Bell" size="20"></lucide-icon>
+        @if (unreadCount() > 0) {
+          <span class="badge badge-accent">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+        }
+      </button>
+
+      <!-- Notification panel -->
+      @if (showPanel()) {
+        <div class="notif-panel" (click)="$event.stopPropagation()">
+          <div class="notif-panel-header">
+            <div class="notif-panel-title">
+            <lucide-icon [name]="icons.Bell" size="16"></lucide-icon>
+              <span>Notifications</span>
+              @if (unreadCount() > 0) {
+                <span class="notif-count-badge">{{ unreadCount() }}</span>
+              }
+            </div>
+            @if (unreadCount() > 0) {
+              <button class="mark-all-btn" (click)="markAllRead($event)">
+                <lucide-icon [name]="icons.CheckCheck" size="14"></lucide-icon>
+                Tout lire
+              </button>
+            }
+          </div>
+
+          @if (selectedNotif(); as notif) {
+            <div class="notif-detail">
+              <button class="back-btn" (click)="backToList()">← Retour</button>
+              <div class="notif-detail-card" [class]="getSeverityClass(notif.severity)">
+                <div class="notif-detail-type">
+                  <span class="type-icon">{{ getIcon(notif.type) }}</span>
+                  <span class="type-label">{{ getTypeLabel(notif.type) }}</span>
+                  <span class="notif-detail-date">{{ formatDate(notif.createdAt) }}</span>
+                </div>
+                <h3 class="notif-detail-title">{{ notif.title }}</h3>
+                <p class="notif-detail-message">{{ notif.message }}</p>
+                @if (notif.zScore != null) {
+                  <div class="notif-zscore-row">
+                    <span class="zscore-label">Score Z :</span>
+                    <span class="zscore-value" [style.color]="getZScoreColor(notif.zScore)">
+                      {{ notif.zScore | number:'1.2-2' }}
+                    </span>
+                  </div>
+                }
+                @if (notif.patientName) {
+                  <div class="notif-patient-row">
+                    <lucide-icon [name]="icons.User" size="14"></lucide-icon>
+                    <span>{{ notif.patientName }}</span>
+                  </div>
+                }
+              </div>
+              @if (notif.actionUrl) {
+                <button class="action-btn" (click)="navigateTo(notif.actionUrl, $event)">
+                  Voir les détails
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="notif-list">
+              @if (notifications().length === 0) {
+                <div class="notif-empty">
+                  <lucide-icon [name]="icons.CheckCheck" size="32" class="empty-icon"></lucide-icon>
+                  <p>Aucune notification</p>
+                </div>
+              } @else {
+                @for (notif of notifications(); track notif.id) {
+                  <button class="notif-item" [class.unread]="!notif.read" (click)="selectNotif(notif)">
+                    <div class="notif-item-left">
+                      <span class="notif-type-icon" [class]="getSeverityClass(notif.severity)">
+                        {{ getIcon(notif.type) }}
+                      </span>
+                    </div>
+                    <div class="notif-item-content">
+                      <div class="notif-item-title">{{ notif.title }}</div>
+                      <div class="notif-item-msg">{{ notif.message }}</div>
+                      <div class="notif-item-date">{{ formatDate(notif.createdAt) }}</div>
+                    </div>
+                    @if (!notif.read) {
+                      <span class="unread-dot"></span>
+                    }
+                  </button>
+                }
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- User profile + selector -->
+    <div class="profile-wrapper">
+      <button class="header-profile" (click)="toggleUserSelector($event)" aria-label="Changer d'utilisateur">
+        <div [class]="getRoleAvatarClass(userService.currentUser()?.role ?? 'SOIGNANT')">
+          @if (userService.currentUser()?.initials) {
+            <span class="avatar-initials">{{ userService.currentUser()?.initials }}</span>
+          } @else {
+            <lucide-icon [name]="icons.User" size="20"></lucide-icon>
+          }
+        </div>
+        <div class="profile-info">
+          <span class="profile-name">{{ userService.currentUser()?.displayName ?? 'Chargement...' }}</span>
+          <span class="profile-role">{{ userService.currentUser()?.roleLabel ?? '' }}</span>
+        </div>
+        <lucide-icon [name]="icons.ChevronDown" size="16" class="chevron-icon" [class.rotated]="showUserSelector()"></lucide-icon>
+      </button>
+
+      <!-- User selector dropdown -->
+      @if (showUserSelector()) {
+        <div class="user-selector-panel" (click)="$event.stopPropagation()">
+          <div class="user-selector-header">Changer d'utilisateur</div>
+
+          @if (loadingUsers()) {
+            <div class="user-selector-loading">
+              <div class="spinner-sm"></div>
+              <span>Chargement...</span>
+            </div>
+          } @else {
+            @if (getUsersByRole('SOIGNANT').length > 0) {
+              <div class="user-group">
+                <div class="user-group-label">
+                  <span class="group-dot dot-soignant"></span> Médecins
+                </div>
+                @for (u of getUsersByRole('SOIGNANT'); track u.id) {
+                  <button class="user-option" [class.active]="isCurrentUser(u)" (click)="selectUser(u, $event)">
+                    <div class="user-opt-avatar role-SOIGNANT">{{ u.initials }}</div>
+                    <div class="user-opt-info">
+                      <span class="user-opt-name">{{ u.displayName }}</span>
+                      <span class="user-opt-role">{{ u.roleLabel }}</span>
+                    </div>
+                    @if (isCurrentUser(u)) { <span class="active-check">✓</span> }
+                  </button>
+                }
+              </div>
+            }
+            @if (getUsersByRole('AIDANT').length > 0) {
+              <div class="user-group">
+                <div class="user-group-label">
+                  <span class="group-dot dot-aidant"></span> Aidants
+                </div>
+                @for (u of getUsersByRole('AIDANT'); track u.id) {
+                  <button class="user-option" [class.active]="isCurrentUser(u)" (click)="selectUser(u, $event)">
+                    <div class="user-opt-avatar role-AIDANT">{{ u.initials }}</div>
+                    <div class="user-opt-info">
+                      <span class="user-opt-name">{{ u.displayName }}</span>
+                      <span class="user-opt-role">{{ u.roleLabel }}</span>
+                    </div>
+                    @if (isCurrentUser(u)) { <span class="active-check">✓</span> }
+                  </button>
+                }
+              </div>
+            }
+            @if (getUsersByRole('PATIENT').length > 0) {
+              <div class="user-group">
+                <div class="user-group-label">
+                  <span class="group-dot dot-patient"></span> Patients
+                </div>
+                @for (u of getUsersByRole('PATIENT'); track u.id) {
+                  <button class="user-option" [class.active]="isCurrentUser(u)" (click)="selectUser(u, $event)">
+                    <div class="user-opt-avatar role-PATIENT">{{ u.initials }}</div>
+                    <div class="user-opt-info">
+                      <span class="user-opt-name">{{ u.displayName }}</span>
+                      <span class="user-opt-role">{{ u.roleLabel }}</span>
+                    </div>
+                    @if (isCurrentUser(u)) { <span class="active-check">✓</span> }
+                  </button>
+                }
+              </div>
+            }
+          }
+        </div>
+      }
+    </div>
+  </div>
+</header>

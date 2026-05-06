@@ -1,0 +1,225 @@
+<div class="question-renderer">
+  <!-- Multiple Choice Questions -->
+  <div *ngIf="question.type === 'MULTIPLE_CHOICE'" class="multiple-choice-container">
+    <div class="options-grid">
+      <div 
+        *ngFor="let option of question.options; let i = index" 
+        class="option-item"
+        [class.selected]="isOptionSelected(i)"
+        (click)="onMultipleChoiceChange(i)">
+        <div class="option-indicator">
+          <lucide-icon 
+            [name]="isOptionSelected(i) ? icons.CheckCircle : icons.Circle" 
+            size="20">
+          </lucide-icon>
+        </div>
+        <span class="option-text">{{ option }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Text Answer Questions -->
+  <div *ngIf="question.type === 'TEXT_ANSWER' || question.type === 'RECALL'" class="text-answer-container">
+    <!-- MMSE Word Recall Special Case -->
+    <div *ngIf="isMMSEWordRecall()" class="mmse-word-recall">
+      <div class="target-words">
+        <p><strong>Mots à rappeler :</strong> Ballon, Voiture, Fleur</p>
+      </div>
+      <div class="word-score" *ngIf="textAnswer">
+        <span>Mots trouvés : {{ getMMSEWordScore() }}/3</span>
+      </div>
+    </div>
+
+    <div class="text-input-wrapper">
+      <textarea 
+        [(ngModel)]="textAnswer"
+        (ngModelChange)="onTextAnswerChange()"
+        class="text-input"
+        [placeholder]="getPlaceholder()"
+        rows="3"
+        [attr.aria-label]="question.text">
+      </textarea>
+    </div>
+    
+    <div *ngIf="textAnswer" class="character-count">
+      {{ textAnswer.length }} caractères
+    </div>
+  </div>
+
+  <!-- Image Choice Questions -->
+  <div *ngIf="question.type === 'IMAGE_CHOICE'" class="image-choice-container">
+    <div class="image-grid">
+      <div 
+        *ngFor="let option of question.options; let i = index" 
+        class="image-option"
+        [class.selected]="isOptionSelected(i)"
+        (click)="onMultipleChoiceChange(i)">
+        <div class="image-container">
+          <img 
+            *ngIf="question.imageData && i === 0"
+            [src]="getImageDisplayUrl(question.imageData)" 
+            alt="Image pour la question"
+            class="question-image">
+          <div *ngIf="!question.imageData || i > 0" class="placeholder-image">
+            <span>Image {{ i + 1 }}</span>
+          </div>
+        </div>
+        <div class="image-label">
+          <lucide-icon 
+            [name]="isOptionSelected(i) ? icons.CheckCircle : icons.Circle" 
+            size="16">
+          </lucide-icon>
+          <span>{{ option || 'Option ' + (i + 1) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yes/No Questions -->
+  <div *ngIf="question.type === 'YES_NO'" class="yes-no-container">
+    <div class="yes-no-options">
+      <div 
+        class="yes-no-option"
+        [class.selected]="yesNoAnswer === 'oui'"
+        (click)="onYesNoChange('oui')">
+        <lucide-icon 
+          [name]="yesNoAnswer === 'oui' ? icons.CheckCircle : icons.Circle" 
+          size="20">
+        </lucide-icon>
+        <span>Oui</span>
+      </div>
+      
+      <div 
+        class="yes-no-option"
+        [class.selected]="yesNoAnswer === 'non'"
+        (click)="onYesNoChange('non')">
+        <lucide-icon 
+          [name]="yesNoAnswer === 'non' ? icons.CheckCircle : icons.Circle" 
+          size="20">
+        </lucide-icon>
+        <span>Non</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calculation Questions -->
+  <div *ngIf="question.type === 'CALCULATION'" class="calculation-container">
+    <div class="calculation-input">
+      <input 
+        type="number" 
+        [(ngModel)]="calculationAnswer"
+        (ngModelChange)="onCalculationChange()"
+        class="number-input"
+        placeholder="Votre réponse">
+    </div>
+    
+    <div *ngIf="shouldShowCalculationHint()" class="calculation-hint">
+      <lucide-icon [name]="icons.CheckCircle" size="16"></lucide-icon>
+      <span>{{ getCalculationHint() }}</span>
+    </div>
+
+    <!-- MMSE Calculation Series -->
+    <div *ngIf="question.id?.startsWith('mmse_1')" class="mmse-calculation-series">
+      <div class="calculation-steps">
+        <div class="step">100 - 7 = ?</div>
+        <div class="step" *ngIf="question.id === 'mmse_12'">93 - 7 = ?</div>
+        <div class="step" *ngIf="question.id === 'mmse_13'">86 - 7 = ?</div>
+        <div class="step" *ngIf="question.id === 'mmse_14'">79 - 7 = ?</div>
+        <div class="step" *ngIf="question.id === 'mmse_15'">72 - 7 = ?</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Memory Sequence Questions -->
+  <div *ngIf="question.type === 'MEMORY_SEQUENCE'" class="memory-sequence-container">
+    <div *ngIf="!showMemorySequence" class="memory-instructions">
+      <p><strong>Instructions :</strong> Mémorisez la séquence qui va s'afficher.</p>
+      <button class="btn-primary" (click)="startMemorySequence()">
+        Afficher la séquence
+      </button>
+    </div>
+
+    <div *ngIf="showMemorySequence" class="memory-display">
+      <div class="sequence-display">
+        <span *ngFor="let digit of ['3', '7', '2', '9', '5']" class="sequence-digit">
+          {{ digit }}
+        </span>
+      </div>
+      <p class="memorize-hint">Mémorisez cette séquence...</p>
+    </div>
+
+    <div *ngIf="!showMemorySequence && memoryInputSequence.length === 0" class="memory-input-instructions">
+      <p><strong>Entrez maintenant la séquence que vous avez mémorisée :</strong></p>
+    </div>
+
+    <div *ngIf="!showMemorySequence" class="memory-input">
+      <div class="sequence-input-display">
+        <span *ngFor="let digit of memoryInputSequence" class="input-digit">{{ digit }}</span>
+        <span *ngIf="memoryInputSequence.length === 0" class="input-placeholder">_</span>
+      </div>
+      
+      <div class="digit-pad">
+        <div class="digit-row">
+          <button class="digit-btn" (click)="addMemoryInput('1')">1</button>
+          <button class="digit-btn" (click)="addMemoryInput('2')">2</button>
+          <button class="digit-btn" (click)="addMemoryInput('3')">3</button>
+        </div>
+        <div class="digit-row">
+          <button class="digit-btn" (click)="addMemoryInput('4')">4</button>
+          <button class="digit-btn" (click)="addMemoryInput('5')">5</button>
+          <button class="digit-btn" (click)="addMemoryInput('6')">6</button>
+        </div>
+        <div class="digit-row">
+          <button class="digit-btn" (click)="addMemoryInput('7')">7</button>
+          <button class="digit-btn" (click)="addMemoryInput('8')">8</button>
+          <button class="digit-btn" (click)="addMemoryInput('9')">9</button>
+        </div>
+        <div class="digit-row">
+          <button class="digit-btn" (click)="addMemoryInput('0')">0</button>
+          <button class="digit-btn btn-clear" (click)="removeMemoryInput()">⌫</button>
+          <button class="digit-btn btn-clear-all" (click)="clearMemoryInput()">C</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MMSE Multi-step Instructions -->
+  <div *ngIf="isMultiStepMMSE()" class="mmse-multi-step">
+    <div class="steps-list">
+      <div *ngFor="let step of getMMSESteps(); let i = index" class="step-item">
+        <div class="step-number">{{ i + 1 }}</div>
+        <span class="step-text">{{ step }}</span>
+      </div>
+    </div>
+    
+    <div class="instruction-note">
+      <p><strong>Note :</strong> Le professionnel de santé évaluera si vous avez correctement suivi toutes les étapes.</p>
+    </div>
+  </div>
+
+  <!-- Special MMSE Drawing Question -->
+  <div *ngIf="question.id === 'mmse_22'" class="mmse-drawing">
+    <div class="drawing-instructions">
+      <p><strong>Instructions :</strong> Copiez ce dessin sur une feuille de papier.</p>
+      <div class="reference-drawing">
+        <svg width="200" height="150" viewBox="0 0 200 150">
+          <!-- Simple intersecting pentagons -->
+          <polygon points="50,30 80,20 100,40 90,70 60,70" 
+                   fill="none" stroke="#333" stroke-width="2"/>
+          <polygon points="120,30 150,20 170,40 160,70 130,70" 
+                   fill="none" stroke="#333" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+    
+    <div class="drawing-note">
+      <p>Le professionnel de santé évaluera la précision de votre dessin.</p>
+    </div>
+  </div>
+
+  <!-- Time Limit Indicator -->
+  <div *ngIf="question.timeLimit" class="time-limit-indicator">
+    <lucide-icon [name]="icons.CheckCircle" size="16"></lucide-icon>
+    <span>Temps limite : {{ question.timeLimit }} secondes</span>
+  </div>
+</div>

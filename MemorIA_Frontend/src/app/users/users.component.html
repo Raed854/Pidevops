@@ -1,0 +1,209 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="users-page">
+
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">Gestion des Utilisateurs</h1>
+      <p class="page-subtitle">{{ stats.total }} utilisateurs enregistrés</p>
+    </div>
+    <div class="header-actions">
+      <button pButton icon="pi pi-file-excel" label="Excel" class="p-button-success p-button-sm" (click)="exportExcel()" aria-label="Exporter en Excel"></button>
+      <button pButton icon="pi pi-file-pdf" label="PDF" class="p-button-danger p-button-sm" (click)="exportPdf()" aria-label="Exporter en PDF"></button>
+      <button pButton icon="pi pi-user-plus" label="Créer" class="p-button-sm" (click)="goToSignup()" aria-label="Créer un nouvel utilisateur"></button>
+      <button pButton icon="pi pi-sign-out" label="Logout" class="p-button-secondary p-button-outlined p-button-sm" (click)="logout()" aria-label="Déconnexion"></button>
+    </div>
+  </header>
+
+  <!-- Stats Cards -->
+  <div class="stats-row">
+    <div class="stat-card stat-card--total">
+      <div class="stat-icon"><i class="pi pi-users"></i></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats.total }}</span>
+        <span class="stat-label">Total</span>
+      </div>
+    </div>
+    <div class="stat-card stat-card--active">
+      <div class="stat-icon"><i class="pi pi-check-circle"></i></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats.active }}</span>
+        <span class="stat-label">Actifs</span>
+      </div>
+    </div>
+    <div class="stat-card stat-card--inactive">
+      <div class="stat-icon"><i class="pi pi-times-circle"></i></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ stats.inactive }}</span>
+        <span class="stat-label">Inactifs</span>
+      </div>
+    </div>
+    <div class="stat-card stat-card--profile">
+      <div class="stat-icon"><i class="pi pi-id-card"></i></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ profileCompletionRate }}%</span>
+        <span class="stat-label">Profils complets</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="charts-row" *ngIf="roleChartData && statusChartData">
+    <div class="chart-card">
+      <h3 class="chart-title">Repartition par role</h3>
+      <div class="chart-wrapper">
+        <p-chart type="doughnut" [data]="roleChartData" [options]="chartOptions"></p-chart>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3 class="chart-title">Statut par role</h3>
+      <div class="chart-wrapper">
+        <p-chart type="bar" [data]="statusChartData" [options]="barChartOptions"></p-chart>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="table-card">
+    <div class="table-scroll">
+    <p-table
+      #dt
+      [value]="users"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[5, 10, 25, 50]"
+      [loading]="isLoading"
+      [globalFilterFields]="['nom', 'prenom', 'email', 'telephone', 'role']"
+      dataKey="id"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="Affichage {first} a {last} sur {totalRecords} utilisateurs"
+      styleClass="p-datatable-sm p-datatable-striped">
+
+      <!-- Table Header -->
+      <ng-template pTemplate="caption">
+        <div class="table-header">
+          <span class="table-title">Liste des utilisateurs</span>
+          <p-iconField iconPosition="left">
+            <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+            <input pInputText type="text" placeholder="Rechercher..." (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+          </p-iconField>
+        </div>
+      </ng-template>
+
+      <!-- Columns -->
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="id" style="width: 70px">ID <p-sortIcon field="id"></p-sortIcon></th>
+          <th pSortableColumn="prenom">Nom <p-sortIcon field="prenom"></p-sortIcon></th>
+          <th pSortableColumn="email">Email <p-sortIcon field="email"></p-sortIcon></th>
+          <th>Telephone</th>
+          <th pSortableColumn="role">Role <p-sortIcon field="role"></p-sortIcon></th>
+          <th pSortableColumn="actif" style="width: 100px">Statut <p-sortIcon field="actif"></p-sortIcon></th>
+          <th style="width: 200px">Actions</th>
+        </tr>
+      </ng-template>
+
+      <!-- Body -->
+      <ng-template pTemplate="body" let-user>
+        <tr>
+          <td>{{ user.id }}</td>
+          <td>
+            <div class="user-name-cell">
+              <div class="user-avatar">{{ user.prenom?.charAt(0) }}{{ user.nom?.charAt(0) }}</div>
+              <div>
+                <div class="user-fullname">{{ user.prenom }} {{ user.nom }}</div>
+                <div class="user-profile-tag" *ngIf="user.profileCompleted">Profil complet</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.telephone }}</td>
+          <td><p-tag [value]="user.role" [severity]="getRoleSeverity(user.role)"></p-tag></td>
+          <td>
+            <p-tag [value]="user.actif ? 'Actif' : 'Inactif'" [severity]="user.actif ? 'success' : 'danger'"></p-tag>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button pButton icon="pi pi-check" class="p-button-success p-button-sm p-button-rounded p-button-outlined"
+                      *ngIf="!user.actif" pTooltip="Confirmer + Email" tooltipPosition="top"
+                      (click)="confirmUser(user)"></button>
+              <button pButton icon="pi pi-pencil" class="p-button-sm p-button-rounded p-button-outlined"
+                      pTooltip="Modifier" tooltipPosition="top"
+                      (click)="startEdit(user)"></button>
+              <button pButton icon="pi pi-trash" class="p-button-danger p-button-sm p-button-rounded p-button-outlined"
+                      pTooltip="Supprimer" tooltipPosition="top"
+                      (click)="deleteUser(user)"></button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <!-- Empty -->
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="7" class="empty-message">Aucun utilisateur trouvé.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+    </div>
+  </div>
+
+  <!-- Edit Dialog -->
+  <p-dialog
+    header="Modifier Utilisateur #{{ editingUserId }}"
+    [(visible)]="editDialogVisible"
+    [modal]="true"
+    [style]="{ width: '580px' }"
+    [draggable]="false"
+    [resizable]="false"
+    (onHide)="cancelEdit()">
+
+    <form [formGroup]="editForm" (ngSubmit)="saveEdit()">
+      <div class="dialog-grid">
+        <div class="form-field">
+          <label>Nom</label>
+          <input pInputText formControlName="nom" />
+          <small class="field-error" *ngIf="editForm.get('nom')?.touched && editForm.get('nom')?.invalid">Nom requis (min 2 car.)</small>
+        </div>
+        <div class="form-field">
+          <label>Prenom</label>
+          <input pInputText formControlName="prenom" />
+          <small class="field-error" *ngIf="editForm.get('prenom')?.touched && editForm.get('prenom')?.invalid">Prenom requis (min 2 car.)</small>
+        </div>
+        <div class="form-field">
+          <label>Email</label>
+          <input pInputText type="email" formControlName="email" />
+          <small class="field-error" *ngIf="editForm.get('email')?.touched && editForm.get('email')?.invalid">Email invalide</small>
+        </div>
+        <div class="form-field">
+          <label>Téléphone</label>
+          <input pInputText type="tel" formControlName="telephone" />
+          <small class="field-error" *ngIf="editForm.get('telephone')?.touched && editForm.get('telephone')?.invalid">Téléphone requis (min 8 car.)</small>
+        </div>
+        <div class="form-field">
+          <label>Rôle</label>
+          <p-dropdown formControlName="role" [options]="roleOptions" placeholder="Choisir un rôle" [style]="{ width: '100%' }"></p-dropdown>
+        </div>
+        <div class="form-field">
+          <label>Statut</label>
+          <p-dropdown formControlName="actif" [options]="statusOptions" [style]="{ width: '100%' }"></p-dropdown>
+        </div>
+        <div class="form-field">
+          <label>Profil complété</label>
+          <p-dropdown formControlName="profileCompleted" [options]="profileOptions" [style]="{ width: '100%' }"></p-dropdown>
+        </div>
+        <div class="form-field">
+          <label>Mot de passe (optionnel)</label>
+          <input pInputText type="password" formControlName="password" placeholder="Laisser vide pour ne pas changer" />
+        </div>
+      </div>
+    </form>
+
+    <ng-template pTemplate="footer">
+      <button pButton label="Annuler" icon="pi pi-times" class="p-button-secondary p-button-outlined" (click)="cancelEdit()"></button>
+      <button pButton label="Enregistrer" icon="pi pi-check" [loading]="isSaving" (click)="saveEdit()"></button>
+    </ng-template>
+  </p-dialog>
+</div>

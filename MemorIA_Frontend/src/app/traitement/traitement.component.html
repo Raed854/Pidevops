@@ -1,0 +1,292 @@
+<div class="page">
+
+  <!-- ══════════════════════════════════════════════
+       PAGE HEADER
+  ══════════════════════════════════════════════ -->
+  <div class="page-header">
+    <div class="page-header__left">
+      <h1 class="page-title">Gestion des Traitements</h1>
+      <p class="page-subtitle">Assigner un accompagnant disponible a un patient et suivre les affectations</p>
+    </div>
+    <button class="btn btn--primary" (click)="openModal()">
+      <span class="btn__icon">+</span> Nouveau Traitement
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">Chargement des donnees...</div>
+  <div *ngIf="successMsg" class="alert-success">{{ successMsg }}</div>
+
+  <!-- ══════════════════════════════════════════════
+       SUMMARY STATS
+  ══════════════════════════════════════════════ -->
+  <div class="summary-row" *ngIf="!loading">
+    <div class="summary-chip summary-chip--total">
+      <span class="chip-value">{{ traitements.length }}</span>
+      <span class="chip-label">Total</span>
+    </div>
+    <div class="summary-chip summary-chip--en-cours">
+      <span class="chip-value">{{ enCoursCount }}</span>
+      <span class="chip-label">En cours</span>
+    </div>
+    <div class="summary-chip summary-chip--termine">
+      <span class="chip-value">{{ termineCount }}</span>
+      <span class="chip-label">Termines</span>
+    </div>
+    <div class="summary-chip summary-chip--annule">
+      <span class="chip-value">{{ annuleCount }}</span>
+      <span class="chip-label">Annules</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       TRAITEMENTS LIST
+  ══════════════════════════════════════════════ -->
+  <section class="section" *ngIf="!loading">
+    <div class="section-head">
+      <h2 class="section-title">Traitements <span class="badge badge--purple">{{ traitements.length }}</span></h2>
+    </div>
+
+    <div *ngIf="traitements.length === 0" class="empty-state">
+      <div class="empty-state__icon">📋</div>
+      <p>Aucun traitement enregistre.</p>
+      <button class="btn btn--outline" (click)="openModal()">Creer le premier</button>
+    </div>
+
+    <div class="card-grid" *ngIf="traitements.length > 0">
+      <div class="t-card" *ngFor="let t of traitements">
+        <!-- Card header -->
+        <div class="t-card__top">
+          <div class="t-card__avatar">T</div>
+          <div class="t-card__info">
+            <div class="t-card__name">{{ t.titre || 'Traitement #' + t.idTraitement }}</div>
+            <div class="t-card__people">
+              <span class="t-card__person">Patient : <b>{{ t.patientNom }}</b></span>
+              <span class="t-card__person">Accompagnant : <b>{{ t.accompagnantNom }}</b></span>
+            </div>
+          </div>
+          <span *ngIf="t.alerteActive" class="status-pill status-pill--active">Alerte</span>
+        </div>
+
+        <!-- Card body -->
+        <div class="t-card__body">
+          <div *ngIf="t.statut" class="t-detail">
+            <span class="t-detail__icon">📋</span>
+            <span class="statut-label"
+                  [class.statut-label--en_cours]="t.statut === 'EN_COURS'"
+                  [class.statut-label--termine]="t.statut === 'TERMINE'"
+                  [class.statut-label--annule]="t.statut === 'ANNULE'">
+              {{ t.statut === 'EN_COURS' ? 'En cours' : t.statut === 'TERMINE' ? 'Termine' : t.statut === 'ANNULE' ? 'Annule' : t.statut }}
+            </span>
+          </div>
+
+          <div *ngIf="t.typeAlerte" class="t-detail">
+            <span class="t-detail__icon">⚠️</span>
+            {{ t.typeAlerte }}
+          </div>
+          <div *ngIf="t.dateFinPrevue" class="t-detail">
+            <span class="t-detail__icon">🏁</span>
+            Fin prevue : {{ t.dateFinPrevue | date:'dd/MM/yyyy' }}
+          </div>
+          <div *ngIf="t.dateCreation" class="t-detail">
+            <span class="t-detail__icon">📅</span>
+            Cree le {{ t.dateCreation | date:'dd/MM/yyyy' }}
+          </div>
+          <div *ngIf="t.notes" class="t-detail">
+            <span class="t-detail__icon">📝</span>
+            {{ t.notes }}
+          </div>
+        </div>
+
+        <!-- Card actions -->
+        <div class="t-card__actions" *ngIf="t.statut === 'EN_COURS'">
+          <button class="btn btn--sm btn--green" (click)="finishAffectation(t)">Terminer</button>
+          <button class="btn btn--sm btn--orange" (click)="cancelAffectation(t)">Annuler</button>
+          <button class="btn btn--sm btn--danger" (click)="deleteAffectation(t)">Supprimer</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       ALERTS SECTION
+  ══════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Alertes Patients <span class="badge badge--purple">{{ alerts.length }}</span></h2>
+      <div class="alert-summary">
+        <span class="alert-summary-chip alert-summary-chip--red">{{ alertCounts['unread'] }} Non lues</span>
+        <span class="alert-summary-chip alert-summary-chip--green">{{ alertCounts['read'] }} Lues</span>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="filter-group">
+        <label class="filter-label">Filtre</label>
+        <div class="filter-pills">
+          <button class="filter-pill" [class.active]="alertReadFilter === 'all'"    (click)="alertReadFilter = 'all'">Toutes ({{ alertCounts['all'] }})</button>
+          <button class="filter-pill filter-pill--urgence" [class.active]="alertReadFilter === 'unread'" (click)="alertReadFilter = 'unread'">Non lues ({{ alertCounts['unread'] }})</button>
+          <button class="filter-pill" [class.active]="alertReadFilter === 'read'"   (click)="alertReadFilter = 'read'">Lues ({{ alertCounts['read'] }})</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="alert-table">
+        <thead>
+          <tr>
+            <th>Traitement</th>
+            <th>Message</th>
+            <th>Date / Heure</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let alert of filteredAlerts" [class.row-unread]="!alert.lu">
+            <td>
+              <span class="alert-treatment">{{ getTraitementTitre(alert.idTraitement) }}</span>
+            </td>
+            <td>
+              <span class="alert-message">{{ alert.alert }}</span>
+            </td>
+            <td class="date-cell">
+              <span class="date-day">{{ alert.dateAlerte | date:'dd/MM/yyyy' }}</span>
+              <span class="date-time">{{ alert.dateAlerte | date:'HH:mm' }}</span>
+            </td>
+            <td>
+              <span class="status-badge" [class]="alert.lu ? 'status-badge--resolu' : 'status-badge--nouveau'">
+                {{ alert.lu ? 'Lue' : 'Non lue' }}
+              </span>
+            </td>
+            <td>
+              <div class="action-btns">
+                <button *ngIf="!alert.lu" class="btn btn--xs btn--green" (click)="markAsRead(alert)">Marquer lue</button>
+                <span *ngIf="alert.lu" class="resolved-label">Lue</span>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredAlerts.length === 0">
+            <td colspan="5" class="no-data">Aucune alerte.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<!-- ════════════════════════════════════════════════
+     MODAL — Nouveau Traitement
+════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal modal--large" (click)="$event.stopPropagation()">
+
+    <div class="modal__header">
+      <h2 class="modal__title">Nouveau Traitement</h2>
+      <button class="modal__close" (click)="closeModal()">✕</button>
+    </div>
+
+    <div class="modal__body" [formGroup]="form">
+
+      <div *ngIf="errorMsg" class="form-error-banner">{{ errorMsg }}</div>
+
+      <!-- ══ Section 1 : Informations du traitement ══ -->
+      <div class="form-divider"><span>Informations du traitement</span></div>
+
+      <!-- Titre -->
+      <div class="form-group">
+        <label class="form-label">Titre <span class="req">*</span></label>
+        <input class="form-input" [class.error]="isInvalid('titre')"
+               formControlName="titre" placeholder="Ex: Suivi post-operatoire, Reeducation..." />
+        <span class="form-error" *ngIf="isInvalid('titre')">Titre requis (min. 3 caracteres)</span>
+      </div>
+
+      <!-- Alerte Active + Type Alerte -->
+      <div class="form-row">
+        <div class="form-group form-group--toggle">
+          <label class="form-label">Alerte active</label>
+          <label class="toggle">
+            <input type="checkbox" formControlName="alerteActive" />
+            <span class="toggle__track"></span>
+            <span class="toggle__label">{{ form.value.alerteActive ? 'Activee' : 'Desactivee' }}</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Type d'alerte</label>
+          <select class="form-input" formControlName="typeAlerte"
+                  [attr.disabled]="!form.value.alerteActive ? '' : null">
+            <option value="">-- Aucun --</option>
+            <option value="ZONE">Depassement de zone</option>
+            <option value="URGENCE">Cas d'urgence</option>
+            <option value="PERTE">Patient introuvable</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ══ Section 2 : Selection Patient ══ -->
+      <div class="form-divider"><span>Choisir un Patient</span></div>
+
+      <div *ngIf="patients.length === 0" class="empty-state" style="padding: 20px">
+        Aucun patient enregistre.
+      </div>
+
+      <div class="scroll-list" *ngIf="patients.length > 0">
+        <div class="scroll-item"
+             *ngFor="let p of patients"
+             [class.scroll-item--selected]="selectedPatientId === p.id"
+             (click)="selectPatient(p.id)">
+          <div class="scroll-item__avatar avatar--patient">{{ p.prenom[0] }}{{ p.nom[0] }}</div>
+          <span class="scroll-item__name">{{ p.prenom }} {{ p.nom }}</span>
+          <span class="scroll-item__check" *ngIf="selectedPatientId === p.id">✓</span>
+        </div>
+      </div>
+
+      <div *ngIf="selectedPatientId" class="selected-notice">
+        Patient selectionne : <b>{{ getPatientName(selectedPatientId) }}</b>
+        <button type="button" class="deselect-btn" (click)="selectedPatientId = null">✕</button>
+      </div>
+
+      <!-- ══ Section 3 : Selection Accompagnant (LIBRE) ══ -->
+      <div class="form-divider"><span>Choisir un Accompagnant disponible</span></div>
+
+      <div *ngIf="accompagnantsLibres.length === 0" class="empty-state" style="padding: 20px">
+        Aucun accompagnant avec disponibilite libre.
+      </div>
+
+      <div class="scroll-list" *ngIf="accompagnantsLibres.length > 0">
+        <div class="scroll-item"
+             *ngFor="let a of accompagnantsLibres"
+             [class.scroll-item--selected]="selectedAccompagnantId === a.id"
+             (click)="selectAccompagnant(a.id)">
+          <div class="scroll-item__avatar avatar--accompagnant">{{ a.prenom[0] }}{{ a.nom[0] }}</div>
+          <span class="scroll-item__name">{{ a.prenom }} {{ a.nom }}</span>
+          <span class="scroll-item__badge">LIBRE</span>
+          <span class="scroll-item__check" *ngIf="selectedAccompagnantId === a.id">✓</span>
+        </div>
+      </div>
+
+      <div *ngIf="selectedAccompagnantId" class="selected-notice">
+        Accompagnant selectionne : <b>{{ getAccompagnantName(selectedAccompagnantId) }}</b>
+        <button type="button" class="deselect-btn" (click)="selectedAccompagnantId = null">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-input form-textarea" formControlName="notes"
+                  placeholder="Observations complementaires..."></textarea>
+      </div>
+
+    </div>
+
+    <div class="modal__footer">
+      <button class="btn btn--outline" type="button" (click)="closeModal()">Annuler</button>
+      <button class="btn btn--primary" type="button"
+              [disabled]="submitLoading || !selectedPatientId || !selectedAccompagnantId || form.invalid"
+              (click)="submitForm()">
+        {{ submitLoading ? 'Enregistrement...' : 'Creer le traitement' }}
+      </button>
+    </div>
+
+  </div>
+</div>

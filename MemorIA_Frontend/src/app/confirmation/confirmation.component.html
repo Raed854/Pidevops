@@ -1,0 +1,50 @@
+<div class="confirmation-container">
+  <div class="confirmation-card">
+    <!-- Success Icon -->
+    <div class="success-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    </div>
+
+    <!-- Title -->
+    <h1 class="confirmation-title">Diagnostic Saved Successfully!</h1>
+
+    <!-- Message -->
+    <p class="confirmation-message">
+      Thank you. I've completed the diagnostic test, and I'll take the results to the doctor.
+      Hopefully, the results will be good.
+    </p>
+
+    <!-- Score Display -->
+    <div class="score-display" *ngIf="score !== null">
+      <span class="score-label">Your Score</span>
+      <div class="score-circle">
+        <span class="score-value">{{ score }}%</span>
+      </div>
+    </div>
+
+    <!-- Info Card -->
+    <div class="info-card">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <p>Your diagnostic has been recorded. Your doctor will review the results during your next appointment.</p>
+    </div>
+
+    <!-- Actions -->
+    <div class="confirmation-actions">
+      <button class="btn btn-primary" (click)="goHome()">
+        Back to Home
+      </button>
+      <button class="btn btn-secondary" (click)="goToDiagnostic()">
+        Take Another Diagnostic
+      </button>
+    </div>
+  </div>
+</div>

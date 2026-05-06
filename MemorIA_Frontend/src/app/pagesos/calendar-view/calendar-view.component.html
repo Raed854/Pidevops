@@ -1,0 +1,100 @@
+<div class="calendar-page">
+    <header class="calendar-header">
+        <div class="header-left">
+            <h1 class="page-title">{{ pageTitle() }}</h1>
+            <div class="month-navigation">
+                <button class="btn-nav" (click)="prevMonth()">
+                    <lucide-icon [img]="icons.ChevronLeft" size="20"></lucide-icon>
+                </button>
+                <h2 class="current-month">{{ monthName() }}</h2>
+                <button class="btn-nav" (click)="nextMonth()">
+                    <lucide-icon [img]="icons.ChevronRight" size="20"></lucide-icon>
+                </button>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-today" (click)="goToToday()">Aujourd'hui</button>
+            <button class="btn-add-event">
+                <lucide-icon [img]="icons.Plus" size="18"></lucide-icon>
+                Nouveau Patient/Rdv
+            </button>
+        </div>
+    </header>
+
+    <div class="calendar-container">
+        <!-- Weekdays Header -->
+        <div class="weekdays-grid">
+            <div *ngFor="let day of daysOfWeek" class="weekday-label">{{ day }}</div>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="calendar-grid">
+            <div *ngFor="let dayObj of calendarDays()" class="calendar-day" (click)="selectDay(dayObj.date)" [ngClass]="{
+                    'not-current': dayObj.month !== 'current',
+                    'today': isToday(dayObj.date)
+                 }">
+                <div class="day-header">
+                    <span class="day-number">{{ dayObj.day }}</span>
+                </div>
+
+                <div class="day-content">
+                    <div class="events-container">
+                        <div *ngFor="let event of getEventsForDay(dayObj.date)" class="calendar-event-pill"
+                            [ngClass]="event.status.toLowerCase()">
+                            <span class="event-time">{{ event.time }}</span>
+                            <span class="event-title">{{ event.title }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event List Detail View (Visible under the grid like in the image) -->
+    <div class="agenda-view">
+        <div class="agenda-header">
+            <h3>Travaux et Rendez-vous du jour</h3>
+            <span class="agenda-date">{{ selectedDay().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric',
+                month: 'long' }) }}</span>
+        </div>
+
+        <div class="agenda-list">
+            <table class="agenda-table">
+                <thead>
+                    <tr>
+                        <th>Heure</th>
+                        <th>Test / Rendez-vous</th>
+                        <th>Description</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let event of getEventsForDay(selectedDay())">
+                        <td class="col-time">{{ event.time }}</td>
+                        <td class="col-project">{{ event.title }}</td>
+                        <td class="col-desc">{{ event.description }}</td>
+                        <td class="col-status">
+                            <span class="status-pill-small" [ngClass]="event.status.toLowerCase()">
+                                {{ event.status === 'DONE' ? 'Terminé' : 'À venir' }}
+                            </span>
+                        </td>
+                        <td class="col-actions">
+                            <button class="btn-action-more">
+                                <lucide-icon [img]="icons.MoreHorizontal" size="18"></lucide-icon>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="getEventsForDay(selectedDay()).length === 0">
+                        <td colspan="6" class="empty-state">Aucun rendez-vous prévu pour cette date.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- FAB for adding event (matching the + in the image) -->
+    <button class="fab-add">
+        <lucide-icon [img]="icons.Plus" size="32"></lucide-icon>
+    </button>
+</div>

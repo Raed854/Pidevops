@@ -1,0 +1,201 @@
+<p-toast />
+
+<div class="form-wrapper">
+  <div class="form-header">
+    <i class="pi pi-file-edit form-header-icon"></i>
+    <div class="form-header-text">
+      <h1>{{ pageTitle }}</h1>
+      <p class="form-header-sub">Dossier médical du patient — champs marqués <span class="required">*</span> obligatoires.</p>
+    </div>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+    <!-- ─── 1. Basic Information ─────────────────────────────────────────── -->
+    <p-card styleClass="form-card">
+      <ng-template pTemplate="header">
+        <div class="card-section-label"><i class="pi pi-user"></i> Informations générales</div>
+      </ng-template>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="contactPatient">Contact patient / aidant</label>
+          <input pInputText id="contactPatient" formControlName="contactPatient"
+                 placeholder="+216 XX XXX XXX" class="w-full" />
+        </div>
+        <div class="field">
+          <label for="derniereVisite">Dernière visite</label>
+          <input pInputText id="derniereVisite" formControlName="derniereVisite"
+                 type="date" class="w-full" />
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 2. Diagnosis ─────────────────────────────────────────────────── -->
+    <p-card styleClass="form-card">
+      <ng-template pTemplate="header">
+        <div class="card-section-label"><i class="pi pi-heart"></i> Diagnostic</div>
+      </ng-template>
+
+      <div class="form-grid">
+        <div class="field full-width">
+          <label for="typeDiagnostic">Type de diagnostic <span class="required">*</span></label>
+          <input pInputText id="typeDiagnostic" formControlName="typeDiagnostic"
+                 placeholder="Ex. Maladie d'Alzheimer" class="w-full" />
+          <small class="error-msg" *ngIf="form.get('typeDiagnostic')?.invalid && form.get('typeDiagnostic')?.touched">
+            Ce champ est obligatoire.
+          </small>
+        </div>
+        <div class="field">
+          <label for="stade">Stade</label>
+          <p-dropdown id="stade" formControlName="stade" [options]="stadeOptions"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Sélectionner" styleClass="w-full" />
+        </div>
+        <div class="field">
+          <label for="dateDiagnostic">Date du diagnostic</label>
+          <input pInputText id="dateDiagnostic" formControlName="dateDiagnostic"
+                 type="date" class="w-full" />
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 3. Health & History ──────────────────────────────────────────── -->
+    <p-card styleClass="form-card">
+      <ng-template pTemplate="header">
+        <div class="card-section-label"><i class="pi pi-history"></i> Santé & Antécédents</div>
+      </ng-template>
+
+      <div class="form-grid">
+        <div class="field full-width">
+          <label for="maladiesPrincipales">Maladies principales</label>
+          <textarea pInputTextarea id="maladiesPrincipales" formControlName="maladiesPrincipales"
+                    rows="3" class="w-full"
+                    placeholder="Ex. Diabète de type 2, hypertension artérielle…"></textarea>
+        </div>
+        <div class="field full-width">
+          <label for="allergies">Allergies</label>
+          <textarea pInputTextarea id="allergies" formControlName="allergies"
+                    rows="2" class="w-full"
+                    placeholder="Ex. Pénicilline, aspirine…"></textarea>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 4. Cognitive State ───────────────────────────────────────────── -->
+    <p-card styleClass="form-card">
+      <ng-template pTemplate="header">
+        <div class="card-section-label"><i class="pi pi-brain"></i> État cognitif</div>
+      </ng-template>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="niveauMemoire">Niveau de mémoire</label>
+          <input pInputText id="niveauMemoire" formControlName="niveauMemoire"
+                 placeholder="Ex. Déficits modérés à court terme" class="w-full" />
+        </div>
+        <div class="field">
+          <label for="orientation">Orientation</label>
+          <p-dropdown id="orientation" formControlName="orientation" [options]="orientationOptions"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Sélectionner" styleClass="w-full" />
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 5. Daily Function ────────────────────────────────────────────── -->
+    <p-card styleClass="form-card">
+      <ng-template pTemplate="header">
+        <div class="card-section-label"><i class="pi pi-calendar"></i> Fonctionnement quotidien</div>
+      </ng-template>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="niveauFonctionnement">Autonomie</label>
+          <p-dropdown id="niveauFonctionnement" formControlName="niveauFonctionnement"
+                    [options]="fonctionnementOptions"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Sélectionner" styleClass="w-full" />
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 6. Medications ───────────────────────────────────────────────── -->
+    <p-card styleClass="form-card">
+      <ng-template pTemplate="header">
+        <div class="card-section-label"><i class="pi pi-box"></i> Médicaments en cours</div>
+      </ng-template>
+
+      <div class="form-grid">
+        <div class="field full-width">
+          <label for="medicamentsActuels">Traitements actuels</label>
+          <textarea pInputTextarea id="medicamentsActuels" formControlName="medicamentsActuels"
+                    rows="3" class="w-full"
+                    placeholder="Ex. Donépézil 10mg, Mémantine 20mg…"></textarea>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 7. Behavior ──────────────────────────────────────────────────── -->
+    <p-card styleClass="form-card">
+      <ng-template pTemplate="header">
+        <div class="card-section-label"><i class="pi pi-users"></i> Comportement</div>
+      </ng-template>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="etatComportement">État comportemental</label>
+          <p-dropdown id="etatComportement" formControlName="etatComportement"
+                    [options]="comportementOptions"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Sélectionner" styleClass="w-full" />
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 8. Caregiver ─────────────────────────────────────────────────── -->
+    <p-card styleClass="form-card">
+      <ng-template pTemplate="header">
+        <div class="card-section-label"><i class="pi pi-id-card"></i> Accompagnant / Aidant</div>
+      </ng-template>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="accompagnantNom">Nom de l'accompagnant</label>
+          <input pInputText id="accompagnantNom" formControlName="accompagnantNom"
+                 placeholder="Prénom Nom" class="w-full" />
+        </div>
+        <div class="field">
+          <label for="accompagnantContact">Contact de l'accompagnant</label>
+          <input pInputText id="accompagnantContact" formControlName="accompagnantContact"
+                 placeholder="+216 XX XXX XXX" class="w-full" />
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 9. Notes ─────────────────────────────────────────────────────── -->
+    <p-card styleClass="form-card">
+      <ng-template pTemplate="header">
+        <div class="card-section-label"><i class="pi pi-pencil"></i> Notes médicales</div>
+      </ng-template>
+
+      <div class="form-grid">
+        <div class="field full-width">
+          <label for="notesMedecin">Notes du médecin</label>
+          <textarea pInputTextarea id="notesMedecin" formControlName="notesMedecin"
+                    rows="5" class="w-full"
+                    placeholder="Observations, recommandations, plan de suivi…"></textarea>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── Actions ──────────────────────────────────────────────────────── -->
+    <div class="form-actions">
+      <button pButton type="button" label="Annuler" icon="pi pi-times"
+              class="p-button-secondary p-button-outlined" (click)="onCancel()"></button>
+      <button pButton type="submit" [label]="isEditMode ? 'Mettre à jour' : 'Créer le dossier'"
+              icon="pi pi-check" [loading]="isSubmitting"></button>
+    </div>
+
+  </form>
+</div>

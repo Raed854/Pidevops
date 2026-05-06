@@ -1,0 +1,236 @@
+<div class="pro-dashboard">
+  <!-- Sidebar Navigation -->
+  <app-sidebar-diagnostic></app-sidebar-diagnostic>
+
+  <main class="main-content">
+    
+    <!-- ══════════ PREMIUM HEADER ══════════ -->
+    <header class="dash-header">
+      <div class="header-left">
+        <h1 class="header-title">Communications Command Center</h1>
+        <p class="header-subtitle">Managing institutional insights, events, and community safety.</p>
+      </div>
+      <div class="header-right">
+        <div class="stats-mini-pill">
+          <i class="fas fa-layer-group"></i>
+          <span>{{ publications.length }} Articles</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ══════════ WORKSPACE NAV ══════════ -->
+    <div class="workspace-nav-pro">
+      <button class="nav-btn" [class.active]="currentWorkspace === 'registry'" (click)="currentWorkspace = 'registry'">
+        <i class="fas fa-th-list"></i> Registry Explorer
+      </button>
+      <button class="nav-btn" [class.active]="currentWorkspace === 'composer'" (click)="currentWorkspace = 'composer'">
+        <i class="fas fa-feather-alt"></i> Drafting Center
+      </button>
+      <button class="nav-btn" [class.active]="currentWorkspace === 'moderation'" (click)="currentWorkspace = 'moderation'">
+        <i class="fas fa-shield-virus"></i> Safety Audit
+        <span class="nav-badge" *ngIf="pendingComments.length > 0">{{ pendingComments.length }}</span>
+      </button>
+    </div>
+
+    <!-- ══════════ WORKSPACE: REGISTRY EXPLORER ══════════ -->
+    <div class="workspace-area animate-fade" *ngIf="currentWorkspace === 'registry'">
+      
+      <!-- Creative Control Hub -->
+      <div class="control-hub-pro">
+        <div class="hub-search">
+          <i class="fas fa-search"></i>
+          <input type="text" [(ngModel)]="searchTerm" placeholder="Search insights, events, or authors...">
+        </div>
+        
+        <div class="hub-filters">
+          <div class="filter-select-wrapper">
+            <i class="fas fa-tags"></i>
+            <select [(ngModel)]="filterType">
+              <option value="">All Categories</option>
+              <option *ngFor="let t of publicationTypes" [value]="t">{{ t }}</option>
+            </select>
+          </div>
+          <button class="btn-primary-pro" (click)="resetForm(); currentWorkspace = 'composer'">
+            <i class="fas fa-plus"></i> New Insight
+          </button>
+        </div>
+      </div>
+
+      <!-- High-Fidelity Registry Grid -->
+      <div class="registry-grid" *ngIf="filteredPublications.length > 0">
+        <article class="modern-card-pro" *ngFor="let pub of filteredPublications">
+          <div class="card-media-pro">
+            <img *ngIf="isImage(pub.mediaUrl)" [src]="getMediaUrl(pub.mediaUrl)" alt="Insight Media">
+            <video *ngIf="isVideo(pub.mediaUrl)" [src]="getMediaUrl(pub.mediaUrl)" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
+            <div *ngIf="!pub.mediaUrl" class="card-media-placeholder">
+              <i class="fas fa-file-alt fa-3x"></i>
+            </div>
+            <span class="card-type-label" [class]="pub.type">{{ pub.type }}</span>
+          </div>
+
+          <div class="card-body-pro">
+            <div class="card-meta">
+              <i class="far fa-calendar-alt"></i> {{ pub.createdAt | date:'MMM d, y' }}
+            </div>
+            <h3>{{ pub.title }}</h3>
+            <p class="content-preview">{{ pub.content }}</p>
+            
+            <div class="mini-map-card animate-fade" *ngIf="pub.type === 'EVENEMENT' && pub.eventAddress">
+               <iframe width="100%" height="100" [src]="pub.eventAddress | safeMap" style="border:0; border-radius:16px;"></iframe>
+            </div>
+            
+            <div class="card-footer-pro">
+               <div class="author-info">
+                  <div class="author-circle">{{ (pub.doctorName || 'D')[0] }}</div>
+                  <span>{{ pub.doctorName || 'Dr. Practitioner' }}</span>
+               </div>
+               <div class="card-actions-mini">
+                  <button class="btn-mini-action" (click)="editPublication(pub); currentWorkspace = 'composer'"><i class="fas fa-edit"></i></button>
+                  <button class="btn-mini-action delete" (click)="deletePublication(pub.id!)"><i class="fas fa-trash"></i></button>
+               </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state-pro" *ngIf="filteredPublications.length === 0">
+        <i class="fas fa-inbox fa-3x"></i>
+        <h3>No Insights Found</h3>
+        <p>Try adjusting your search or create a new institutional insight.</p>
+        <button class="btn-primary-pro mt-4" (click)="currentWorkspace = 'composer'">Compose First Insight</button>
+      </div>
+    </div>
+
+    <!-- ══════════ WORKSPACE: DRAFTING CENTER ══════════ -->
+    <div class="workspace-area animate-fade" *ngIf="currentWorkspace === 'composer'">
+      <div class="composer-container-pro">
+        <div class="composer-header">
+           <h2><i class="fas" [ngClass]="isEditing ? 'fa-edit' : 'fa-magic'"></i> {{ isEditing ? 'Edit Existing Insight' : 'Draft New Insight' }}</h2>
+           <button class="btn-close-pro" (click)="resetForm(); currentWorkspace = 'registry'"><i class="fas fa-times"></i></button>
+        </div>
+
+        <form (ngSubmit)="savePublication()" #pubForm="ngForm" class="composer-form">
+          <div class="form-grid">
+            <div class="form-main">
+              <div class="form-group-pro">
+                <label>Insight Title</label>
+                <input type="text" [(ngModel)]="currentPublication.title" name="title" required placeholder="A clear, professional title...">
+              </div>
+              <div class="form-group-pro">
+                <label>Category</label>
+                <select [(ngModel)]="currentPublication.type" name="type">
+                  <option *ngFor="let t of publicationTypes" [value]="t">{{ t }}</option>
+                </select>
+              </div>
+              <div class="form-group-pro">
+                <label>Full Content</label>
+                <textarea rows="10" [(ngModel)]="currentPublication.content" name="content" required placeholder="Detailed information for the community..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-side">
+              <!-- Visual Identity / Dropzone -->
+              <div class="form-group-pro">
+                <label>Visual Identity</label>
+                <div class="dropzone-pro" (click)="imageInput.click()">
+                   <input type="file" #imageInput hidden (change)="onFileSelected($event, 'image')" accept="image/*">
+                   <div class="dropzone-preview" [class.has-preview]="selectedFilePreview">
+                      <img *ngIf="selectedFilePreview" [src]="selectedFilePreview">
+                      <div class="dropzone-placeholder" *ngIf="!selectedFilePreview">
+                         <i class="fas fa-image fa-2x"></i>
+                         <span>Upload Image</span>
+                      </div>
+                   </div>
+                </div>
+              </div>
+
+              <!-- Event Details -->
+              <div class="event-details-pro animate-fade" *ngIf="currentPublication.type === 'EVENEMENT'">
+                <label>Event Logistics</label>
+                <div class="form-group-pro small">
+                   <input type="text" [(ngModel)]="currentPublication.eventAddress" name="eventAddress" placeholder="Location Name / Address">
+                </div>
+                <div class="form-group-pro small">
+                   <input type="text" [(ngModel)]="currentPublication.eventLink" name="eventLink" placeholder="External Link (RSVP)">
+                </div>
+                
+                <div class="mini-map-preview" *ngIf="currentPublication.eventAddress">
+                   <iframe width="100%" height="120" [src]="currentPublication.eventAddress | safeMap" style="border:0; border-radius:12px;"></iframe>
+                </div>
+              </div>
+
+              <div class="form-actions-pro">
+                <button type="submit" class="btn-save-pro" [disabled]="isUploading || !pubForm.valid">
+                  <i class="fas" [ngClass]="isUploading ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
+                  {{ isEditing ? 'Confirm Update' : 'Publish to Feed' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ══════════ WORKSPACE: SAFETY AUDIT ══════════ -->
+    <div class="workspace-area animate-fade" *ngIf="currentWorkspace === 'moderation'">
+      <div class="mod-control-bar">
+        <div class="mod-stats-pro">
+           <div class="mod-pill critical" [class.active]="activeModFilter === 'critical'" (click)="activeModFilter = 'critical'">
+              <span class="count">{{ getModStats().critical }}</span> Critical Threats
+           </div>
+           <div class="mod-pill warning" [class.active]="activeModFilter === 'warning'" (click)="activeModFilter = 'warning'">
+              <span class="count">{{ getModStats().warning }}</span> Review Required
+           </div>
+           <div class="mod-pill all" [class.active]="activeModFilter === 'all'" (click)="activeModFilter = 'all'">
+              View Full Queue
+           </div>
+        </div>
+
+        <div class="mod-actions-pro">
+           <button class="btn-sync" (click)="loadPendingComments()"><i class="fas fa-sync"></i> Sync Cloud</button>
+           <button class="btn-excel" (click)="excelImport.click()"><i class="fas fa-file-excel"></i> Update Lexicon</button>
+           <input type="file" (change)="onImportBadWords($event)" accept=".xlsx, .xls" hidden #excelImport>
+        </div>
+      </div>
+
+      <div class="audit-queue" *ngIf="filteredModerationFeed.length > 0">
+        <div class="audit-card-pro" *ngFor="let comment of filteredModerationFeed" [class]="'severity-' + comment.violationSeverity">
+          <div class="audit-header">
+             <div class="audit-author">
+                <div class="avatar-pro"><i class="fas fa-user-circle"></i></div>
+                <div class="author-meta">
+                   <strong>{{ comment.authorName || 'Anonymous' }}</strong>
+                   <span>CXT-{{ comment.id }}</span>
+                </div>
+             </div>
+             <div class="severity-tag">Severity: {{ comment.violationSeverity }}</div>
+          </div>
+
+          <div class="audit-comparison">
+             <div class="audit-blob violation">
+                <label>Detected Violation</label>
+                <p>{{ comment.originalContent }}</p>
+             </div>
+             <div class="audit-blob sanitized">
+                <label>Sanitized Output</label>
+                <p>{{ comment.content }}</p>
+             </div>
+          </div>
+
+          <div class="audit-actions">
+             <button class="btn-audit reject" (click)="rejectComment(comment.id!)"><i class="fas fa-trash"></i> Permanently Dismiss</button>
+             <button class="btn-audit approve" (click)="approveComment(comment.id!)"><i class="fas fa-check-double"></i> Verified Approval</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state-pro" *ngIf="filteredModerationFeed.length === 0">
+        <i class="fas fa-shield-check fa-4x text-emerald-400"></i>
+        <h3>Safety Status: Secure</h3>
+        <p>All active community discussions comply with the current institutional lexicon.</p>
+      </div>
+    </div>
+
+  </main>
+</div>

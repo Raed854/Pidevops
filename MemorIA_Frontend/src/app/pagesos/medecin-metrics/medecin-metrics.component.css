@@ -1,0 +1,640 @@
+/* MEDECIN METRICS - Inspired by tests-cognitifs component */
+
+/* Container */
+.medecin-metrics-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: var(--spacing-xl) var(--spacing-lg);
+}
+
+/* Header Styles - Reused from tests-cognitifs */
+.dashboard-header-simple {
+    margin-bottom: 2rem;
+    animation: fadeInDown 0.6s ease-out;
+}
+
+.breadcrumb {
+    margin-bottom: 1.5rem;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    color: #6b7280;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+    background: #f9fafb;
+    color: #4b5563;
+    transform: translateX(-2px);
+}
+
+.dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #4B2475;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.2;
+}
+
+.dashboard-subtitle {
+    font-size: 1.1rem;
+    color: #6B7280;
+    margin: 0;
+    max-width: 600px;
+}
+
+/* Loading State */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 1.5rem;
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e5e7eb;
+    border-top: 4px solid #7c3aed;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Controls Section */
+.metrics-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.period-filter {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.95rem;
+}
+
+.radio-group {
+    display: flex;
+    gap: 0.5rem;
+    background: #f3f4f6;
+    padding: 0.25rem;
+    border-radius: 0.75rem;
+}
+
+.radio-item {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.radio-item input[type="radio"] {
+    display: none;
+}
+
+.radio-pill {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.radio-item.active .radio-pill {
+    background: white;
+    color: #4b5563;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.export-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-secondary-light {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary-light:hover {
+    background: #f9fafb;
+    color: #4b5563;
+    transform: translateY(-1px);
+}
+
+.btn-primary-purple {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    border: none;
+    border-radius: 0.75rem;
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary-purple:hover {
+    background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+/* Stats Grid - Reused from tests-cognitifs */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.stat-icon.purple { background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); }
+.stat-icon.blue { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.stat-icon.teal { background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); }
+
+.stat-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.stat-dot.green { background: #10b981; }
+.stat-dot.orange { background: #f59e0b; }
+.stat-dot.red { background: #ef4444; }
+
+.stat-data {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1f2937;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #6b7280;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.stat-trend {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    display: inline-block;
+}
+
+.stat-trend.purple {
+    background: rgba(124, 58, 237, 0.1);
+    color: #7c3aed;
+}
+
+/* Main Content Grid */
+.dashboard-main-content {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Content Sections - Reused from tests-cognitifs */
+.content-section {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.view-all {
+    color: #7c3aed;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+
+.view-all:hover {
+    color: #6d28d9;
+}
+
+/* Patients Grid */
+.patients-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.patient-card {
+    padding: 1.25rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.patient-card:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+    transform: translateX(4px);
+}
+
+.patient-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.patient-info h3.patient-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 0.25rem 0;
+}
+
+.patient-age {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.patient-stage-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.patient-stage-badge.stage-stable {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.patient-stage-badge.stage-surveillance {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.patient-stage-badge.stage-critique {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.patient-metrics {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.metric-label {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.metric-value {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.metric-trend {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.metric-trend.trend-up { color: #10b981; }
+.metric-trend.trend-down { color: #ef4444; }
+.metric-trend.trend-stable { color: #6b7280; }
+
+.patient-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-view-patient {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    color: #6b7280;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-view-patient:hover {
+    background: #f9fafb;
+    color: #4b5563;
+    border-color: #d1d5db;
+}
+
+/* Recent Tests List */
+.recent-tests-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.test-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.test-item:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+}
+
+.test-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 0.5rem;
+    background: rgba(59, 130, 246, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.test-details {
+    flex: 1;
+}
+
+.test-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.test-patient {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 0.9rem;
+}
+
+.test-status {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.test-status.status-completed {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.test-status.status-in-progress {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.test-status.status-assigned {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+.test-name {
+    display: block;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.test-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.test-score {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* Quick Actions - Reused from tests-cognitifs */
+.quick-actions-section {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.quick-actions-section .section-title {
+    margin-bottom: 1.5rem;
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.action-card:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.action-card span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+/* Color utilities */
+.blue-text { color: #3b82f6; }
+.purple { color: #7c3aed; }
+.teal { color: #14b8a6; }
+
+/* Animations - Reused from tests-cognitifs */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .dashboard-main-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .metrics-controls {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .period-filter {
+        justify-content: center;
+    }
+    
+    .export-actions {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .medecin-metrics-container {
+        padding: var(--spacing-md) var(--spacing-sm);
+    }
+    
+    .dashboard-title {
+        font-size: 2rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .radio-group {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}

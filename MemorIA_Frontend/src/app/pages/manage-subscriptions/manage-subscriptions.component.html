@@ -1,0 +1,85 @@
+<div class="admin-page">
+  <div class="admin-container">
+    <button class="back-btn" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i> Back
+    </button>
+
+    <div class="header">
+      <h1><i class="fas fa-users-cog"></i>Subscription Management</h1>
+      <p class="subtitle">Manage all caregivers' subscriptions</p>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="stats-row" *ngIf="!isLoading">
+      <div class="stat-card">
+        <i class="fas fa-users"></i>
+        <div class="stat-info">
+          <span class="stat-number">{{ subscriptions.length }}</span>
+          <span class="stat-label">Total</span>
+        </div>
+      </div>
+      <div class="stat-card active">
+        <i class="fas fa-check-circle"></i>
+        <div class="stat-info">
+          <span class="stat-number">{{ activeCount }}</span>
+          <span class="stat-label">Active</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="loading" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Loading...</span>
+    </div>
+
+    <!-- Subscriptions Table -->
+    <div class="table-container" *ngIf="!isLoading && subscriptions.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Plan</th>
+            <th>Status</th>
+            <th>Expires on</th>
+            <th>Receipt</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let sub of subscriptions">
+            <td>
+              <div class="user-cell">
+                <div class="user-avatar">{{ getUserName(sub).charAt(0) }}</div>
+                <div>
+                  <span class="user-name">{{ getUserName(sub) }}</span>
+                  <span class="user-email">{{ sub.user?.email }}</span>
+                </div>
+              </div>
+            </td>
+            <td><span class="plan-badge">{{ getPlanLabel(sub.planType) }}</span></td>
+            <td><span class="status-badge" [class]="getStatusClass(sub.status)">{{ sub.status }}</span></td>
+            <td>{{ formatDate(sub.currentPeriodEnd) }}</td>
+            <td>
+              <a *ngIf="sub.receiptUrl"
+                 href="{{communityBaseUrl}}/subscriptions/receipt/{{sub.receiptUrl}}" target="_blank" rel="noopener"
+                 class="receipt-link" title="Télécharger le reçu">
+                <i class="fas fa-file-invoice"></i>
+              </a>
+              <span *ngIf="!sub.receiptUrl" class="text-muted">—</span>
+            </td>
+            <td>
+              <button class="delete-btn" (click)="deleteSubscription(sub.id)" title="Supprimer">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="empty-state" *ngIf="!isLoading && subscriptions.length === 0">
+      <i class="fas fa-inbox"></i>
+      <span>No subscriptions found</span>
+    </div>
+  </div>
+</div>

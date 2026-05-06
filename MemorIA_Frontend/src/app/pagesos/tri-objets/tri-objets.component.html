@@ -1,0 +1,212 @@
+<div class="test-page-container">
+
+  <!-- Phase 1 : Instructions -->
+  <div *ngIf="currentPhase() === 'INSTRUCTIONS'" class="phase-container">
+    <div class="card-header-new">
+      <div class="header-top">
+        <h1 class="test-title">TEST DE TRI D'OBJETS - ID 27</h1>
+        <div class="phase-info">
+          <span class="phase-label">INTRODUCTION</span>
+          <span class="phase-count">Phase 1/4</span>
+        </div>
+      </div>
+      <div class="progress-dots">
+        <span class="dot active"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    </div>
+
+    <div class="card-body centered">
+      <p class="intro-text">
+        Ce test évalue votre capacité de catégorisation, votre attention et votre flexibilité cognitive.
+      </p>
+      <div class="instructions-list">
+        <h3>Veuillez suivre ces instructions :</h3>
+        <ul>
+          <li><span class="bullet">•</span> Des objets apparaissent un par un au centre</li>
+          <li><span class="bullet">•</span> Faites glisser chaque objet dans la bonne catégorie</li>
+          <li><span class="bullet">•</span> Ou cliquez sur une catégorie pour y déposer l'objet</li>
+          <li><span class="bullet">•</span> Soyez précis et rapide !</li>
+          <li><span class="bullet">•</span> Chaque bonne réponse rapporte des points</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <button class="btn-primary" (click)="startTest()">COMMENCER LE TEST →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 2 : Jeu -->
+  <div *ngIf="currentPhase() === 'PLAY'" class="phase-container">
+    <div class="card-header-new">
+      <div class="header-top">
+        <h1 class="test-title">TEST DE TRI D'OBJETS - ID 27</h1>
+        <div class="phase-info">
+          <span class="phase-label">RÉFLEXION</span>
+          <span class="phase-count">Phase 2/4</span>
+        </div>
+      </div>
+      <div class="progress-dots">
+        <span class="dot active"></span>
+        <span class="dot active"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    </div>
+
+    <header class="interface-header-sub">
+      <div class="timer-box">
+        <lucide-icon [img]="icons.Clock" size="20"></lucide-icon>
+        <span>Temps restant : {{ formatTime(timeLeftSeconds()) }}</span>
+      </div>
+      <div class="score-badge">
+        <lucide-icon [img]="icons.Star" size="16"></lucide-icon>
+        <span>{{ currentScore }} pts</span>
+      </div>
+    </header>
+
+    <div class="game-content">
+      <div class="lavender-focus-box game-box">
+
+        <!-- Objet courant à trier -->
+        <div class="object-stage">
+          <p class="stage-label">Où doit aller cet objet ?</p>
+
+          <div class="current-object-card"
+               [class.feedback-correct]="feedbackState === 'correct'"
+               [class.feedback-wrong]="feedbackState === 'wrong'"
+               [class.animating]="isAnimating"
+               draggable="true"
+               (dragstart)="onDragStart($event)">
+            <span class="object-emoji">{{ currentItem()?.emoji }}</span>
+            <span class="object-name">{{ currentItem()?.name }}</span>
+          </div>
+
+          <!-- Feedback visuel -->
+          <div class="feedback-msg" *ngIf="feedbackState !== 'idle'">
+            <span *ngIf="feedbackState === 'correct'" class="feedback-correct-text">✓ Correct !</span>
+            <span *ngIf="feedbackState === 'wrong'" class="feedback-wrong-text">✗ Incorrect</span>
+          </div>
+
+          <!-- Progression -->
+          <div class="progress-bar-container">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill"
+                   [style.width.%]="progressPercentage">
+              </div>
+            </div>
+            <span class="progress-label">{{ currentIndex() + 1 }} / {{ totalItems }}</span>
+          </div>
+        </div>
+
+        <!-- Zones de tri -->
+        <div class="categories-zone">
+          <div *ngFor="let cat of categories"
+               class="category-bucket"
+               [class.drag-over]="dragOverCategory === cat.id"
+               (dragover)="onDragOver($event, cat.id)"
+               (dragleave)="onDragLeave()"
+               (drop)="onDrop($event, cat.id)"
+               (click)="onCategoryClick(cat.id)">
+            <span class="category-emoji">{{ cat.emoji }}</span>
+            <span class="category-name">{{ cat.name }}</span>
+            <span class="category-count">{{ getCategoryCount(cat.id) }}</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="action-footer">
+        <div class="grid-stats">
+          <span>Objets triés : {{ currentIndex() + 1 }} / {{ totalItems }}</span>
+        </div>
+        <div class="grid-actions">
+          <button class="btn-outline" 
+                  [disabled]="feedbackState !== 'idle'" 
+                  (click)="skipItem()">PASSER</button>
+          <button class="btn-primary" 
+                  (click)="validatePrompt()">TERMINER</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 3 : Confirmation -->
+  <div *ngIf="currentPhase() === 'VALIDATION'" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-body">
+        <div class="check-icon">
+          <lucide-icon [img]="icons.ListChecks" size="48"></lucide-icon>
+        </div>
+        <h2>Terminer le test ?</h2>
+        <p>Voulez-vous valider vos réponses ? Vous ne pourrez plus les modifier.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-outline" (click)="cancelValidation()">NON, REVENIR</button>
+        <button class="btn-primary" (click)="finishTest()">OUI, VALIDER</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 4 : Résultats -->
+  <div *ngIf="currentPhase() === 'RESULTS'" class="phase-container results-card">
+    <div class="card-header-new">
+      <div class="header-top">
+        <h1 class="test-title">RÉSULTATS DU TEST</h1>
+        <div class="phase-info">
+          <span class="phase-label">BILAN</span>
+          <span class="phase-count">Terminé</span>
+        </div>
+      </div>
+      <div class="progress-dots">
+        <span class="dot active"></span>
+        <span class="dot active"></span>
+        <span class="dot active"></span>
+        <span class="dot active"></span>
+      </div>
+    </div>
+
+    <div class="card-body centered">
+      <div class="lavender-focus-box results-box">
+        <span class="score-main-new">{{ totalScore() }}</span>
+        <span class="score-label">Points obtenus sur {{ maxScore }}</span>
+      </div>
+
+      <p class="secondary-info">Précision : {{ accuracy() }}%</p>
+      <p class="secondary-info">Temps utilisé : {{ timeSpentStr }}</p>
+
+      <div class="table-container-new">
+        <table class="results-table-new">
+          <thead>
+            <tr>
+              <th>OBJET</th>
+              <th>CATÉGORIE DONNÉE</th>
+              <th>ATTENDU</th>
+              <th>STATUT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let res of results()">
+              <td class="word-id">{{ res.emoji }} {{ res.name }}</td>
+              <td class="user-answer-new">{{ res.givenCategory || '—' }}</td>
+              <td class="user-answer-new">{{ res.expectedCategory }}</td>
+              <td>
+                <span class="status-icon"
+                      [ngClass]="{'success': res.isCorrect, 'error': !res.isCorrect}">
+                  {{ res.isCorrect ? '✓' : '✗' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card-footer">
+        <button class="btn-primary" (click)="exit()">RETOUR AU DASHBOARD →</button>
+      </div>
+    </div>
+  </div>
+
+</div>

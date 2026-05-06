@@ -1,0 +1,105 @@
+<div class="payment-container">
+  
+  <div class="header-section">
+    <button class="btn-back" (click)="cancelPayment()" *ngIf="showPaymentForm">
+      <i class="fas fa-arrow-left"></i> Retour aux forfaits
+    </button>
+    <button class="btn-back" (click)="goToDashboard()" *ngIf="!showPaymentForm">
+      <i class="fas fa-arrow-left"></i> Retour au Dashboard
+    </button>
+    <h1>🎫 Forfaits d'activités</h1>
+    <p>Choisissez le pack qui correspond à vos besoins d'accompagnement.</p>
+  </div>
+
+  <!-- Plans Selection -->
+  <div class="plans-grid" *ngIf="!showPaymentForm && !paymentSuccess">
+    <div class="plan-card" *ngFor="let plan of plans" [class.popular]="plan.popular">
+      <div class="popular-badge" *ngIf="plan.popular">RECOMMANDÉ</div>
+      <div class="plan-icon"><i [class]="plan.icon"></i></div>
+      <h3>{{ plan.name }}</h3>
+      <div class="price">
+        <span class="amount">{{ plan.price }}€</span>
+      </div>
+      <p class="desc">{{ plan.description }}</p>
+      
+      <ul class="features">
+        <li *ngFor="let f of plan.features"><i class="fas fa-check"></i> {{ f }}</li>
+      </ul>
+
+      <button class="btn-select" (click)="selectPlan(plan)" [disabled]="isLoading">
+        {{ isLoading ? 'Chargement...' : 'Choisir ce pack' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Payment Form -->
+  <div class="payment-card glass-morph" *ngIf="showPaymentForm && !paymentSuccess">
+    <div class="summary-box">
+      <span>Forfait sélectionné:</span>
+      <div class="selected-details">
+        <strong>{{ selectedPlan.name }}</strong>
+        <span class="price-tag">{{ selectedPlan.price }}€</span>
+      </div>
+    </div>
+
+    <form (submit)="processPayment()" class="cc-form">
+      <div class="form-group">
+        <label>Numéro de carte</label>
+        <div class="input-with-icon">
+          <i class="fas fa-credit-card"></i>
+          <input type="text" [(ngModel)]="cardNumber" name="cardNumber" 
+                 (input)="formatCardNumber($event)" placeholder="0000 0000 0000 0000" maxlength="19">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mois (MM)</label>
+          <input type="text" [(ngModel)]="expMonth" name="expMonth" placeholder="MM" maxlength="2">
+        </div>
+        <div class="form-group">
+          <label>Année (AAAA)</label>
+          <input type="text" [(ngModel)]="expYear" name="expYear" placeholder="AAAA" maxlength="4">
+        </div>
+        <div class="form-group">
+          <label>CVC</label>
+          <input type="text" [(ngModel)]="cvc" name="cvc" placeholder="123" maxlength="3">
+        </div>
+      </div>
+
+      <div class="error-msg" *ngIf="errorMessage">
+        <i class="fas fa-exclamation-circle"></i> {{ errorMessage }}
+      </div>
+
+      <button type="submit" class="btn-pay" [disabled]="isProcessing">
+        <span *ngIf="!isProcessing"><i class="fas fa-lock"></i> Payer {{ selectedPlan.price }}€</span>
+        <span *ngIf="isProcessing"><i class="fas fa-spinner fa-spin"></i> Traitement...</span>
+      </button>
+    </form>
+    
+    <div class="secure-info">
+      <i class="fas fa-shield-check"></i> Paiement 100% sécurisé via Stripe
+    </div>
+  </div>
+
+  <!-- Success State -->
+  <div class="success-card glass-morph" *ngIf="paymentSuccess">
+    <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+    <h2>Paiement Réussi !</h2>
+    <p>Votre pack <strong>{{ selectedPlan.name }}</strong> est maintenant actif.</p>
+    
+    <div class="success-actions">
+       <button class="btn-receipt" (click)="downloadReceipt()">
+         <i class="fas fa-file-download"></i> Télécharger le reçu (PDF)
+       </button>
+       <button class="btn-dashboard" (click)="goToDashboard()">
+         <i class="fas fa-home"></i> Aller au Dashboard
+       </button>
+    </div>
+  </div>
+
+</div>
+
+<div class="loading-overlay" *ngIf="isLoading">
+  <div class="spinner"></div>
+</div>

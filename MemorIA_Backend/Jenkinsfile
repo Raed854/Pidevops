@@ -1,0 +1,63 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 30, unit: 'MINUTES')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Diagnose') {
+            steps {
+                sh 'java -version'
+                sh 'chmod +x ./mvnw'
+                sh './mvnw -v'
+            }
+        }
+
+        stage('Build & Test') {
+            steps {
+                sh './mvnw -B clean verify'
+            }
+            post {
+                always {
+                    junit testResults: 'target/surefire-reports/*.xml', allowEmptyResults: true
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh './mvnw -B sonar:sonar'
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Archive JAR') {
+            steps {
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: true
+            }
+        }
+    }
+
+    post {
+        success { echo "Build #${BUILD_NUMBER} OK" }
+        failure { echo "Build #${BUILD_NUMBER} en echec" }
+    }
+}

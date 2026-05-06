@@ -1,0 +1,200 @@
+<div class="feed-content">
+
+  <!-- ══════════ NOTIFICATIONS ══════════ -->
+  <div class="notification-toast" *ngIf="successMessage">
+    <i class="fas fa-magic"></i>
+    <span>{{ successMessage }}</span>
+  </div>
+  <div class="notification-toast error" *ngIf="errorMessage" style="background: var(--danger)">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- ══════════ PREMIUM HEADER ══════════ -->
+  <div class="page-header">
+    <div class="header-left">
+      <h1>Découvrir MemorIA</h1>
+      <p style="color: var(--text-muted); font-weight: 500; margin-top: 5px; font-size: 1.1rem;">Explorez des programmes thérapeutiques conçus pour votre bien-être.</p>
+    </div>
+    
+    <div class="header-right flex items-center gap-4">
+      <div class="credits-badge" *ngIf="abonnement && !isLoadingAbonnement" style="border-radius: 30px; background: white; border: 2px solid var(--healing-soft);">
+        <div class="text-right">
+          <span class="block text-[9px] uppercase font-black text-[#6366f1]/40 tracking-widest leading-none mb-1">Pass Actif</span>
+          <span class="text-sm font-black text-[#6366f1]">{{ seancesRestantes }} Séances</span>
+        </div>
+        <div class="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center">
+            <i class="fas fa-ticket-alt text-[#6366f1]"></i>
+        </div>
+      </div>
+      
+      <button class="w-12 h-12 bg-white rounded-full border border-gray-100 shadow-sm flex items-center justify-center text-gray-400 hover:text-[#6366f1] transition-all" (click)="loadAll()" title="Actualiser">
+        <i class="fas fa-sync-alt" [class.fa-spin]="isLoadingAbonnement"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════ WORKSPACE TABS ══════════ -->
+  <div class="tabs-container" style="border-radius: 30px; padding: 8px; background: rgba(99, 102, 241, 0.04); border: none;">
+    <button class="tab-btn" [class.active]="activeTab==='activities'" (click)="activeTab='activities'">
+      <i class="fas fa-compass"></i> Explorer
+    </button>
+    <button class="tab-btn" [class.active]="activeTab==='calendar'" (click)="activeTab='calendar'">
+      <i class="fas fa-calendar-day"></i> Mon Agenda
+    </button>
+    <button class="tab-btn" [class.active]="activeTab==='reservations'" (click)="activeTab='reservations'">
+      <i class="fas fa-id-card-alt"></i> Mes Sessions
+      <span class="badge" *ngIf="mesReservations.length > 0" style="background: var(--primary);">{{ mesReservations.length }}</span>
+    </button>
+  </div>
+
+  <!-- ══════════ EXPLORER: ORGANIC DISCOVERY GRID ══════════ -->
+  <div *ngIf="activeTab === 'activities'" class="animate-fadeIn">
+    
+    <div class="toolbar" style="border-radius: 35px; border: none; background: white; padding: 20px 30px;">
+      <div class="search-box" style="border-radius: 25px; background: var(--healing-soft); border: none;">
+        <i class="fas fa-search text-indigo-300"></i>
+        <input type="text" [(ngModel)]="searchTerm" placeholder="Trouvez une activité, un docteur ou une spécialité...">
+      </div>
+      <select [(ngModel)]="filterType" class="filter-select" style="border-radius: 25px; border: 2px solid var(--healing-soft);">
+        <option value="">Toutes les Catégories</option>
+        <option *ngFor="let t of activityTypes" [value]="t">{{ t }}</option>
+      </select>
+    </div>
+
+    <div class="activities-grid" *ngIf="!isLoading">
+      <div class="activity-card" *ngFor="let act of filteredActivites">
+        
+        <div class="card-media">
+          <img *ngIf="act.image && isImage(act.image)" [src]="getMediaUrl(act.image)" [alt]="act.titre" 
+               (error)="$any($event.target).src='https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=1000&auto=format&fit=crop'" />
+          
+          <video *ngIf="act.image && isVideo(act.image)" [src]="getMediaUrl(act.image)" 
+                 class="w-full h-full object-cover" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
+          
+          <div *ngIf="!act.image || (!isImage(act.image) && !isVideo(act.image))" class="w-full h-full bg-slate-50 flex items-center justify-center text-slate-200">
+            <i class="fas fa-image fa-3x"></i>
+          </div>
+
+          <span class="type-badge">{{ act.type }}</span>
+        </div>
+
+        <div class="card-body">
+          <div class="doctor-tag">
+             <i class="fas fa-star text-[10px]"></i>
+             <span>Proposé par Dr. {{ act.doctor?.nom }}</span>
+          </div>
+          <h4>{{ act.titre }}</h4>
+          <p class="description">{{ act.description }}</p>
+          
+          <button class="btn-sessions" (click)="selectActivite(act)" [class.active]="selectedActivite?.id === act.id">
+            <i class="fas" [ngClass]="selectedActivite?.id === act.id ? 'fa-times-circle' : 'fa-sparkles'"></i>
+            <span>{{ selectedActivite?.id === act.id ? 'Fermer les créneaux' : 'Voir les créneaux' }}</span>
+          </button>
+        </div>
+
+        <div class="sessions-panel" *ngIf="selectedActivite?.id === act.id" style="border-radius: 0 0 60px 60px;">
+          <div class="session-item" *ngFor="let s of getSeancesForActivite(act.id!)" style="border-radius: 25px;">
+            <div class="session-info">
+              <span class="flex items-center gap-2 text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">
+                <i class="far fa-calendar-alt"></i>
+                {{ s.date | date:'EEEE dd MMMM' }}
+              </span>
+              <span class="text-sm font-black text-[#6366f1]">
+                <i class="far fa-clock mr-1"></i>
+                {{ s.heureDebut | slice:0:5 }} - {{ s.heureFin | slice:0:5 }}
+              </span>
+            </div>
+            
+            <div class="booking-actions">
+              <button class="btn-book" *ngIf="bookingStatus === 'RESERVER'" (click)='reserver(s)' style="border-radius: 20px;">
+                <i class="fas fa-magic mr-2"></i> Réserver
+              </button>
+              <button class="btn-book opacity-40" *ngIf="bookingStatus === 'CHARGEMENT'" disabled><i class="fas fa-spinner fa-spin"></i></button>
+              <button class="btn-book" *ngIf="['ABONNER','RECHARGER'].includes(bookingStatus)" (click)="navigateToPayment()" style="border-radius: 20px;">
+                <i class="fas fa-ticket-alt mr-2"></i> Pass
+              </button>
+            </div>
+          </div>
+          <div *ngIf="getSeancesForActivite(act.id!).length === 0" class="py-8 text-center text-slate-300 italic text-sm">
+             Aucune séance disponible pour ce programme.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="py-32 text-center" *ngIf="isLoading">
+      <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin mx-auto mb-6"></div>
+      <p class="text-indigo-300 font-bold uppercase tracking-widest text-xs">Préparation de votre parcours...</p>
+    </div>
+  </div>
+
+  <!-- ══════════ CALENDAR ══════════ -->
+  <div class="tab-content animate-fadeIn" *ngIf="activeTab === 'calendar'">
+    <div class="calendar-card" style="background: white; border-radius: 60px; padding: 40px; box-shadow: 0 40px 100px -20px rgba(99, 102, 241, 0.05);">
+      <div class="mb-8 flex items-center gap-4 bg-indigo-50/50 p-6 rounded-[30px] border border-indigo-50">
+        <i class="fas fa-lightbulb text-indigo-400"></i>
+        <span class="text-indigo-900 font-black text-xs uppercase tracking-widest">Cliquez sur une session pour la réserver instantanément.</span>
+      </div>
+      <full-calendar [options]="calendarOptions"></full-calendar>
+    </div>
+  </div>
+
+  <!-- ══════════ RESERVATIONS: TICKETS ══════════ -->
+  <div class="tab-content animate-fadeIn" *ngIf="activeTab === 'reservations'">
+    
+    <div class="reservations-grid">
+      <div class="res-card" *ngFor="let res of mesReservations" style="border-radius: 40px; border: none; box-shadow: 0 20px 50px rgba(99, 102, 241, 0.08);">
+        <div class="res-card-header" [class]="res.statut" style="height: 10px;"></div>
+        <div class="status-glow" [class]="res.statut"></div>
+        
+        <div class="res-card-body p-8">
+          <div class="flex justify-between items-start mb-6">
+            <span class="text-[9px] font-black uppercase tracking-[0.2em] text-[#6366f1]/40 text-left">Healing Program Pass</span>
+            <span class="text-[10px] font-mono text-indigo-100">CXT-{{ res.id }}</span>
+          </div>
+
+          <h4 class="text-2xl font-black text-slate-800 leading-tight mb-4">{{ res.seance?.activite?.titre }}</h4>
+          
+          <div class="flex items-center gap-4 mb-8">
+             <div class="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center">
+                <i class="fas fa-sparkles text-[#6366f1]/60"></i>
+             </div>
+             <div class="text-left">
+                <span class="block text-[10px] font-black uppercase text-indigo-300 tracking-tighter">Votre Praticien</span>
+                <span class="text-sm font-black text-[#6366f1]">Dr. {{ res.seance?.activite?.doctor?.nom }}</span>
+             </div>
+          </div>
+
+          <div class="ticket-divider"></div>
+
+          <div class="datetime-row mt-6">
+            <div class="flex items-center gap-2 font-black text-xs text-indigo-400">
+                <i class="far fa-calendar-alt"></i>
+                {{ res.seance?.date | date:'dd MMM yyyy' }}
+            </div>
+            <div class="flex items-center gap-2 font-black text-xs text-indigo-400">
+                <i class="far fa-clock"></i>
+                {{ res.seance?.heureDebut | slice:0:5 }}
+            </div>
+          </div>
+
+          <div class="mt-8" *ngIf="['EN_ATTENTE','ACCEPTEE'].includes(res.statut)">
+            <button class="btn-cancel-res" (click)="annuler(res.id!)" style="border-radius: 20px; border: 1.5px solid #ffeff1;">Annuler la Session</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty Sessions -->
+    <div class="py-32 text-center bg-white rounded-[60px] border-none shadow-sm" *ngIf="mesReservations.length === 0">
+      <div class="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6">
+        <i class="fas fa-wind fa-2x text-indigo-200"></i>
+      </div>
+      <h3 class="text-2xl font-black text-slate-800">Prêt pour votre voyage ?</h3>
+      <p class="text-slate-400 mt-2 mb-8 max-w-xs mx-auto">Explorez nos programmes pour réserver votre première séance de bien-être.</p>
+      <button class="btn-sessions w-auto px-12 py-4 bg-[#6366f1] text-white rounded-[30px] shadow-xl shadow-[#6366f1]/20 font-black hover:-translate-y-1 transition-all" (click)="activeTab='activities'">Commencer l'Exploration</button>
+    </div>
+  </div>
+
+</div>

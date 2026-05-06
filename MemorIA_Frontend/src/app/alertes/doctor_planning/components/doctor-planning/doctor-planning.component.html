@@ -1,0 +1,216 @@
+<div class="dp-page">
+
+  <!-- ─── NAVBAR (haut de page) ─────────────────── -->
+  <app-navbar></app-navbar>
+
+  <div class="dp-body">
+
+    <!-- ─── SIDEBAR (gauche fixe) ─────────────────── -->
+    <app-sidebar-diagnostic></app-sidebar-diagnostic>
+
+    <!-- ─── CONTENU PRINCIPAL ─────────────────────── -->
+    <div class="dp-main">
+
+      <!-- ══ HEADER ══════════════════════════════════ -->
+      <header class="dp-header">
+        <div class="dp-header-left">
+          <div class="dp-header-icon"><i class="fas fa-calendar-check"></i></div>
+          <div>
+            <h1 class="dp-title">Planning &amp; Rappels</h1>
+            <p class="dp-subtitle">
+              <span class="dp-dot-online"></span>
+              {{ selectedPatient ? (selectedPatient.prenom + ' ' + selectedPatient.nom) : 'Sélectionner des rappels adaptés à vos patients' }}
+              &nbsp;·&nbsp; {{ currentMonth | date:'MMMM yyyy':'':'fr-FR' | titlecase }}
+            </p>
+          </div>
+        </div>
+        <div class="dp-header-right">
+          <div *ngIf="isLoadingCalendar" class="dp-badge-loading">
+            <span class="dp-spin-sm"></span> Chargement…
+          </div>
+          <!-- Badges compteurs rappels (n'apparaissent que si un patient est sélectionné) -->
+          <div *ngIf="selectedPatient && !isLoadingCalendar" class="dp-header-badges">
+            <span class="dp-badge-count dp-badge-pending" *ngIf="getPendingCount() > 0"
+                  title="Rappels en attente">
+              <i class="fas fa-clock"></i> {{ getPendingCount() }}
+            </span>
+            <span class="dp-badge-count dp-badge-missed" *ngIf="getMissedCount() > 0"
+                  title="Rappels manqués">
+              <i class="fas fa-exclamation-circle"></i> {{ getMissedCount() }}
+            </span>
+          </div>
+          <button class="dp-btn-add" [disabled]="!selectedPatient" (click)="openAddReminderModal()">
+            <i class="fas fa-plus"></i> Nouveau rappel
+          </button>
+          <!-- Bouton Export PDF — génère un rapport complet du patient -->
+          <button
+            class="dp-btn-pdf"
+            [disabled]="!selectedPatient || exportingPdf"
+            (click)="exportPatientPdf()"
+            title="Exporter le rapport complet du patient en PDF">
+            <i class="fas" [ngClass]="exportingPdf ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+            {{ exportingPdf ? 'Génération…' : 'Export PDF' }}
+          </button>
+        </div>
+      </header>
+
+      <!-- ══ LAYOUT 3 COLONNES ════════════════════════
+           Patients (220px) | Calendrier (1fr) | Stats (220px)
+      ══════════════════════════════════════════════ -->
+      <div class="dp-layout">
+
+        <!-- ▌COLONNE GAUCHE — Liste patients ▌ -->
+        <aside class="dp-pat-col">
+
+          <!-- En-tête violet gradient -->
+          <div class="dp-pat-head">
+            <span class="dp-pat-head-title">
+              <i class="fas fa-users"></i> Mes patients
+            </span>
+            <span class="dp-pat-badge">{{ filteredPatients.length }}</span>
+          </div>
+
+          <!-- Barre de recherche -->
+          <div class="dp-search-wrap">
+            <i class="fas fa-search dp-search-ico"></i>
+            <input
+              type="text"
+              class="dp-search-inp"
+              placeholder="Rechercher un patient..."
+              [(ngModel)]="patientSearch"
+              (ngModelChange)="onSearchChange($event)">
+          </div>
+
+          <!-- Spinner patients -->
+          <div *ngIf="isLoadingPatients" class="dp-pat-spin">
+            <span class="dp-spin-sm"></span><span>Chargement…</span>
+          </div>
+
+          <!-- Liste scrollable -->
+          <div class="dp-pat-list" *ngIf="!isLoadingPatients">
+
+            <div *ngIf="filteredPatients.length === 0" class="dp-pat-vide">
+              <i class="fas fa-search"></i><p>Aucun patient trouvé</p>
+            </div>
+
+            <!-- ▶ Carte patient -->
+            <div
+              *ngFor="let p of filteredPatients"
+              class="dp-pcard"
+              [class.dp-pcard--active]="selectedPatient?.id === p.id"
+              (click)="onPatientSelected(p)">
+
+              <!-- Barre de sélection gauche -->
+              <div class="dp-pcard-bar" *ngIf="selectedPatient?.id === p.id"></div>
+
+              <!-- Avatar initiales coloré -->
+              <div class="dp-avatar" [style.background]="getAvatarColor(p)">
+                {{ p.initials || (p.prenom[0] + p.nom[0]) }}
+              </div>
+
+              <!-- Corps de la carte -->
+              <div class="dp-pcard-body">
+                <div class="dp-pcard-name">{{ p.prenom }} {{ p.nom }}</div>
+                <div class="dp-pcard-meta">
+                  <span>{{ p.age }} ans</span>
+                  <span class="dp-stage" [ngClass]="'dp-stage--' + (p.stage | lowercase)">
+                    {{ getStageLabel(p.stage) }}
+                  </span>
+                  <span *ngIf="(p.numberOfAlerts || 0) > 0" class="dp-badge-count dp-badge-missed" title="Alertes ouvertes">
+                    <i class="fas fa-bell"></i> {{ p.numberOfAlerts }}
+                  </span>
+                </div>
+              </div>
+
+
+            </div><!-- /dp-pcard -->
+
+          </div><!-- /dp-pat-list -->
+
+        </aside><!-- /dp-pat-col -->
+
+        <!-- ▌COLONNE CENTRALE — Calendrier ▌ -->
+        <main class="dp-cal-col">
+
+          <!-- État vide -->
+          <div *ngIf="!selectedPatient" class="dp-empty">
+            <div class="dp-empty-icon"><i class="fas fa-user-md"></i></div>
+            <h3>Sélectionnez un patient</h3>
+            <p>Choisissez un patient dans la liste à gauche pour afficher son planning de rappels.</p>
+            <span class="dp-empty-hint"><i class="fas fa-arrow-left"></i> Liste des patients ←</span>
+          </div>
+
+          <!-- Spinner calendrier -->
+          <div *ngIf="selectedPatient && isLoadingCalendar" class="dp-cal-loading">
+            <div class="dp-spin-lg"></div>
+            <span>Chargement du calendrier…</span>
+          </div>
+
+          <!-- ▶ Calendrier avec dots de rappels colorés par statut -->
+          <div *ngIf="selectedPatient && !isLoadingCalendar" class="dp-cal-wrap">
+            <app-calendar-view
+              [events]="calendarEvents"
+              [currentMonth]="currentMonth"
+              [view]="calendarView"
+              [selectedPatient]="selectedPatient"
+              (dayClicked)="onDayClicked($event)"
+              (monthChanged)="onMonthChanged($event)"
+              (viewChanged)="onViewChanged($event)">
+            </app-calendar-view>
+          </div>
+
+        </main><!-- /dp-cal-col -->
+
+        <!-- ▌COLONNE DROITE — Stats observance ▌ -->
+        <aside class="dp-stats-col">
+
+          <!-- Stats panel si patient sélectionné et stats chargées -->
+          <app-stats-panel
+            *ngIf="selectedPatient && adherenceStats && !isLoadingStats"
+            [metrics]="adherenceStats"
+            [patient]="selectedPatient">
+          </app-stats-panel>
+
+          <!-- Spinner stats -->
+          <div *ngIf="selectedPatient && isLoadingStats" class="dp-stat-loading">
+            <div class="dp-spin-lg"></div>
+            <span>Chargement des stats…</span>
+          </div>
+
+          <!-- Vide si aucun patient -->
+          <div *ngIf="!selectedPatient" class="dp-stats-empty">
+            <i class="fas fa-chart-pie"></i>
+            <p>Sélectionnez un patient pour voir ses statistiques</p>
+          </div>
+
+        </aside><!-- /dp-stats-col -->
+
+      </div><!-- /dp-layout -->
+
+      <!-- ══ MODAL : Détail du jour ════════════════════ -->
+      <app-day-detail-modal
+        *ngIf="showDayDetailModal && selectedDate"
+        [date]="selectedDate"
+        [reminders]="dayReminders"
+        [patient]="selectedPatient!"
+        (close)="showDayDetailModal = false"
+        (reminderMarkedDone)="onReminderMarkedDone($event)"
+        (reminderDeleted)="onDeleteReminder($event)"
+        (reminderUpdated)="onReminderUpdated($event)"
+        (addReminderRequested)="onAddReminderRequested($event)">
+      </app-day-detail-modal>
+
+      <!-- ══ MODAL : Formulaire rappel ══════════════════ -->
+      <app-reminder-form-modal
+        *ngIf="showReminderFormModal"
+        [patient]="selectedPatient!"
+        [selectedDate]="selectedDate || undefined"
+        [reminderMode]="reminderFormMode"
+        (reminderAdded)="onSaveReminder($event)"
+        (close)="showReminderFormModal = false">
+      </app-reminder-form-modal>
+
+    </div><!-- /dp-main -->
+  </div><!-- /dp-body -->
+</div><!-- /dp-page -->
+

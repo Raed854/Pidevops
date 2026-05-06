@@ -1,0 +1,231 @@
+<div class="medecin-metrics-container">
+    <!-- Header -->
+    <header class="dashboard-header-simple">
+        <div class="breadcrumb">
+            <button class="btn-back" (click)="router.navigate(['/tests-cognitifs'])">
+                <lucide-icon [img]="icons.ChevronRight" size="14" style="transform: rotate(180deg);"></lucide-icon>
+                Retour
+            </button>
+        </div>
+        <h1 class="dashboard-title">Métriques Médecin</h1>
+        <p class="dashboard-subtitle">Vue d’ensemble de vos patients et de leurs performances cognitives</p>
+    </header>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading()" class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Chargement des métriques...</p>
+    </div>
+
+    <!-- Main Content -->
+    <div *ngIf="!isLoading()" class="metrics-content">
+        <!-- Period Filter & Export -->
+        <section class="metrics-controls">
+            <div class="period-filter">
+                <span class="filter-label">Période:</span>
+                <div class="radio-group">
+                    <label class="radio-item" [ngClass]="{'active': selectedPeriod() === 'current'}">
+                        <input type="radio" name="period" value="current" [(ngModel)]="selectedPeriod">
+                        <span class="radio-pill">Mois en cours</span>
+                    </label>
+                    <label class="radio-item" [ngClass]="{'active': selectedPeriod() === '6months'}">
+                        <input type="radio" name="period" value="6months" [(ngModel)]="selectedPeriod">
+                        <span class="radio-pill">6 derniers mois</span>
+                    </label>
+                    <label class="radio-item" [ngClass]="{'active': selectedPeriod() === '12months'}">
+                        <input type="radio" name="period" value="12months" [(ngModel)]="selectedPeriod">
+                        <span class="radio-pill">12 derniers mois</span>
+                    </label>
+                    <label class="radio-item" [ngClass]="{'active': selectedPeriod() === 'all'}">
+                        <input type="radio" name="period" value="all" [(ngModel)]="selectedPeriod">
+                        <span class="radio-pill">Tout</span>
+                    </label>
+                </div>
+            </div>
+            <div class="export-actions">
+                <button class="btn-secondary-light" (click)="openCalendar()">
+                    <lucide-icon [img]="icons.Calendar" size="18"></lucide-icon>
+                    Calendrier
+                </button>
+                <button class="btn-primary-purple" (click)="exportToCSV()">
+                    <lucide-icon [img]="icons.FileText" size="18"></lucide-icon>
+                    Exporter CSV
+                </button>
+            </div>
+        </section>
+
+        <!-- Stats Cards -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon purple">
+                    <lucide-icon [img]="icons.Users" size="24"></lucide-icon>
+                </div>
+                <div class="stat-data">
+                    <span class="stat-value">{{ doctorStats().totalPatients }}</span>
+                    <span class="stat-label">Total Patients</span>
+                    <span class="stat-trend purple">+{{ doctorStats().newThisMonth }} ce mois</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-dot green"></div>
+                <div class="stat-data">
+                    <span class="stat-value">{{ doctorStats().stage1 }}</span>
+                    <span class="stat-label">Stage 1 — Stable</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-dot orange"></div>
+                <div class="stat-data">
+                    <span class="stat-value">{{ doctorStats().stage2 }}</span>
+                    <span class="stat-label">Stage 2 — Surveillance</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-dot red"></div>
+                <div class="stat-data">
+                    <span class="stat-value">{{ doctorStats().stage3 }}</span>
+                    <span class="stat-label">Stage 3 — Critique</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <lucide-icon [img]="icons.BarChart" size="24"></lucide-icon>
+                </div>
+                <div class="stat-data">
+                    <span class="stat-value">{{ successRate() }}%</span>
+                    <span class="stat-label">Taux de réussite</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon teal">
+                    <lucide-icon [img]="icons.Activity" size="24"></lucide-icon>
+                </div>
+                <div class="stat-data">
+                    <span class="stat-value">{{ avgScore() | number:'1.1' }}</span>
+                    <span class="stat-label">Score moyen</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Grid -->
+        <div class="dashboard-main-content">
+            <!-- Patients Overview -->
+            <section class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <lucide-icon [img]="icons.Users" size="18"></lucide-icon>
+                        Vue d’ensemble des patients
+                    </h2>
+                    <a href="#" class="view-all">Voir tout →</a>
+                </div>
+                <div class="patients-grid">
+                    <div *ngFor="let patient of patientSummaries()" class="patient-card" (click)="viewPatientDetails(patient.id)">
+                        <div class="patient-header">
+                            <div class="patient-info">
+                                <h3 class="patient-name">{{ patient.name }}</h3>
+                                <span class="patient-age">{{ patient.age }} ans</span>
+                            </div>
+                            <div class="patient-stage-badge" [ngClass]="{
+                                'stage-stable': patient.stage.includes('STAGE 1'),
+                                'stage-surveillance': patient.stage.includes('STAGE 2'),
+                                'stage-critique': patient.stage.includes('STAGE 3')
+                            }">
+                                {{ patient.stage }}
+                            </div>
+                        </div>
+                        <div class="patient-metrics">
+                            <div class="metric-row">
+                                <span class="metric-label">Dernier test:</span>
+                                <span class="metric-value">{{ patient.lastTest | date:'dd/MM/yyyy' }}</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Score:</span>
+                                <span class="metric-value">{{ patient.lastScore }}/30</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Tendance:</span>
+                                <span class="metric-trend" [ngClass]="{
+                                    'trend-up': patient.trend === 'up',
+                                    'trend-down': patient.trend === 'down',
+                                    'trend-stable': patient.trend === 'stable'
+                                }">
+                                    <lucide-icon [img]="patient.trend === 'up' ? icons.TrendingUp : patient.trend === 'down' ? icons.TrendingDown : icons.Activity" size="14"></lucide-icon>
+                                    {{ patient.trend === 'up' ? 'Amélioration' : patient.trend === 'down' ? 'Baisse' : 'Stable' }}
+                                </span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Prochain RDV:</span>
+                                <span class="metric-value">{{ patient.nextAppointment | date:'dd/MM/yyyy' }}</span>
+                            </div>
+                        </div>
+                        <div class="patient-actions">
+                            <button class="btn-view-patient">
+                                Voir détails
+                                <lucide-icon [img]="icons.ChevronRight" size="16"></lucide-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Tests -->
+            <section class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <lucide-icon [img]="icons.Brain" size="18"></lucide-icon>
+                        Tests récents
+                    </h2>
+                    <a href="#" class="view-all">Voir tout →</a>
+                </div>
+                <div class="recent-tests-list">
+                    <div *ngFor="let test of recentTests()" class="test-item">
+                        <div class="test-icon">
+                            <lucide-icon [img]="icons.Brain" size="20" class="blue-text"></lucide-icon>
+                        </div>
+                        <div class="test-details">
+                            <div class="test-header">
+                                <span class="test-patient">{{ test.patientName }}</span>
+                                <span class="test-status" [ngClass]="{
+                                    'status-completed': test.status === 'completed',
+                                    'status-in-progress': test.status === 'in-progress',
+                                    'status-assigned': test.status === 'assigned'
+                                }">
+                                    {{ test.status === 'completed' ? 'Terminé' : test.status === 'in-progress' ? 'En cours' : 'Assigné' }}
+                                </span>
+                            </div>
+                            <span class="test-name">{{ test.testName }}</span>
+                            <div class="test-meta">
+                                <span class="test-date">{{ test.date | date:'dd/MM/yyyy' }}</span>
+                                <span class="test-score">Score: {{ test.score }}/30</span>
+                                <span class="test-duration">{{ test.duration }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Quick Actions -->
+        <section class="quick-actions-section">
+            <h2 class="section-title">Actions rapides</h2>
+            <div class="actions-grid">
+                <div class="action-card" (click)="router.navigate(['/tests-cognitifs'])">
+                    <lucide-icon [img]="icons.Users" size="32" class="purple"></lucide-icon>
+                    <span>Vue globale</span>
+                </div>
+                <div class="action-card" (click)="router.navigate(['/gestion-tests'])">
+                    <lucide-icon [img]="icons.Brain" size="32" class="teal"></lucide-icon>
+                    <span>Gérer les tests</span>
+                </div>
+                <div class="action-card" (click)="openCalendar()">
+                    <lucide-icon [img]="icons.Calendar" size="32" class="blue"></lucide-icon>
+                    <span>Calendrier</span>
+                </div>
+                <div class="action-card" (click)="exportToCSV()">
+                    <lucide-icon [img]="icons.FileText" size="32" class="orange"></lucide-icon>
+                    <span>Exporter</span>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

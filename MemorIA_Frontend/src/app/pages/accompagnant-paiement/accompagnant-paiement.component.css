@@ -1,0 +1,247 @@
+.payment-container {
+  padding: 60px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  color: #1e293b;
+  min-height: 100vh;
+}
+
+.header-section {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.header-section h1 {
+  font-size: 42px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #1e1b4b 0%, #541A75 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.05em;
+  margin-bottom: 12px;
+}
+
+.header-section p {
+  color: #64748b;
+  font-size: 18px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.btn-back {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  color: #541A75;
+  cursor: pointer;
+  margin-bottom: 30px;
+  transition: all 0.2s;
+}
+
+.btn-back:hover { background: #f8fafc; border-color: #541A75; transform: translateX(-5px); }
+
+/* Plans Grid */
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 32px;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+.plan-card {
+  background: white;
+  border-radius: 32px;
+  padding: 48px;
+  text-align: center;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.plan-card:hover { transform: translateY(-15px); box-shadow: 0 30px 60px rgba(84, 26, 117, 0.12); }
+
+.plan-card.popular {
+  border: 2px solid #541A75;
+  background: linear-gradient(to bottom, white, #faf5ff);
+}
+
+.popular-badge {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: #541A75;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.plan-icon { font-size: 40px; color: #541A75; margin-bottom: 24px; }
+.plan-card h3 { font-size: 24px; font-weight: 800; margin-bottom: 12px; color: #1e1b4b; }
+.price .amount { font-size: 44px; font-weight: 900; color: #541A75; }
+.desc { color: #64748b; margin-bottom: 32px; font-weight: 500; }
+
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 40px 0;
+  text-align: left;
+}
+
+.features li {
+  padding: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.features li i { color: #10b981; }
+
+.btn-select {
+  width: 100%;
+  padding: 16px;
+  border-radius: 18px;
+  border: none;
+  background: #f1f5f9;
+  color: #1e1b4b;
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.plan-card:hover .btn-select { background: #541A75; color: white; }
+
+/* Payment Card - Glassmorphism */
+.glass-morph {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border-radius: 32px;
+  padding: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.05);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.summary-box {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 20px;
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price-tag { background: #541A75; color: white; padding: 4px 12px; border-radius: 10px; font-weight: 800; }
+
+.cc-form .form-group { margin-bottom: 24px; }
+.cc-form label { display: block; font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 8px; }
+
+.input-with-icon { position: relative; }
+.input-with-icon i { position: absolute; left: 16px; top: 18px; color: #94a3b8; }
+.input-with-icon input { padding-left: 48px; }
+
+.cc-form input {
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.cc-form input:focus { border-color: #541A75; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+.btn-pay {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, #541A75, #7c3aed);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 800;
+  margin-top: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 10px 20px rgba(84, 26, 117, 0.2);
+}
+
+.btn-pay:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(84, 26, 117, 0.3); }
+
+.secure-info { text-align: center; margin-top: 24px; color: #94a3b8; font-size: 13px; font-weight: 600; }
+
+.error-msg { background: #fff1f2; color: #be123c; padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 20px; font-weight: 600; }
+
+/* Success Card */
+.success-card { text-align: center; animation: zoomIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+@keyframes zoomIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.success-icon { font-size: 72px; color: #10b981; margin-bottom: 24px; }
+.success-card h2 { font-size: 32px; font-weight: 900; color: #1e1b4b; margin-bottom: 12px; }
+.success-card p { font-size: 18px; color: #64748b; margin-bottom: 40px; }
+
+.success-actions { display: flex; flex-direction: column; gap: 16px; }
+
+.btn-receipt {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #dcfce7;
+  padding: 16px;
+  border-radius: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-receipt:hover { background: #dcfce7; transform: translateY(-2px); }
+
+.btn-dashboard {
+  background: #541A75;
+  color: white;
+  padding: 16px;
+  border-radius: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-dashboard:hover { opacity: 0.9; transform: translateY(-2px); }
+
+/* Loading State */
+.loading-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(84, 26, 117, 0.1);
+  border-left-color: #541A75;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -1,0 +1,42 @@
+:host {
+  display: block;
+}
+
+.caregiver-alerts-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.caregiver-alerts-layout > main {
+  flex: 1;
+  margin-left: 242px;
+  padding-top: 84px;
+  min-height: 100vh;
+  max-width: calc(100% - 242px);
+  overflow-x: hidden;
+}
+
+@media (max-width: 1024px) {
+  .caregiver-alerts-layout > main {
+    margin-left: 0;
+    padding-top: 76px;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .caregiver-alerts-layout > main {
+    padding-bottom: 5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .caregiver-alerts-layout > main {
+    padding: 1rem 0.75rem;
+    padding-top: 76px;
+    padding-bottom: 5rem;
+  }
+}

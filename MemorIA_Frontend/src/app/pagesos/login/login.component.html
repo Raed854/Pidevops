@@ -1,0 +1,80 @@
+<div class="login-container">
+  <div class="login-card">
+    <!-- Logo/Header -->
+    <div class="login-header">
+      <h1>MemoriA</h1>
+      <p>Plateforme de Santé Cognitive</p>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="error-alert">
+      <span class="error-icon">⚠️</span>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Login Form -->
+    <form (ngSubmit)="onLogin()" (keypress)="onKeyPress($event)">
+      <!-- Email Field -->
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="votre.email@memoria.com"
+          [disabled]="isLoading"
+          required
+        />
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <div class="password-input-wrapper">
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            id="password"
+            [(ngModel)]="password"
+            name="password"
+            placeholder="••••••••"
+            [disabled]="isLoading"
+            required
+          />
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="togglePasswordVisibility()"
+            [disabled]="isLoading"
+          >
+            {{ showPassword ? '👁️‍🗨️' : '👁️' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="login-button"
+        [disabled]="isLoading || !email || !password"
+      >
+        {{ isLoading ? 'Connexion en cours...' : 'Se connecter' }}
+      </button>
+    </form>
+
+    <!-- Footer with Demo Info -->
+    <div class="login-footer">
+      <p class="demo-info">
+        <strong>Accès de démonstration:</strong><br>
+        Email: <code>jeandupont&#64;memoria.com</code><br>
+        Mot de passe: <code>Med123!Pass</code>
+      </p>
+    </div>
+  </div>
+
+  <!-- Background Decoration -->
+  <div class="background-decoration">
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+  </div>
+</div>

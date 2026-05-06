@@ -1,0 +1,217 @@
+<!-- ===== CREATE A NEW REMINDER — MemoriA Doctor Planning ===== -->
+<div class="rm-overlay" (click)="closeModal()">
+  <div class="rm-panel" (click)="$event.stopPropagation()">
+
+    <!-- ══ HEADER ══ -->
+    <div class="rm-header">
+      <div class="rm-header-left">
+        <div class="rm-header-icon">
+          <i class="fas fa-bell"></i>
+        </div>
+        <div>
+          <h2 class="rm-title">{{ reminderMode === 'edit' ? 'Edit Reminder' : 'Create a New Reminder' }}</h2>
+          <p class="rm-subtitle" *ngIf="patient">
+            <i class="fas fa-user-circle"></i>
+            {{ patient.prenom }} {{ patient.nom }}
+          </p>
+        </div>
+      </div>
+      <button class="rm-close-btn" (click)="closeModal()" title="Close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- ══ FORM ══ -->
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="rm-body" autocomplete="off">
+
+      <!-- ── TYPE ── -->
+      <div class="rm-section">
+        <label class="rm-label"><i class="fas fa-shapes"></i> Reminder Type <span class="req">*</span></label>
+        <div class="type-grid">
+          <button *ngFor="let opt of reminderTypeOptions" type="button"
+            class="type-btn"
+            [class.active]="form.get('type')?.value === opt.value"
+            [ngStyle]="{'--tc': opt.color}"
+            (click)="form.get('type')?.setValue(opt.value)"
+            [title]="opt.label">
+            <i [class]="opt.icon"></i>
+            <span>{{ opt.label }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── TITLE + PRIORITY ── -->
+      <div class="rm-row">
+        <div class="rm-group flex-2">
+          <label class="rm-label"><i class="fas fa-heading"></i> Title <span class="req">*</span></label>
+          <input type="text" formControlName="title" class="rm-input"
+            [class.error]="hasError('title')"
+            placeholder="Ex: Paracetamol 500mg morning">
+          <p class="rm-error" *ngIf="hasError('title')">{{ getErrorMessage('title') }}</p>
+        </div>
+        <div class="rm-group flex-1">
+          <label class="rm-label"><i class="fas fa-flag"></i> Priority</label>
+          <div class="priority-row">
+            <button *ngFor="let p of priorityOptions" type="button"
+              class="prio-btn"
+              [class.active]="form.get('priority')?.value === p.value"
+              [ngStyle]="{'--pc': p.color}"
+              (click)="form.get('priority')?.setValue(p.value)"
+              [title]="p.label">
+              {{ p.icon }}
+            </button>
+          </div>
+          <span class="prio-hint">{{ getPriorityOption(form.get('priority')?.value)?.label }}</span>
+        </div>
+      </div>
+
+      <!-- ── DESCRIPTION ── -->
+      <div class="rm-group">
+        <label class="rm-label"><i class="fas fa-align-left"></i> Description</label>
+        <textarea formControlName="description" class="rm-input rm-textarea" rows="2"
+          placeholder="Dosage, special instructions…"></textarea>
+      </div>
+
+      <!-- ── DATE / TIME / DURATION ── -->
+      <div class="rm-row">
+        <div class="rm-group flex-1">
+          <label class="rm-label"><i class="fas fa-calendar-day"></i> Date <span class="req">*</span></label>
+          <input type="date" formControlName="reminderDate" class="rm-input"
+            [class.error]="hasError('reminderDate')">
+          <p class="rm-error" *ngIf="hasError('reminderDate')">{{ getErrorMessage('reminderDate') }}</p>
+        </div>
+        <div class="rm-group flex-1">
+          <label class="rm-label"><i class="fas fa-clock"></i> Time <span class="req">*</span></label>
+          <input type="time" formControlName="reminderTime" class="rm-input"
+            [class.error]="hasError('reminderTime')">
+          <p class="rm-error" *ngIf="hasError('reminderTime')">{{ getErrorMessage('reminderTime') }}</p>
+        </div>
+        <div class="rm-group" style="flex:0 0 110px">
+          <label class="rm-label"><i class="fas fa-hourglass-half"></i> Duration (min)</label>
+          <input type="number" formControlName="durationMinutes" class="rm-input"
+            min="5" max="480" placeholder="30">
+        </div>
+      </div>
+
+      <!-- ══ RECURRENCE ══ -->
+      <div class="recurrence-block">
+        <div class="recurrence-block-title">
+          <i class="fas fa-sync-alt"></i>
+          Recurring Reminder
+          <span class="rec-active-badge" *ngIf="isRecurring">{{ selectedRecurrenceOption.label }}</span>
+        </div>
+
+        <!-- 4 recurrence cards -->
+        <div class="rec-cards">
+          <button *ngFor="let opt of recurrenceOptions" type="button"
+            class="rec-card"
+            [class.active]="form.get('recurrenceType')?.value === opt.value"
+            (click)="form.get('recurrenceType')?.setValue(opt.value)">
+            <i [class]="opt.icon"></i>
+            <span class="rec-card-label">{{ opt.label }}</span>
+            <span class="rec-card-desc">{{ opt.description }}</span>
+          </button>
+        </div>
+
+        <!-- Occurrence preview -->
+        <div class="rec-preview" *ngIf="isRecurring">
+          <div class="rec-dots-row">
+            <span class="rec-dots-label"><i class="fas fa-calendar-alt"></i> Calendar preview:</span>
+            <div class="rec-dots">
+              <span *ngFor="let d of dotPreviewArray" class="rec-dot"></span>
+              <span class="rec-dot-more">…</span>
+            </div>
+          </div>
+          <div class="rec-next-dates">
+            <span class="rec-next-label"><i class="fas fa-forward"></i> Next:</span>
+            <div class="rec-chips">
+              <span *ngFor="let d of previewDates" class="rec-chip">{{ d }}</span>
+            </div>
+          </div>
+          <!-- Optional end date -->
+          <div class="rm-group" style="margin-top:10px;">
+            <label class="rm-label" style="font-size:11px;">
+              <i class="fas fa-flag-checkered"></i> Recurrence End Date (optional)
+            </label>
+            <input type="date" formControlName="recurrenceEndDate" class="rm-input">
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ NOTIFICATION CHANNELS ══ -->
+      <div class="rm-section">
+        <label class="rm-label"><i class="fas fa-bell"></i> Notification Channels</label>
+        <div class="channels-row">
+          <button *ngFor="let ch of channelOptions" type="button"
+            class="channel-btn"
+            [class.active]="isChannelActive(ch.value)"
+            [ngStyle]="{'--chc': ch.color}"
+            (click)="toggleChannel(ch.value)"
+            [title]="ch.desc">
+            <i [class]="ch.icon"></i>
+            <span class="ch-label">{{ ch.label }}</span>
+            <span class="ch-status">{{ isChannelActive(ch.value) ? '✓ Active' : 'Inactive' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rm-section">
+        <label class="rm-label"><i class="fas fa-users"></i> Notification Recipients</label>
+        <div class="recipients-row">
+          <button type="button" class="recipient-card" [class.active]="notifyPatient" (click)="toggleNotifyPatient()">
+            <span class="recipient-icon patient-icon"><i class="fas fa-user"></i></span>
+            <span class="recipient-content">
+              <span class="recipient-name">Patient</span>
+                            <span class="recipient-meta">{{ patient!.prenom }} {{ patient!.nom }}</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── INSTRUCTIONS ── -->
+      <div class="rm-group">
+        <label class="rm-label"><i class="fas fa-book-open"></i> Instructions for Patient</label>
+        <textarea formControlName="instructions" class="rm-input rm-textarea" rows="2"
+          placeholder="Ex: Take with a glass of water, after meals…"></textarea>
+      </div>
+
+    </form>
+
+      <!-- Recurrence summary -->
+      <div class="footer-recap" *ngIf="isRecurring">
+        <i class="fas fa-info-circle" style="color:#541A75"></i>
+        <span>
+          Creating
+          <strong>{{ selectedRecurrenceOption.dotPreview }}+ reminders</strong>
+          — {{ selectedRecurrenceOption.description }}
+        </span>
+      </div>
+
+      <div class="footer-recap" *ngIf="notifyPatient">
+        <i class="fas fa-paper-plane" style="color:#541A75"></i>
+        <span>
+          Notification to
+          <strong>patient</strong>
+        </span>
+      </div>
+
+      <div class="footer-actions">
+        <button type="button" class="btn-form-cancel" (click)="closeModal()">
+          Cancel
+        </button>
+        <button type="button" class="btn-form-submit"
+                [disabled]="form.invalid || isSubmitting"
+                (click)="onSubmit()">
+          <span *ngIf="!isSubmitting">
+            <i class="fas fa-check"></i>
+            {{ reminderMode === 'edit' ? 'Save' : 'Create Reminder' }}
+          </span>
+          <span *ngIf="isSubmitting">
+            <i class="fas fa-spinner fa-spin"></i> Saving...
+          </span>
+        </button>
+      </div>
+
+  </div>
+</div>
+

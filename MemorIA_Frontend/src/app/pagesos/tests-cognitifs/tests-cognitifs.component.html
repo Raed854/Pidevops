@@ -1,0 +1,2791 @@
+<div class="tests-container">
+    <!-- Médecin/Soignant Interface - Shown when NOT aidant or patient (default doctor dashboard) -->
+    <div *ngIf="!selectedRole() || selectedRole() === 'soignant'">
+        <div class="dashboard-header">
+            <div>
+                <div class="breadcrumb">
+                    <button class="btn-back" (click)="selectedRole.set(null)">
+                        <lucide-icon [img]="icons.ChevronRight" size="14"
+                            style="transform: rotate(180deg);"></lucide-icon>
+                        Retour
+                    </button>
+                </div>
+                <h1 class="dashboard-title">Dashboard Médecin</h1>
+                <p class="dashboard-subtitle">Gestion des patients et suivi cognitif par stages</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-secondary-light" (click)="openCalendar()">
+                    <lucide-icon [img]="icons.Calendar" size="18"></lucide-icon>
+                    Calendrier
+                </button>
+                <button class="btn-primary-purple" (click)="showNewTestModal.set(true)">
+                    <lucide-icon [img]="icons.Plus" size="18"></lucide-icon>
+                    Assigner Test
+                </button>
+                <button class="btn-success-green" (click)="openNewRecommendationDialog()"
+                    title="Prescrire une action pour l'aidant">
+                    <lucide-icon [img]="icons.ClipboardCheck" size="18"></lucide-icon>
+                    Nouvelle recommandation
+                </button>
+            </div>
+        </div>
+
+        <!-- Top Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon purple">
+                    <lucide-icon [img]="icons.Users" size="24"></lucide-icon>
+                </div>
+                <div class="stat-data">
+                    <span class="stat-value">{{ dashboardStats.totalPatients }}</span>
+                    <span class="stat-label">Total Patients</span>
+                    <span class="stat-trend purple">+{{ dashboardStats.newThisMonth }} ce mois</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-dot green"></div>
+                <div class="stat-data">
+                    <span class="stat-value">{{ dashboardStats.stage1 }}</span>
+                    <span class="stat-label">Stage 1 — Stable</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-dot orange"></div>
+                <div class="stat-data">
+                    <span class="stat-value">{{ dashboardStats.stage2 }}</span>
+                    <span class="stat-label">Stage 2 — Surveillance</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-dot red"></div>
+                <div class="stat-data">
+                    <span class="stat-value">{{ dashboardStats.stage3 }}</span>
+                    <span class="stat-label">Stage 3 — Critique</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-main-content">
+            <!-- Alertes Critiques -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <lucide-icon [img]="icons.AlertTriangle" size="18"></lucide-icon>
+                        Alertes Critiques
+                    </h2>
+                    <a href="#" class="view-all">Voir tout →</a>
+                </div>
+                <div class="alerts-list">
+                    <div *ngFor="let alert of criticalAlerts" class="alert-item" [ngClass]="alert.color">
+                        <div class="alert-user">
+                            <span class="user-name">{{ alert.name }}</span>
+                            <span class="user-stage badge-red">{{ alert.stage }}</span>
+                        </div>
+                        <div class="alert-metrics">
+                            <div class="metric">
+                                <span class="metric-label">SCORE:</span>
+                                <span class="metric-value">{{ alert.score }}</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">TENDANCE:</span>
+                                <span class="metric-value trend-down">
+                                    <lucide-icon [img]="icons.TrendingDown" size="14"></lucide-icon>
+                                    {{ alert.trend }}
+                                </span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">ALERTES:</span>
+                                <span class="alert-count">{{ alert.alerts }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Décisions Récentes -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <lucide-icon [img]="icons.Activity" size="18"></lucide-icon>
+                        Décisions Récentes
+                    </h2>
+                    <a href="#" class="view-all">Voir tout →</a>
+                </div>
+                <div class="decisions-list">
+                    <div *ngFor="let decision of recentDecisions" class="decision-item">
+                        <div class="decision-header">
+                            <span class="decision-patient">{{ decision.patient }}</span>
+                            <span class="decision-status" [ngClass]="decision.status.toLowerCase()">{{ decision.status
+                                }}</span>
+                        </div>
+                        <div class="decision-urgency">{{ decision.urgency }}</div>
+                        <p class="decision-desc">{{ decision.description }}</p>
+                        <div class="decision-footer">
+                            <span class="decision-type">{{ decision.type }}</span>
+                            <span class="decision-date">{{ decision.date }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             SCROLL HORIZONTAL - Cartes Patients avec Aidants
+        ══════════════════════════════════════════════════════════ -->
+        <div class="patients-scroll-section" *ngIf="patientsWithAidants().length > 0">
+            <div class="scroll-section-header">
+                <div>
+                    <h2 class="section-title">
+                        <lucide-icon [img]="icons.Users" size="20"></lucide-icon>
+                        Mes Patients
+                    </h2>
+                    <p class="scroll-section-subtitle">Consultez les profils de vos patients et leurs aidants</p>
+                </div>
+            </div>
+
+            <!-- Scroll Container -->
+            <div class="patients-scroll-container">
+                <div class="patients-cards-wrapper">
+                    <div *ngFor="let patient of patientsWithAidants()" 
+                         class="patient-card"
+                         (click)="openPatientDetail(patient)">
+                        
+                        <!-- Avatar du patient -->
+                        <div class="patient-card-avatar">
+                            <div class="avatar-circle">{{ (patient.prenom?.charAt(0) || '') + (patient.nom?.charAt(0) || '') }}</div>
+                        </div>
+
+                        <!-- Infos patient -->
+                        <div class="patient-card-content">
+                            <h3 class="patient-card-name">{{ patient.prenom }} {{ patient.nom }}</h3>
+                            <p class="patient-card-info">
+                                <span class="info-label">Âge:</span>
+                                <span>{{ patient.age }} ans</span>
+                            </p>
+                            <p class="patient-card-info">
+                                <span class="info-label">Score:</span>
+                                <span class="score-badge">{{ patient.score }}/30</span>
+                            </p>
+                            <p class="patient-card-info">
+                                <span class="info-label">Stage:</span>
+                                <span class="stage-badge" [ngClass]="'stage-' + patient.stage?.toLowerCase()">
+                                    {{ patient.stage }}
+                                </span>
+                            </p>
+                        </div>
+
+                        <!-- Aidants -->
+                        <div class="patient-card-aidants">
+                            <p class="aidants-label">Aidant(s):</p>
+                            <div class="aidants-list">
+                                <div *ngFor="let aidant of patient.aidants; let last = last" class="aidant-item">
+                                    <span class="aidant-name">{{ aidant.prenom }} {{ aidant.nom }}</span>
+                                    <span *ngIf="!last" class="aidant-separator">•</span>
+                                </div>
+                                <div *ngIf="patient.aidants.length === 0" class="no-aidant">
+                                    Aucun aidant assigné
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Arrow indicator -->
+                        <div class="card-arrow">
+                            <lucide-icon [img]="icons.ChevronRight" size="20"></lucide-icon>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- État vide: pas de patients -->
+        <div class="patients-empty-state" *ngIf="patientsWithAidants().length === 0">
+            <lucide-icon [img]="icons.Users" size="48" class="empty-icon"></lucide-icon>
+            <p>Aucun patient actuellement.</p>
+            <p class="empty-subtitle">Assignez des patients pour les voir ici.</p>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             MODALE - Détails Patient
+        ══════════════════════════════════════════════════════════ -->
+        <div class="modal-overlay" *ngIf="showPatientDetailModal()" (click)="closePatientDetail()">
+            <div class="patient-detail-modal" (click)="$event.stopPropagation()">
+                
+                <!-- Modal Header -->
+                <div class="modal-header patient-modal-header">
+                    <div class="header-left">
+                        <div class="modal-avatar-large">
+                            {{ (selectedPatientDetail()?.prenom?.charAt(0) || '') + (selectedPatientDetail()?.nom?.charAt(0) || '') }}
+                        </div>
+                        <div class="modal-header-info">
+                            <h2 class="modal-patient-name">{{ selectedPatientDetail()?.prenom }} {{ selectedPatientDetail()?.nom }}</h2>
+                            <p class="modal-patient-meta">
+                                <span class="meta-item">
+                                    <lucide-icon [img]="icons.Calendar" size="14"></lucide-icon>
+                                    {{ selectedPatientDetail()?.age }} ans
+                                </span>
+                                <span class="meta-item">
+                                    <span class="stage-badge-modal" [ngClass]="'stage-' + selectedPatientDetail()?.stage?.toLowerCase()">
+                                        {{ selectedPatientDetail()?.stage }}
+                                    </span>
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    <button class="btn-close-modal" (click)="closePatientDetail()">
+                        <lucide-icon [img]="icons.X" size="20"></lucide-icon>
+                    </button>
+                </div>
+
+                <!-- Modal Content -->
+                <div class="modal-body patient-modal-body">
+                    
+                    <!-- Section: Score Cognitif -->
+                    <div class="modal-section">
+                        <h3 class="modal-section-title">
+                            <lucide-icon [img]="icons.Brain" size="18"></lucide-icon>
+                            Score Cognitif
+                        </h3>
+                        <div class="score-display">
+                            <div class="score-big">{{ selectedPatientDetail()?.score }}<span class="score-max">/30</span></div>
+                            <div class="score-bar">
+                                <div class="score-progress" [style.width.%]="(selectedPatientDetail()?.score || 0) * 3.33"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Aidants -->
+                    <div class="modal-section" *ngIf="selectedPatientDetail()?.aidants?.length > 0">
+                        <h3 class="modal-section-title">
+                            <lucide-icon [img]="icons.Users" size="18"></lucide-icon>
+                            Aidants Assignés
+                        </h3>
+                        <div class="aidants-list-modal">
+                            <div *ngFor="let aidant of selectedPatientDetail()?.aidants" class="aidant-card-modal">
+                                <div class="aidant-avatar-modal">{{ (aidant.prenom?.charAt(0) || '') + (aidant.nom?.charAt(0) || '') }}</div>
+                                <div class="aidant-info-modal">
+                                    <p class="aidant-name-modal">{{ aidant.prenom }} {{ aidant.nom }}</p>
+                                    <p class="aidant-email-modal">{{ aidant.email }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Contact & Informations -->
+                    <div class="modal-section">
+                        <h3 class="modal-section-title">
+                            <lucide-icon [img]="icons.Info" size="18"></lucide-icon>
+                            Informations
+                        </h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Email:</span>
+                                <span class="info-value">{{ selectedPatientDetail()?.email }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Médecin:</span>
+                                <span class="info-value">{{ selectedPatientDetail()?.medecin?.prenom }} {{ selectedPatientDetail()?.medecin?.nom }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Modal Footer - Actions -->
+                <div class="modal-footer patient-modal-footer">
+                    <button class="btn-action btn-action-primary" 
+                            (click)="openVideoCallWithPatientAidant()"
+                            title="Appel vidéo avec l'aidant du patient">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                        <span>Appel Vidéo</span>
+                    </button>
+                    <button class="btn-action btn-action-secondary" 
+                            (click)="openConversationWithPatientAidant()"
+                            title="Discuter avec l'aidant">
+                        <lucide-icon [img]="icons.MessageSquare" size="18"></lucide-icon>
+                        <span>Discussion</span>
+                    </button>
+                    <button class="btn-action btn-action-info" 
+                            (click)="openNewRecommendationDialog(); closePatientDetail()"
+                            title="Ajouter une recommandation">
+                        <lucide-icon [img]="icons.ClipboardCheck" size="18"></lucide-icon>
+                        <span>Recommandation</span>
+                    </button>
+                    <button class="btn-action btn-action-success" 
+                            (click)="showNewTestModal.set(true); closePatientDetail()"
+                            title="Assigner un test">
+                        <lucide-icon [img]="icons.Plus" size="18"></lucide-icon>
+                        <span>Assigner Test</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ── Rendez-vous planifiés (médecin) ───────────────────────── -->
+        <div *ngIf="scheduledAppointments().length > 0" class="doctor-appointments-section">
+            <div class="appointments-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <h3>Consultations planifiées</h3>
+                <span class="appointments-count">{{ scheduledAppointments().length }}</span>
+            </div>
+            <div class="appointments-list">
+                <div *ngFor="let apt of scheduledAppointments()" class="appointment-card"
+                     [class.apt-missed]="apt.status === 'missed'"
+                     [class.apt-ended]="apt.status === 'ended'">
+                    <div class="apt-card-left">
+                        <div class="apt-date-block">
+                            <span class="apt-day">{{ apt.date | date:'dd' }}</span>
+                            <span class="apt-month">{{ apt.date | date:'MMM' : '' : 'fr' }}</span>
+                        </div>
+                    </div>
+                    <div class="apt-card-body">
+                        <p class="apt-patient">{{ apt.patientName }}</p>
+                        <p class="apt-time">{{ apt.date | date:'HH:mm' }} · Consultation vidéo</p>
+                        <p class="apt-report" *ngIf="apt.report">📝 {{ apt.report | slice:0:60 }}…</p>
+                    </div>
+                    <div class="apt-card-right">
+                        <span class="apt-status-badge" [class]="'apt-status-' + apt.status">
+                            {{ apt.status === 'scheduled' ? '⏳ Planifié' :
+                               apt.status === 'ended' ? '✅ Terminé' :
+                               apt.status === 'missed' ? '❌ Manqué' : apt.status }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ SECTION RECOMMANDATIONS MÉDECIN ═══════════════════════ -->
+        <div class="rec-doctor-section">
+            <!-- En-tête avec compteurs et bouton -->
+            <div class="rec-section-header">
+                <div class="rec-section-title-group">
+                    <lucide-icon [img]="icons.ClipboardCheck" size="20" class="green-icon"></lucide-icon>
+                    <h2 class="section-title">Mes recommandations</h2>
+                    <span class="rec-total-badge" *ngIf="doctorRecommendations().length > 0">
+                        {{ doctorRecommendations().length }}
+                    </span>
+                </div>
+                <div class="rec-section-actions">
+                    <!-- Indicateurs rapides -->
+                    <span class="rec-kpi urgent" *ngIf="getRecommendationUrgentCount() > 0">
+                        🔴 {{ getRecommendationUrgentCount() }} urgente(s)
+                    </span>
+                    <span class="rec-kpi pending" *ngIf="getRecommendationPendingCount() > 0">
+                        🕐 {{ getRecommendationPendingCount() }} en attente
+                    </span>
+                    <!-- Badge messages non lus total -->
+                    <div class="doc-msg-total-badge" *ngIf="getTotalDoctorUnread() > 0"
+                         title="Messages non lus de l'aidant">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <span>{{ getTotalDoctorUnread() }}</span>
+                    </div>
+                    <button class="btn-success-green btn-sm" (click)="openNewRecommendationDialog()">
+                        <lucide-icon [img]="icons.Plus" size="16"></lucide-icon>
+                        Nouvelle
+                    </button>
+                </div>
+            </div>
+
+            <!-- État vide -->
+            <div *ngIf="doctorRecommendations().length === 0" class="rec-empty-state">
+                <lucide-icon [img]="icons.ClipboardList" size="36" class="empty-icon"></lucide-icon>
+                <p>Aucune recommandation créée pour le moment.</p>
+                <button class="btn-success-green btn-sm" (click)="openNewRecommendationDialog()">
+                    <lucide-icon [img]="icons.Plus" size="16"></lucide-icon>
+                    Créer une recommandation
+                </button>
+            </div>
+
+            <!-- Liste des 5 premières recommandations -->
+            <div *ngIf="doctorRecommendations().length > 0" class="rec-list-doctor">
+                <div *ngFor="let rec of doctorRecommendations().slice(0, 5)"
+                     class="rec-card-doctor"
+                     [class.rec-new]="rec.isNew"
+                     [class.rec-urgent]="rec.priority === PriorityLevel.URGENT">
+
+                    <!-- Badge NOUVEAU -->
+                    <span *ngIf="rec.isNew" class="rec-new-badge">NOUVEAU</span>
+
+                    <!-- Priorité + statut -->
+                    <div class="rec-card-top">
+                        <div class="rec-priority-badge"
+                             [style.background-color]="getPriorityColor(rec.priority) + '20'"
+                             [style.border-color]="getPriorityColor(rec.priority)">
+                            <span>{{ getPriorityEmoji(rec.priority) }}</span>
+                            <span class="rec-priority-text">{{ getPriorityLabel(rec.priority) }}</span>
+                        </div>
+                        <span class="rec-status-pill"
+                              [style.color]="getStatusColor(rec.status)"
+                              [style.border-color]="getStatusColor(rec.status)">
+                            {{ getStatusLabel(rec.status) }}
+                        </span>
+                    </div>
+
+                    <!-- Action -->
+                    <p class="rec-action-text">{{ rec.action }}</p>
+
+                    <!-- Deadline -->
+                    <div class="rec-card-footer" *ngIf="rec.deadline">
+                        <lucide-icon [img]="icons.Clock" size="14" class="clock-icon"></lucide-icon>
+                        <span class="rec-deadline">{{ formatDeadlineText(rec.deadline) }}</span>
+                    </div>
+
+                    <!-- Bouton messagerie -->
+                    <div class="doc-rec-card-msg-row">
+                        <button class="doc-rec-msg-btn"
+                                (click)="$event.stopPropagation(); loadAllRecMessages(); openDoctorConversation(rec)"
+                                [class.has-unread]="rec.id && getDoctorUnread(rec.id) > 0"
+                                [title]="rec.id && getDoctorUnread(rec.id) > 0 ? 'Nouveau message de l\'aidant' : 'Conversation avec l\'aidant'">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            <span>Messages</span>
+                            <span class="doc-msg-unread-badge" *ngIf="rec.id && getDoctorUnread(rec.id) > 0">
+                                {{ getDoctorUnread(rec.id) }}
+                            </span>
+                        </button>
+                        <span class="doc-rec-msg-count" *ngIf="rec.id && getDoctorMessages(rec.id).length > 0">
+                            {{ getDoctorMessages(rec.id).length }} message(s)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lien "Voir toutes" si > 5 -->
+            <div *ngIf="doctorRecommendations().length > 5" class="rec-see-all">
+                <span>{{ doctorRecommendations().length - 5 }} autres recommandations...</span>
+            </div>
+
+            <!-- ── Section "Messages en attente" ─────────────────────── -->
+            <div *ngIf="getRecsWithMessages().length > 0" class="doc-messages-panel">
+                <div class="doc-messages-panel-header">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span>Conversations actives</span>
+                    <span class="doc-msg-total-count">{{ getRecsWithMessages().length }}</span>
+                </div>
+                <div class="doc-messages-list">
+                    <div *ngFor="let rec of getRecsWithMessages()"
+                         class="doc-msg-preview-card"
+                         [class.has-unread]="rec.id && getDoctorUnread(rec.id) > 0"
+                         (click)="loadAllRecMessages(); openDoctorConversation(rec)">
+                        <div class="doc-msg-preview-left">
+                            <div class="doc-msg-preview-icon"
+                                 [style.background]="rec.id && getDoctorUnread(rec.id) > 0 ? '#EEF2FF' : '#F9FAFB'">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="doc-msg-preview-body">
+                            <p class="doc-msg-preview-rec">{{ rec.action | slice:0:50 }}{{ rec.action.length > 50 ? '…' : '' }}</p>
+                            <p class="doc-msg-preview-last" *ngIf="rec.id && getDoctorMessages(rec.id).length > 0">
+                                {{ getDoctorMessages(rec.id)[getDoctorMessages(rec.id).length - 1].from === 'AIDANT' ? 'Aidant : ' : 'Vous : ' }}
+                                {{ getDoctorMessages(rec.id)[getDoctorMessages(rec.id).length - 1].text | slice:0:60 }}…
+                            </p>
+                        </div>
+                        <div class="doc-msg-preview-right">
+                            <span class="doc-msg-unread-dot" *ngIf="rec.id && getDoctorUnread(rec.id) > 0">
+                                {{ getDoctorUnread(rec.id) }}
+                            </span>
+                            <span class="doc-msg-preview-time" *ngIf="rec.id && getDoctorMessages(rec.id).length > 0">
+                                {{ getDoctorMessages(rec.id)[getDoctorMessages(rec.id).length - 1].sentAt | date:'HH:mm' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions rapides (sous Mes recommandations) -->
+        <div class="quick-actions-section">
+            <div class="quick-actions-header">
+                <h2>Actions rapides</h2>
+                <span>Acces direct aux operations du medecin</span>
+            </div>
+            <div class="quick-actions-grid">
+                <button class="quick-action-card primary" (click)="showNewTestModal.set(true)">
+                    <lucide-icon [img]="icons.Plus" size="20"></lucide-icon>
+                    <div>
+                        <strong>Assigner test</strong>
+                        <p>Creer une nouvelle assignation</p>
+                    </div>
+                </button>
+
+                <button class="quick-action-card success" (click)="openNewRecommendationDialog()">
+                    <lucide-icon [img]="icons.ClipboardCheck" size="20"></lucide-icon>
+                    <div>
+                        <strong>Recommandation</strong>
+                        <p>Prescrire une action a l'aidant</p>
+                    </div>
+                </button>
+
+                <button class="quick-action-card light" (click)="openCalendar()">
+                    <lucide-icon [img]="icons.Calendar" size="20"></lucide-icon>
+                    <div>
+                        <strong>Calendrier</strong>
+                        <p>Voir les rendez-vous et rappels</p>
+                    </div>
+                </button>
+
+                <button class="quick-action-card danger" (click)="selectedRole.set(null)">
+                    <lucide-icon [img]="icons.ChevronRight" size="20" style="transform: rotate(180deg);"></lucide-icon>
+                    <div>
+                        <strong>Changer role</strong>
+                        <p>Retour a la selection des roles</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         AIDANT DASHBOARD — Interface complète (Étapes 11-14)
+    ══════════════════════════════════════════════════════════ -->
+    <div *ngIf="selectedRole() === 'aidant'" class="dashboard-aidant">
+
+        <!-- ── EN-TÊTE AIDANT ──────────────────────────────────────── -->
+        <header class="aidant-main-header">
+            <div class="aidant-header-inner">
+                <button class="btn-back" (click)="selectedRole.set(null)">
+                    <lucide-icon [img]="icons.ChevronRight" size="14" style="transform:rotate(180deg)"></lucide-icon>
+                    Retour
+                </button>
+
+                <div class="aidant-header-patient">
+                    <div class="aidant-avatar-circle">{{ getPatientInitials(aidantData.patientName) }}</div>
+                    <div class="aidant-header-text">
+                        <p class="aidant-header-label">Patient suivi</p>
+                        <h1 class="aidant-header-name">{{ aidantData.patientName }}</h1>
+                    </div>
+                </div>
+
+                <div class="aidant-header-right">
+                    <div class="aidant-notif-bell" (click)="goToAidantTab('recommandations')"
+                         *ngIf="pendingRecsCount() > 0" title="Recommandations en attente">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span class="aidant-notif-count">{{ pendingRecsCount() }}</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── NAVIGATION PAR ONGLETS ──────────────────────────────── -->
+        <nav class="aidant-tab-nav">
+            <button class="aidant-tab-btn" [class.active]="aidantActiveTab() === 'accueil'"
+                    (click)="goToAidantTab('accueil')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Accueil
+            </button>
+            <button class="aidant-tab-btn" [class.active]="aidantActiveTab() === 'recommandations'"
+                    (click)="goToAidantTab('recommandations')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+                Recommandations
+                <span class="aidant-tab-badge" *ngIf="pendingRecsCount() > 0">{{ pendingRecsCount() }}</span>
+            </button>
+            <button class="aidant-tab-btn" [class.active]="aidantActiveTab() === 'historique'"
+                    (click)="goToAidantTab('historique')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Historique
+            </button>
+            <button class="aidant-tab-btn" [class.active]="aidantActiveTab() === 'profil'"
+                    (click)="goToAidantTab('profil')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Profil
+            </button>
+        </nav>
+
+        <!-- ══════════════════════════════════════════════════════════
+             ONGLET : ACCUEIL
+        ══════════════════════════════════════════════════════════ -->
+        <div *ngIf="aidantActiveTab() === 'accueil'" class="aidant-tab-content">
+
+            <!-- Carte résumé patient -->
+            <section class="patient-summary-card">
+            <div class="card-header-row">
+                <div class="patient-info">
+                    <h2 class="patient-name-large">{{ aidantData.patientName }} <span class="age-badge">{{
+                            aidantData.patientAge }} ans</span></h2>
+                </div>
+                <div class="status-badge-container">
+                    <span class="status-pill orange">
+                        <span class="dot"></span>
+                        {{ aidantData.stage }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- ══ SCORE GLOBAL COMPOSITE ══════════════════════════════════ -->
+            <ng-container *ngIf="aidantGlobalScore() as sg">
+                <div class="score-global-card"
+                     [class.score-global-vert]="sg.colorCode === 'VERT'"
+                     [class.score-global-jaune]="sg.colorCode === 'JAUNE'"
+                     [class.score-global-rouge]="sg.colorCode === 'ROUGE'"
+                     [class.score-global-gray]="sg.status === 'NON_EVALUABLE'">
+                    <div class="score-global-top">
+                        <div class="score-global-label">SCORE COGNITIF GLOBAL</div>
+                        <div class="score-global-badge"
+                             [class.badge-vert]="sg.colorCode === 'VERT'"
+                             [class.badge-jaune]="sg.colorCode === 'JAUNE'"
+                             [class.badge-rouge]="sg.colorCode === 'ROUGE'"
+                             [class.badge-gray]="sg.status === 'NON_EVALUABLE'">
+                            {{ sg.colorCode === 'VERT' ? 'Normal' : sg.colorCode === 'JAUNE' ? 'Surveillance' : sg.status === 'NON_EVALUABLE' ? 'Non évaluable' : 'Alerte' }}
+                        </div>
+                    </div>
+                    <div class="score-global-value-row">
+                        <span class="score-global-value"
+                              [class.score-vert]="sg.colorCode === 'VERT'"
+                              [class.score-jaune]="sg.colorCode === 'JAUNE'"
+                              [class.score-rouge]="sg.colorCode === 'ROUGE'">
+                            {{ sg.status === 'NON_EVALUABLE' ? '—' : (sg.globalScore | number:'1.2-2') }}
+                        </span>
+                        <span class="score-global-unit" *ngIf="sg.status !== 'NON_EVALUABLE'">z-score pondéré</span>
+                    </div>
+                    <div class="score-global-interpretation">{{ sg.interpretation }}</div>
+                    <div class="score-global-detail" *ngIf="sg.status === 'OK' && sg.scoreByType">
+                        <span *ngFor="let entry of sg.scoreByType | keyvalue"
+                              class="score-type-chip"
+                              [class.chip-vert]="entry.value > -1"
+                              [class.chip-jaune]="entry.value <= -1 && entry.value > -2"
+                              [class.chip-rouge]="entry.value <= -2">
+                            {{ entry.key }} : {{ entry.value | number:'1.2-2' }}
+                        </span>
+                    </div>
+                    <div class="score-global-tests" *ngIf="sg.status === 'OK'">Basé sur {{ sg.testCount }} test(s) valide(s)</div>
+                </div>
+            </ng-container>
+
+            <div class="score-overview-grid">
+                <div class="score-stat">
+                    <span class="stat-label">SCORE ACTUEL (MMSE)</span>
+                    <ng-container *ngIf="aidantPatientMmseScore() as score">
+                        <ng-container *ngIf="score.hasPassedTest">
+                            <span class="stat-value">{{ score.mmseScore | number:'1.0-0' }}/30</span>
+                        </ng-container>
+                        <ng-container *ngIf="!score.hasPassedTest">
+                            <span class="stat-value">0%</span>
+                        </ng-container>
+                    </ng-container>
+                    <ng-container *ngIf="!aidantPatientMmseScore()">
+                        <span class="stat-value">-</span>
+                    </ng-container>
+                </div>
+                <div class="score-stat">
+                    <span class="stat-label">TENDANCE</span>
+                    <span class="stat-value trend-down-text">
+                        <lucide-icon [img]="icons.TrendingDown" size="16"></lucide-icon>
+                        {{ aidantData.trend }}
+                    </span>
+                </div>
+                <div class="score-stat">
+                    <span class="stat-label">PROCHAIN TEST</span>
+                    <span class="stat-value">{{ aidantData.nextTest }}</span>
+                </div>
+            </div>
+
+            <ng-container *ngIf="aidantPatientMmseScore() as score">
+                <ng-container *ngIf="!score.hasPassedTest">
+                    <div class="status-alert-box orange">
+                        <lucide-icon [img]="icons.Info" size="20"></lucide-icon>
+                        <div class="alert-content">
+                            <h3 class="alert-title">Ce patient n'a pas passé le test MMSE</h3>
+                            <p class="alert-desc">Veuillez planifier un test MMSE pour évaluer les fonctions cognitives du patient.</p>
+                        </div>
+                    </div>
+                </ng-container>
+                <ng-container *ngIf="score.hasPassedTest">
+                    <div class="status-alert-box orange">
+                        <lucide-icon [img]="icons.Info" size="20"></lucide-icon>
+                        <div class="alert-content">
+                            <h3 class="alert-title">{{ aidantData.statusMessage }}</h3>
+                            <p class="alert-desc">{{ aidantData.statusDesc }}</p>
+                        </div>
+                    </div>
+                </ng-container>
+            </ng-container>
+
+            <button class="btn-full-details" (click)="goToAidantTab('recommandations')">
+                Voir toutes les recommandations <lucide-icon [img]="icons.ChevronRight" size="18"></lucide-icon>
+            </button>
+        </section>
+
+            <!-- Statistiques rapides dans l'onglet Accueil -->
+            <div class="aidant-stats-quick-row">
+                <div class="aidant-stat-quick pending" (click)="goToAidantTab('recommandations'); toggleStatusFilter(RecommendStatus.PENDING)">
+                    <div class="aidant-stat-quick-num">{{ pendingRecsCount() }}</div>
+                    <div class="aidant-stat-quick-label">À faire</div>
+                </div>
+                <div class="aidant-stat-quick inprogress" (click)="goToAidantTab('recommandations'); toggleStatusFilter(RecommendStatus.IN_PROGRESS)">
+                    <div class="aidant-stat-quick-num">{{ inProgressRecsCount() }}</div>
+                    <div class="aidant-stat-quick-label">En cours</div>
+                </div>
+                <div class="aidant-stat-quick completed" (click)="goToAidantTab('historique')">
+                    <div class="aidant-stat-quick-num">{{ completedRecsCount() }}</div>
+                    <div class="aidant-stat-quick-label">Terminé</div>
+                </div>
+                <div class="aidant-stat-quick dismissed" (click)="goToAidantTab('historique')">
+                    <div class="aidant-stat-quick-num">{{ dismissedRecsCount() }}</div>
+                    <div class="aidant-stat-quick-label">Ignoré</div>
+                </div>
+            </div>
+
+            <!-- Top 3 recommandations urgentes -->
+            <div class="aidant-home-recs-section" *ngIf="getTopUrgentRecs().length > 0">
+                <div class="aidant-home-recs-header">
+                    <h3>Priorités immédiates</h3>
+                    <button class="aidant-see-all-btn" (click)="goToAidantTab('recommandations')">Voir tout →</button>
+                </div>
+                <div class="aidant-home-rec-list">
+                    <div *ngFor="let rec of getTopUrgentRecs()"
+                         class="aidant-home-rec-card"
+                         [class.priority-urgent]="rec.priority === PriorityLevel.URGENT"
+                         [class.priority-high]="rec.priority === PriorityLevel.HIGH"
+                         [class.priority-medium]="rec.priority === PriorityLevel.MEDIUM"
+                         [class.priority-low]="rec.priority === PriorityLevel.LOW"
+                         (click)="goToAidantTab('recommandations'); openRecDetail(rec)">
+                        <div class="aidant-home-rec-left">
+                            <span class="rec-priority-pill"
+                                  [style.background]="getPriorityColor(rec.priority) + '22'"
+                                  [style.color]="getPriorityColor(rec.priority)"
+                                  [style.border-color]="getPriorityColor(rec.priority)">
+                                {{ getPriorityEmoji(rec.priority) }} {{ getPriorityLabel(rec.priority) }}
+                            </span>
+                            <p class="aidant-home-rec-action">{{ rec.action }}</p>
+                            <span class="aidant-home-rec-deadline"
+                                  [class.deadline-overdue]="getDeadlineStatus(rec.deadline) === 'overdue'"
+                                  [class.deadline-today]="getDeadlineStatus(rec.deadline) === 'today'"
+                                  [class.deadline-soon]="getDeadlineStatus(rec.deadline) === 'soon'">
+                                {{ getDeadlineDisplay(rec.deadline) }}
+                            </span>
+                        </div>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tests & Rendez-vous (Accueil) -->
+            <div class="aidant-home-tests-section">
+                <div class="aidant-home-recs-header">
+                    <h3>Tests & Rendez-vous</h3>
+                    <button class="aidant-see-all-btn" (click)="openCalendar()">Calendrier →</button>
+                </div>
+                <!-- Tests assignés -->
+                <div *ngIf="patientAssignments().length > 0" class="tests-list-aidant-scrollable">
+                    <div *ngFor="let assignment of patientAssignments()" class="appointment-card-inner clickable"
+                         (click)="handleAidantAssignmentClick(assignment)">
+                        <lucide-icon [img]="icons.Brain" size="28" class="blue-text"></lucide-icon>
+                        <div class="appointment-details-text">
+                            <span class="appoint-date">{{ assignment.test?.titre || 'Test Cognitif' }}</span>
+                            <span class="appoint-time">{{ assignment.test?.type || 'MEMORY' }}</span>
+                            <span class="appoint-desc" *ngIf="assignment.dateLimite">Échéance: {{ assignment.dateLimite | date:'dd/MM/yyyy' }}</span>
+                        </div>
+                        <button class="btn-start-assignment" (click)="$event.stopPropagation(); handleAidantAssignmentClick(assignment)">
+                            {{ assignment.status === 'IN_PROGRESS' ? 'Continuer' : 'Commencer' }}
+                        </button>
+                    </div>
+                </div>
+                <div *ngIf="patientAssignments().length === 0" class="aidant-empty-state">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span>Aucun test assigné</span>
+                </div>
+            </div><!-- /aidant-home-tests-section -->
+
+        </div><!-- /onglet accueil -->
+
+        <!-- ══════════════════════════════════════════════════════════
+             ONGLET : RECOMMANDATIONS (Étapes 12, 13, 14)
+        ══════════════════════════════════════════════════════════ -->
+        <div *ngIf="aidantActiveTab() === 'recommandations'" class="aidant-tab-content">
+
+            <!-- ── Étape 16 : Barre de recherche et filtres ─────────── -->
+            <div class="aidant-filter-bar">
+                <div class="aidant-search-wrapper">
+                    <svg class="aidant-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" class="aidant-search-input"
+                           placeholder="Rechercher par mot-clé, action, notes…"
+                           [value]="aidantSearchQuery()"
+                           (input)="aidantSearchQuery.set($any($event.target).value); aidantRecPage.set(1)"/>
+                    <button class="aidant-search-clear" *ngIf="aidantSearchQuery()" (click)="aidantSearchQuery.set(''); aidantRecPage.set(1)">✕</button>
+                </div>
+                <select class="aidant-priority-select"
+                        [value]="aidantPriorityFilter() || ''"
+                        (change)="aidantPriorityFilter.set($any($event.target).value || null); aidantRecPage.set(1)">
+                    <option value="">Toutes priorités</option>
+                    <option value="URGENT">🔴 Urgente</option>
+                    <option value="HIGH">🟠 Haute</option>
+                    <option value="MEDIUM">🟡 Moyenne</option>
+                    <option value="LOW">🟢 Basse</option>
+                </select>
+                <button class="aidant-reset-btn" *ngIf="hasActiveFilters()" (click)="resetAllFilters()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    Réinitialiser
+                </button>
+            </div>
+
+            <!-- ── Cartes statistiques filtrantes ─────────────────── -->
+            <div class="aidant-stat-cards-row">
+                <div class="aidant-stat-card pending"
+                     [class.active-filter]="aidantStatusFilter() === RecommendStatus.PENDING"
+                     (click)="toggleStatusFilter(RecommendStatus.PENDING)">
+                    <div class="aidant-stat-card-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div class="aidant-stat-card-body">
+                        <span class="aidant-stat-card-num">{{ pendingRecsCount() }}</span>
+                        <span class="aidant-stat-card-label">À faire</span>
+                    </div>
+                </div>
+                <div class="aidant-stat-card inprogress"
+                     [class.active-filter]="aidantStatusFilter() === RecommendStatus.IN_PROGRESS"
+                     (click)="toggleStatusFilter(RecommendStatus.IN_PROGRESS)">
+                    <div class="aidant-stat-card-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    </div>
+                    <div class="aidant-stat-card-body">
+                        <span class="aidant-stat-card-num">{{ inProgressRecsCount() }}</span>
+                        <span class="aidant-stat-card-label">En cours</span>
+                    </div>
+                </div>
+                <div class="aidant-stat-card completed"
+                     [class.active-filter]="aidantStatusFilter() === RecommendStatus.COMPLETED"
+                     (click)="toggleStatusFilter(RecommendStatus.COMPLETED)">
+                    <div class="aidant-stat-card-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <div class="aidant-stat-card-body">
+                        <span class="aidant-stat-card-num">{{ completedRecsCount() }}</span>
+                        <span class="aidant-stat-card-label">Terminé</span>
+                    </div>
+                </div>
+                <div class="aidant-stat-card dismissed"
+                     [class.active-filter]="aidantStatusFilter() === RecommendStatus.DISMISSED"
+                     (click)="toggleStatusFilter(RecommendStatus.DISMISSED)">
+                    <div class="aidant-stat-card-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </div>
+                    <div class="aidant-stat-card-body">
+                        <span class="aidant-stat-card-num">{{ dismissedRecsCount() }}</span>
+                        <span class="aidant-stat-card-label">Ignoré</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Filtre actif label ──────────────────────────────── -->
+            <div class="aidant-filter-active" *ngIf="hasActiveFilters()">
+                <span *ngIf="aidantStatusFilter()">Statut : <strong>{{ getStatusLabel(aidantStatusFilter()!) }}</strong></span>
+                <span *ngIf="aidantPriorityFilter()">Priorité : <strong>{{ getPriorityLabel(aidantPriorityFilter()!) }}</strong></span>
+                <span *ngIf="aidantSearchQuery()">Recherche : <strong>« {{ aidantSearchQuery() }} »</strong></span>
+                <span class="aidant-filter-result-count">{{ getFilteredAidantRecs().length }} résultat(s)</span>
+                <button class="aidant-filter-clear" (click)="resetAllFilters()">✕ Tout effacer</button>
+            </div>
+
+            <!-- ── Layout liste + détail ──────────────────────────── -->
+            <div class="aidant-rec-layout" [class.has-detail]="aidantSelectedRec()">
+
+                <!-- Liste des recommandations -->
+                <div class="aidant-rec-list-col">
+
+                    <!-- Empty state -->
+                    <div *ngIf="getFilteredAidantRecs().length === 0" class="aidant-empty-state large">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+                        <p>Aucune recommandation {{ aidantStatusFilter() ? 'avec ce statut' : 'active' }}</p>
+                    </div>
+
+                    <!-- Cartes recommandations (triées URGENT→LOW + deadline) -->
+                    <div *ngFor="let rec of getPaginatedAidantRecs()"
+                         class="aidant-rec-card"
+                         [class.selected]="aidantSelectedRec()?.id === rec.id"
+                         [class.priority-urgent]="rec.priority === PriorityLevel.URGENT"
+                         [class.priority-high]="rec.priority === PriorityLevel.HIGH"
+                         [class.priority-medium]="rec.priority === PriorityLevel.MEDIUM"
+                         [class.priority-low]="rec.priority === PriorityLevel.LOW"
+                         [class.rec-done]="rec.status === RecommendStatus.COMPLETED"
+                         (click)="openRecDetail(rec)">
+
+                        <!-- Barre couleur priorité -->
+                        <div class="rec-card-accent" [style.background]="getPriorityColor(rec.priority)"></div>
+
+                        <div class="rec-card-body">
+                            <!-- Ligne 1 : priorité + statut -->
+                            <div class="rec-card-top">
+                                <span class="rec-priority-pill"
+                                      [style.background]="getPriorityColor(rec.priority) + '20'"
+                                      [style.color]="getPriorityColor(rec.priority)"
+                                      [style.border-color]="getPriorityColor(rec.priority)">
+                                    {{ getPriorityEmoji(rec.priority) }} {{ getPriorityLabel(rec.priority) }}
+                                </span>
+                                <span class="rec-status-pill"
+                                      [class.status-pending]="rec.status === RecommendStatus.PENDING"
+                                      [class.status-inprogress]="rec.status === RecommendStatus.IN_PROGRESS"
+                                      [class.status-completed]="rec.status === RecommendStatus.COMPLETED"
+                                      [class.status-dismissed]="rec.status === RecommendStatus.DISMISSED">
+                                    {{ getStatusLabel(rec.status) }}
+                                </span>
+                            </div>
+
+                            <!-- Action (texte principal) -->
+                            <p class="rec-card-action">{{ rec.action }}</p>
+
+                            <!-- Deadline avec indicateur couleur -->
+                            <div class="rec-card-deadline"
+                                 [class.deadline-overdue]="getDeadlineStatus(rec.deadline) === 'overdue'"
+                                 [class.deadline-today]="getDeadlineStatus(rec.deadline) === 'today'"
+                                 [class.deadline-soon]="getDeadlineStatus(rec.deadline) === 'soon'"
+                                 *ngIf="rec.deadline">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                {{ getDeadlineDisplay(rec.deadline) }}
+                            </div>
+
+                            <!-- Notes -->
+                            <p class="rec-card-notes" *ngIf="rec.notes">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                {{ rec.notes }}
+                            </p>
+                        </div>
+
+                        <!-- Bouton détail -->
+                        <div class="rec-card-footer-btns">
+                            <button class="rec-card-detail-btn" (click)="$event.stopPropagation(); openRecDetail(rec)">
+                                📖 Détails
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                            </button>
+                            <button class="rec-card-contact-btn" (click)="$event.stopPropagation(); openContactModal(rec)"
+                                    title="Contacter le médecin à propos de cette recommandation">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                <span class="rec-contact-unread" *ngIf="unreadDoctorCount(rec.id!) > 0">{{ unreadDoctorCount(rec.id!) }}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pagination "Voir plus" -->
+                    <div class="aidant-load-more" *ngIf="hasMoreRecs()">
+                        <button class="btn-load-more" (click)="loadMoreRecs()">
+                            Voir plus ({{ getFilteredAidantRecs().length - aidantRecPage() * REC_PAGE_SIZE }} restantes)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── Panneau Détail (Étape 14) ────────────────────── -->
+                <div class="aidant-rec-detail-panel" *ngIf="aidantSelectedRec() as rec">
+
+                    <!-- En-tête panneau -->
+                    <div class="detail-panel-header">
+                        <h3 class="detail-panel-title">Détail de la recommandation</h3>
+                        <button class="detail-panel-close" (click)="closeRecDetail()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Corps panneau -->
+                    <div class="detail-panel-body">
+
+                        <!-- Priorité + Statut -->
+                        <div class="detail-row-pills">
+                            <span class="rec-priority-pill large"
+                                  [style.background]="getPriorityColor(rec.priority) + '20'"
+                                  [style.color]="getPriorityColor(rec.priority)"
+                                  [style.border-color]="getPriorityColor(rec.priority)">
+                                {{ getPriorityEmoji(rec.priority) }} {{ getPriorityLabel(rec.priority) }}
+                            </span>
+                            <span class="rec-status-pill large"
+                                  [class.status-pending]="rec.status === RecommendStatus.PENDING"
+                                  [class.status-inprogress]="rec.status === RecommendStatus.IN_PROGRESS"
+                                  [class.status-completed]="rec.status === RecommendStatus.COMPLETED"
+                                  [class.status-dismissed]="rec.status === RecommendStatus.DISMISSED">
+                                {{ getStatusLabel(rec.status) }}
+                            </span>
+                        </div>
+
+                        <!-- Action principale -->
+                        <div class="detail-section">
+                            <label class="detail-label">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+                                Action recommandée
+                            </label>
+                            <p class="detail-action-text">{{ rec.action }}</p>
+                        </div>
+
+                        <!-- Patient & Médecin -->
+                        <div class="detail-info-grid">
+                            <div class="detail-info-item">
+                                <label class="detail-label">Patient</label>
+                                <span class="detail-value">{{ aidantData.patientName }}</span>
+                            </div>
+                            <div class="detail-info-item">
+                                <label class="detail-label">Prescrit le</label>
+                                <span class="detail-value">{{ rec.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Deadline -->
+                        <div class="detail-section" *ngIf="rec.deadline">
+                            <label class="detail-label">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                Date limite & Temps restant
+                            </label>
+                            <div class="detail-deadline-box"
+                                 [class.deadline-overdue]="getDeadlineStatus(rec.deadline) === 'overdue'"
+                                 [class.deadline-today]="getDeadlineStatus(rec.deadline) === 'today'"
+                                 [class.deadline-soon]="getDeadlineStatus(rec.deadline) === 'soon'">
+                                {{ getDeadlineDisplay(rec.deadline) }}
+                            </div>
+                        </div>
+
+                        <!-- Notes personnelles de l'aidant -->
+                        <div class="detail-section">
+                            <div class="detail-notes-header">
+                                <label class="detail-label">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                    Notes personnelles
+                                </label>
+                                <button class="detail-edit-btn" *ngIf="!aidantRecNotesEditing()"
+                                        (click)="aidantRecNotesDraft.set(rec.notes || ''); aidantRecNotesEditing.set(true)">
+                                    Modifier
+                                </button>
+                            </div>
+
+                            <!-- Affichage notes -->
+                            <p class="detail-notes-text" *ngIf="!aidantRecNotesEditing()">
+                                {{ rec.notes || 'Aucune note. Cliquez sur Modifier pour ajouter.' }}
+                            </p>
+
+                            <!-- Édition notes -->
+                            <div *ngIf="aidantRecNotesEditing()" class="detail-notes-edit">
+                                <textarea class="detail-notes-textarea"
+                                          rows="4"
+                                          [value]="aidantRecNotesDraft()"
+                                          (input)="aidantRecNotesDraft.set($any($event.target).value)"
+                                          placeholder="Ajoutez vos notes personnelles…"></textarea>
+                                <div class="detail-notes-actions">
+                                    <button class="btn-notes-cancel" (click)="aidantRecNotesEditing.set(false)">Annuler</button>
+                                    <button class="btn-notes-save" (click)="saveAidantRecNotes(rec)">Sauvegarder</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action statut -->
+                        <div class="detail-action-buttons" *ngIf="rec.status !== RecommendStatus.COMPLETED && rec.status !== RecommendStatus.DISMISSED">
+                            <button class="detail-btn-action inprogress"
+                                    *ngIf="rec.status === RecommendStatus.PENDING"
+                                    (click)="requestStatusChange(rec,RecommendStatus.IN_PROGRESS)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                Marquer en cours
+                            </button>
+                            <button class="detail-btn-action completed"
+                                    (click)="requestStatusChange(rec,RecommendStatus.COMPLETED)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                Marquer terminé
+                            </button>
+                            <button class="detail-btn-action dismissed"
+                                    (click)="requestStatusChange(rec,RecommendStatus.DISMISSED)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                Ignorer
+                            </button>
+                        </div>
+
+                        <!-- Message si terminé/ignoré -->
+                        <div class="detail-done-msg" *ngIf="rec.status === RecommendStatus.COMPLETED">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00635D" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            Recommandation terminée
+                            <button class="detail-reopen-btn" (click)="requestStatusChange(rec,RecommendStatus.PENDING)">Réouvrir</button>
+                        </div>
+                        <div class="detail-done-msg dismissed-msg" *ngIf="rec.status === RecommendStatus.DISMISSED">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            Recommandation ignorée
+                            <button class="detail-reopen-btn" (click)="requestStatusChange(rec,RecommendStatus.PENDING)">Réactiver</button>
+                        </div>
+
+                        <!-- ── Étape 19 : Décision médicale associée ──── -->
+                        <ng-container *ngIf="getDecisionForRec(rec) as dec">
+                            <div class="detail-decision-section">
+                                <div class="detail-decision-header">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                                    <span>Décision médicale associée</span>
+                                </div>
+                                <div class="detail-decision-body">
+                                    <div class="decision-risk-badge"
+                                         [style.background]="getRiskColor(dec.riskLevel) + '18'"
+                                         [style.color]="getRiskColor(dec.riskLevel)"
+                                         [style.border-color]="getRiskColor(dec.riskLevel)">
+                                        ● {{ getRiskLabel(dec.riskLevel) }}
+                                    </div>
+                                    <div class="decision-info-grid">
+                                        <div class="decision-info-item">
+                                            <span class="decision-info-label">Type</span>
+                                            <span class="decision-info-value">{{ getDecisionTypeLabel(dec.decisionType) }}</span>
+                                        </div>
+                                        <div class="decision-info-item">
+                                            <span class="decision-info-label">Date</span>
+                                            <span class="decision-info-value">{{ dec.createdAt | date:'dd/MM/yyyy' }}</span>
+                                        </div>
+                                    </div>
+                                    <p class="decision-explanation" *ngIf="dec.explanation">{{ dec.explanation }}</p>
+                                    <p class="decision-reassurance">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2A6EBB" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                        Si vous avez des questions, n'hésitez pas à contacter le médecin.
+                                    </p>
+                                    <button class="btn-view-decisions" (click)="showDecisionsHistoryModal.set(true)">
+                                        Voir l'historique des décisions →
+                                    </button>
+                                </div>
+                            </div>
+                        </ng-container>
+
+                        <!-- ── Étape 20 : Conversation avec le médecin ── -->
+                        <div class="detail-contact-section">
+                            <div class="detail-contact-header">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                <span>Contacter le médecin</span>
+                                <span class="contact-unread-badge" *ngIf="unreadDoctorCount(rec.id!) > 0">{{ unreadDoctorCount(rec.id!) }} nouveau(x)</span>
+                            </div>
+                            <!-- Aperçu dernier message -->
+                            <div class="contact-last-msg" *ngIf="getMessagesForRec(rec.id!).length > 0" (click)="openConversation(rec)">
+                                <div class="contact-last-msg-bubble"
+                                     [class.from-medecin]="getMessagesForRec(rec.id!)[getMessagesForRec(rec.id!).length-1].from === 'MEDECIN'">
+                                    <span class="msg-from">{{ getMessagesForRec(rec.id!)[getMessagesForRec(rec.id!).length-1].from === 'AIDANT' ? 'Vous' : '👨‍⚕️ Médecin' }}</span>
+                                    <p class="msg-text">{{ getMessagesForRec(rec.id!)[getMessagesForRec(rec.id!).length-1].text }}</p>
+                                </div>
+                                <span class="contact-see-conv">Voir la conversation →</span>
+                            </div>
+                            <div class="detail-contact-btns">
+                                <button class="btn-contact-doctor" (click)="openContactModal(rec)">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                    {{ getMessagesForRec(rec.id!).length > 0 ? 'Nouveau message' : 'Envoyer un message' }}
+                                </button>
+                                <button class="btn-view-conversation" *ngIf="getMessagesForRec(rec.id!).length > 0" (click)="openConversation(rec)">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    {{ getMessagesForRec(rec.id!).length }} échange(s)
+                                </button>
+                            </div>
+                        </div>
+
+                    </div><!-- /detail-panel-body -->
+                </div><!-- /detail-panel -->
+
+            </div><!-- /aidant-rec-layout -->
+        </div><!-- /onglet recommandations -->
+
+        <!-- ══════════════════════════════════════════════════════════
+             ONGLET : HISTORIQUE (Étape 18)
+        ══════════════════════════════════════════════════════════ -->
+        <div *ngIf="aidantActiveTab() === 'historique'" class="aidant-tab-content">
+
+            <!-- En-tête avec compteur + export -->
+            <div class="hist-header-row">
+                <div>
+                    <h3 class="hist-title">Historique des recommandations</h3>
+                    <span class="hist-subtitle">{{ getFilteredHistoryRecs().length }} entrée(s) affichée(s)</span>
+                </div>
+                <div class="hist-export-btns">
+                    <button class="btn-hist-export csv" (click)="exportHistoryCSV()" title="Exporter en CSV (Excel)">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        CSV
+                    </button>
+                    <button class="btn-hist-export pdf" (click)="printHistory()" title="Imprimer / Enregistrer en PDF">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                        PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtres période + statut -->
+            <div class="hist-filter-bar">
+                <div class="hist-filter-group">
+                    <label class="hist-filter-label">Période</label>
+                    <div class="hist-period-pills">
+                        <button class="hist-pill" [class.active]="histPeriodFilter() === 'all'"   (click)="histPeriodFilter.set('all')">Tout</button>
+                        <button class="hist-pill" [class.active]="histPeriodFilter() === 'week'"  (click)="histPeriodFilter.set('week')">Cette semaine</button>
+                        <button class="hist-pill" [class.active]="histPeriodFilter() === 'month'" (click)="histPeriodFilter.set('month')">Ce mois</button>
+                        <button class="hist-pill" [class.active]="histPeriodFilter() === 'year'"  (click)="histPeriodFilter.set('year')">Cette année</button>
+                    </div>
+                </div>
+                <div class="hist-filter-group">
+                    <label class="hist-filter-label">Statut</label>
+                    <div class="hist-period-pills">
+                        <button class="hist-pill" [class.active]="histStatusFilter() === 'all'"       (click)="histStatusFilter.set('all')">Toutes</button>
+                        <button class="hist-pill completed" [class.active]="histStatusFilter() === 'completed'" (click)="histStatusFilter.set('completed')">✅ Terminées</button>
+                        <button class="hist-pill dismissed" [class.active]="histStatusFilter() === 'dismissed'" (click)="histStatusFilter.set('dismissed')">❌ Ignorées</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty state -->
+            <div *ngIf="getFilteredHistoryRecs().length === 0" class="aidant-empty-state large">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <p>Aucun historique pour cette période</p>
+            </div>
+
+            <!-- Cartes archivées -->
+            <div *ngFor="let rec of getFilteredHistoryRecs()" class="aidant-history-card"
+                 [class.history-completed]="rec.status === RecommendStatus.COMPLETED"
+                 [class.history-dismissed]="rec.status === RecommendStatus.DISMISSED">
+
+                <!-- Icône statut -->
+                <div class="history-card-icon">
+                    <svg *ngIf="rec.status === RecommendStatus.COMPLETED" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00635D" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg *ngIf="rec.status === RecommendStatus.DISMISSED" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </div>
+
+                <!-- Corps -->
+                <div class="history-card-body">
+                    <div class="history-card-status-row">
+                        <span class="history-status-badge" [class.badge-completed]="rec.status === RecommendStatus.COMPLETED"
+                              [class.badge-dismissed]="rec.status === RecommendStatus.DISMISSED">
+                            {{ rec.status === RecommendStatus.COMPLETED ? '✅ TERMINÉE' : '❌ IGNORÉE' }}
+                        </span>
+                        <span class="rec-priority-pill small"
+                              [style.background]="getPriorityColor(rec.priority) + '20'"
+                              [style.color]="getPriorityColor(rec.priority)"
+                              [style.border-color]="getPriorityColor(rec.priority)">
+                            {{ getPriorityEmoji(rec.priority) }} {{ getPriorityLabel(rec.priority) }}
+                        </span>
+                    </div>
+                    <p class="history-card-action">{{ rec.action }}</p>
+                    <div class="history-dates-row">
+                        <span class="history-date-item">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            Prescrit le {{ rec.createdAt | date:'dd/MM/yyyy' }}
+                        </span>
+                        <span class="history-date-item accent" *ngIf="rec.updatedAt || rec.completedAt">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            {{ rec.status === RecommendStatus.COMPLETED ? 'Terminé' : 'Ignoré' }} le {{ (rec.completedAt || rec.updatedAt) | date:'dd/MM/yyyy' }}
+                        </span>
+                    </div>
+                    <p class="history-notes" *ngIf="rec.notes">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        {{ rec.notes }}
+                    </p>
+                </div>
+
+                <!-- Actions -->
+                <div class="history-card-actions">
+                    <button class="btn-hist-detail" (click)="openArchiveDetail(rec)" title="Voir les détails archivés">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        Détails
+                    </button>
+                    <button class="history-reopen-btn" (click)="requestStatusChange(rec,RecommendStatus.PENDING)">
+                        ↺ Réactiver
+                    </button>
+                </div>
+            </div>
+
+        </div><!-- /onglet historique -->
+
+        <!-- ══════════════════════════════════════════════════════════
+             ONGLET : PROFIL
+        ══════════════════════════════════════════════════════════ -->
+        <div *ngIf="aidantActiveTab() === 'profil'" class="aidant-tab-content">
+            <div class="aidant-profile-card">
+                <div class="aidant-profile-avatar">{{ getPatientInitials(aidantData.patientName) }}</div>
+                <div class="aidant-profile-info">
+                    <h3 class="aidant-profile-name">{{ aidantData.patientName }}</h3>
+                    <p class="aidant-profile-role">Aidant / Accompagnant</p>
+                </div>
+            </div>
+            <div class="aidant-profile-section">
+                <h4>Patient accompagné</h4>
+                <div class="aidant-profile-patient-card">
+                    <div class="aidant-avatar-circle small">{{ getPatientInitials(aidantData.patientName) }}</div>
+                    <div>
+                        <p class="profile-patient-name">{{ aidantData.patientName }}</p>
+                        <p class="profile-patient-age">{{ aidantData.patientAge }} ans · {{ aidantData.stage }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="aidant-profile-section">
+                <h4>Actions rapides</h4>
+                <div class="aidant-profile-actions">
+                    <button class="aidant-profile-action-btn" (click)="openCalendar()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        Calendrier
+                    </button>
+                    <button class="aidant-profile-action-btn" (click)="goToAidantTab('recommandations')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+                        Mes recommandations
+                    </button>
+                    <button class="aidant-profile-action-btn danger" (click)="selectedRole.set(null)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Se déconnecter
+                    </button>
+                </div>
+            </div>
+        </div><!-- /onglet profil -->
+
+    </div><!-- /dashboard-aidant -->
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 15 — MODAL CONFIRMATION DE STATUT
+    ══════════════════════════════════════════════════════════ -->
+    <div class="aidant-modal-overlay" *ngIf="showConfirmModal()" (click)="showConfirmModal.set(false)">
+        <div class="aidant-confirm-modal" (click)="$event.stopPropagation()">
+            <div class="confirm-modal-icon" [ngClass]="confirmConfig()?.confirmClass || ''">
+                <svg *ngIf="confirmConfig()?.confirmClass === 'inprogress'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                <svg *ngIf="confirmConfig()?.confirmClass === 'completed'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg *ngIf="confirmConfig()?.confirmClass === 'reopen'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            </div>
+            <h3 class="confirm-modal-title">{{ confirmConfig()?.title }}</h3>
+            <p class="confirm-modal-message">{{ confirmConfig()?.message }}</p>
+            <div class="confirm-modal-actions">
+                <button class="btn-confirm-cancel" (click)="showConfirmModal.set(false)">Annuler</button>
+                <button class="btn-confirm-ok" [ngClass]="confirmConfig()?.confirmClass || ''"
+                        (click)="confirmConfig()?.onConfirm && confirmConfig()!.onConfirm()">
+                    {{ confirmConfig()?.confirmLabel }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 15 — MODAL MOTIF D'IGNORANCE
+    ══════════════════════════════════════════════════════════ -->
+    <div class="aidant-modal-overlay" *ngIf="showDismissModal()" (click)="showDismissModal.set(false)">
+        <div class="aidant-dismiss-modal" (click)="$event.stopPropagation()">
+            <div class="dismiss-modal-header">
+                <div class="dismiss-modal-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </div>
+                <div>
+                    <h3 class="dismiss-modal-title">Ignorer la recommandation</h3>
+                    <p class="dismiss-modal-subtitle">Sélectionnez un motif (obligatoire)</p>
+                </div>
+                <button class="dismiss-modal-close" (click)="showDismissModal.set(false)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <p class="dismiss-rec-preview">« {{ dismissTargetRec()?.action }} »</p>
+            <div class="dismiss-reasons-list">
+                <label *ngFor="let reason of DISMISS_REASONS" class="dismiss-reason-option"
+                       [class.selected]="dismissReason() === reason">
+                    <input type="radio" name="dismissReason"
+                           [value]="reason"
+                           [checked]="dismissReason() === reason"
+                           (change)="dismissReason.set(reason)"/>
+                    <span class="dismiss-reason-text">{{ reason }}</span>
+                    <svg *ngIf="dismissReason() === reason" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#541A75" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </label>
+            </div>
+            <div class="dismiss-custom-wrapper" *ngIf="dismissReason() === 'Autre (préciser)'">
+                <textarea class="dismiss-custom-textarea"
+                          rows="3"
+                          placeholder="Décrivez le motif…"
+                          [value]="dismissCustomNote()"
+                          (input)="dismissCustomNote.set($any($event.target).value)"></textarea>
+            </div>
+            <div class="dismiss-modal-actions">
+                <button class="btn-dismiss-cancel" (click)="showDismissModal.set(false)">Annuler</button>
+                <button class="btn-dismiss-confirm" [disabled]="!dismissReason()" (click)="confirmDismiss()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Ignorer la recommandation
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 17 — POPUP URGENTE (priorité URGENT)
+    ══════════════════════════════════════════════════════════ -->
+    <div class="aidant-urgent-overlay" *ngIf="urgentPopupRec()">
+        <div class="aidant-urgent-popup">
+            <div class="urgent-popup-header">
+                <div class="urgent-popup-pulse"></div>
+                <span class="urgent-popup-badge">🚨 RECOMMANDATION URGENTE</span>
+            </div>
+            <div class="urgent-popup-body">
+                <p class="urgent-popup-action">{{ urgentPopupRec()?.action }}</p>
+                <div class="urgent-popup-deadline" *ngIf="urgentPopupRec()?.deadline">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    {{ getDeadlineDisplay(urgentPopupRec()?.deadline) }}
+                </div>
+            </div>
+            <div class="urgent-popup-actions">
+                <button class="btn-urgent-view"
+                        (click)="goToAidantTab('recommandations'); openRecDetail(urgentPopupRec()!); urgentPopupRec.set(null)">
+                    👁 Voir la recommandation
+                </button>
+                <button class="btn-urgent-later" (click)="urgentPopupRec.set(null)">Plus tard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 17 — TOASTS (HIGH = 10s orange / MEDIUM = 5s jaune)
+    ══════════════════════════════════════════════════════════ -->
+    <div class="aidant-toasts-container" *ngIf="aidantToasts().length > 0">
+        <div *ngFor="let toast of aidantToasts()"
+             class="aidant-toast"
+             [class.toast-high]="toast.rec.priority === PriorityLevel.HIGH"
+             [class.toast-medium]="toast.rec.priority === PriorityLevel.MEDIUM">
+            <div class="toast-top">
+                <span class="toast-priority-label">{{ getPriorityEmoji(toast.rec.priority) }} Nouvelle recommandation</span>
+                <button class="toast-close" (click)="removeToast(toast.id)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <p class="toast-action">{{ toast.rec.action }}</p>
+            <button class="toast-view-btn"
+                    (click)="goToAidantTab('recommandations'); openRecDetail(toast.rec); removeToast(toast.id)">
+                Voir →
+            </button>
+            <div class="toast-progress-bar" [class.toast-high]="toast.rec.priority === PriorityLevel.HIGH"
+                 [class.toast-medium]="toast.rec.priority === PriorityLevel.MEDIUM"></div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 18 — MODAL DÉTAIL ARCHIVÉ
+    ══════════════════════════════════════════════════════════ -->
+    <div class="aidant-modal-overlay" *ngIf="showArchiveDetailModal() && archiveDetailRec() as rec" (click)="showArchiveDetailModal.set(false)">
+        <div class="archive-detail-modal" (click)="$event.stopPropagation()">
+            <div class="archive-modal-header" [class.header-completed]="rec.status === RecommendStatus.COMPLETED"
+                 [class.header-dismissed]="rec.status === RecommendStatus.DISMISSED">
+                <div class="archive-modal-status-badge">
+                    {{ rec.status === RecommendStatus.COMPLETED ? '✅ TERMINÉE' : '❌ IGNORÉE' }}
+                </div>
+                <button class="dismiss-modal-close" (click)="showArchiveDetailModal.set(false)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="archive-modal-body">
+                <div class="archive-modal-pills">
+                    <span class="rec-priority-pill large"
+                          [style.background]="getPriorityColor(rec.priority) + '20'"
+                          [style.color]="getPriorityColor(rec.priority)"
+                          [style.border-color]="getPriorityColor(rec.priority)">
+                        {{ getPriorityEmoji(rec.priority) }} {{ getPriorityLabel(rec.priority) }}
+                    </span>
+                </div>
+                <h3 class="archive-modal-action">{{ rec.action }}</h3>
+                <div class="archive-modal-dates">
+                    <div class="archive-date-item">
+                        <span class="archive-date-label">Prescrit le</span>
+                        <span class="archive-date-value">{{ rec.createdAt | date:'dd/MM/yyyy à HH:mm' }}</span>
+                    </div>
+                    <div class="archive-date-item accent" *ngIf="rec.completedAt || rec.updatedAt">
+                        <span class="archive-date-label">{{ rec.status === RecommendStatus.COMPLETED ? 'Terminé le' : 'Ignoré le' }}</span>
+                        <span class="archive-date-value">{{ (rec.completedAt || rec.updatedAt) | date:'dd/MM/yyyy à HH:mm' }}</span>
+                    </div>
+                    <div class="archive-date-item" *ngIf="rec.deadline">
+                        <span class="archive-date-label">Date limite était</span>
+                        <span class="archive-date-value">{{ rec.deadline | date:'dd/MM/yyyy à HH:mm' }}</span>
+                    </div>
+                </div>
+                <div class="archive-modal-notes" *ngIf="rec.notes">
+                    <label class="detail-label">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Notes personnelles
+                    </label>
+                    <p class="archive-notes-text">{{ rec.notes }}</p>
+                </div>
+                <div class="archive-modal-footer">
+                    <button class="btn-archive-reopen" (click)="requestStatusChange(rec, RecommendStatus.PENDING); showArchiveDetailModal.set(false)">
+                        ↺ Réactiver cette recommandation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 19 — MODAL HISTORIQUE DES DÉCISIONS
+    ══════════════════════════════════════════════════════════ -->
+    <div class="aidant-modal-overlay" *ngIf="showDecisionsHistoryModal()" (click)="showDecisionsHistoryModal.set(false)">
+        <div class="decisions-history-modal" (click)="$event.stopPropagation()">
+            <div class="dec-modal-header">
+                <div class="dec-modal-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div>
+                    <h3 class="dec-modal-title">Historique des décisions médicales</h3>
+                    <p class="dec-modal-subtitle">Vue simplifiée — données de santé du patient</p>
+                </div>
+                <button class="dismiss-modal-close" (click)="showDecisionsHistoryModal.set(false)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="dec-modal-body">
+                <div class="dec-reassurance-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2A6EBB" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <p>Ces informations sont un résumé simplifié. Pour toute question médicale, contactez directement votre médecin.</p>
+                </div>
+                <div *ngIf="patientDecisions().length === 0" class="aidant-empty-state">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    <p>Aucune décision médicale enregistrée</p>
+                </div>
+                <div *ngFor="let dec of patientDecisions()" class="dec-history-item">
+                    <div class="dec-risk-indicator" [style.background]="getRiskColor(dec.riskLevel)"></div>
+                    <div class="dec-history-body">
+                        <div class="dec-history-top">
+                            <span class="dec-risk-pill"
+                                  [style.background]="getRiskColor(dec.riskLevel) + '18'"
+                                  [style.color]="getRiskColor(dec.riskLevel)"
+                                  [style.border-color]="getRiskColor(dec.riskLevel)">
+                                ● {{ getRiskLabel(dec.riskLevel) }}
+                            </span>
+                            <span class="dec-date">{{ dec.createdAt | date:'dd/MM/yyyy' }}</span>
+                        </div>
+                        <p class="dec-type-label">{{ getDecisionTypeLabel(dec.decisionType) }}</p>
+                        <p class="dec-explanation" *ngIf="dec.explanation">{{ dec.explanation }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 20 — MODAL ENVOI DE MESSAGE AU MÉDECIN
+    ══════════════════════════════════════════════════════════ -->
+    <div class="aidant-modal-overlay" *ngIf="showContactModal()" (click)="showContactModal.set(false)">
+        <div class="contact-modal" (click)="$event.stopPropagation()">
+            <div class="contact-modal-header">
+                <div class="contact-modal-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div>
+                    <h3 class="contact-modal-title">Contacter le médecin</h3>
+                    <p class="contact-modal-subtitle" *ngIf="contactTargetRec()">À propos de : « {{ contactTargetRec()!.action | slice:0:50 }}… »</p>
+                </div>
+                <button class="dismiss-modal-close" (click)="showContactModal.set(false)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="contact-modal-body">
+                <!-- Priorité du message -->
+                <div class="contact-priority-row">
+                    <span class="contact-priority-label">Priorité du message :</span>
+                    <div class="contact-priority-pills">
+                        <button class="contact-priority-pill" [class.active-normal]="contactPriority() === 'NORMALE'"
+                                (click)="contactPriority.set('NORMALE')">Normale</button>
+                        <button class="contact-priority-pill high" [class.active-high]="contactPriority() === 'HAUTE'"
+                                (click)="contactPriority.set('HAUTE')">🔴 Haute</button>
+                    </div>
+                </div>
+                <!-- Zone de texte -->
+                <textarea class="contact-textarea"
+                          rows="6"
+                          placeholder="Écrivez votre message au médecin…"
+                          [value]="contactMessage()"
+                          (input)="contactMessage.set($any($event.target).value)"></textarea>
+                <!-- Note info -->
+                <p class="contact-info-note">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Le médecin recevra une notification et pourra vous répondre dans l'interface.
+                </p>
+            </div>
+            <div class="contact-modal-footer">
+                <button class="btn-contact-cancel" (click)="showContactModal.set(false)">Annuler</button>
+                <button class="btn-contact-send" [disabled]="!contactMessage().trim()" (click)="sendContactMessage()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    Envoyer le message
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 20 — MODAL CONVERSATION
+    ══════════════════════════════════════════════════════════ -->
+    <div class="aidant-modal-overlay" *ngIf="showConversationModal() && conversationTargetRec() as rec" (click)="showConversationModal.set(false)">
+        <div class="conversation-modal" (click)="$event.stopPropagation()">
+            <div class="conversation-modal-header">
+                <div class="conv-header-avatar">💬</div>
+                <div>
+                    <h3 class="conversation-modal-title">Conversation avec le médecin</h3>
+                    <p class="conversation-modal-sub">{{ rec.action | slice:0:60 }}…</p>
+                </div>
+                <button class="dismiss-modal-close" (click)="showConversationModal.set(false)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="conversation-thread">
+                <div *ngIf="getMessagesForRec(rec.id!).length === 0" class="aidant-empty-state">
+                    <p>Aucun message dans cette conversation</p>
+                </div>
+                <div *ngFor="let msg of getMessagesForRec(rec.id!)" class="conv-message"
+                     [class.msg-aidant]="msg.from === 'AIDANT'"
+                     [class.msg-medecin]="msg.from === 'MEDECIN'">
+                    <div class="conv-msg-bubble">
+                        <div class="conv-msg-from">
+                            {{ msg.from === 'AIDANT' ? '👤 Vous' : '👨‍⚕️ Médecin' }}
+                            <span class="conv-msg-priority" *ngIf="msg.priority === 'HAUTE'">🔴 Haute priorité</span>
+                        </div>
+                        <p class="conv-msg-text">{{ msg.text }}</p>
+                        <span class="conv-msg-time">{{ msg.sentAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="conversation-footer">
+                <button class="btn-conv-reply" (click)="showConversationModal.set(false); openContactModal(rec)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    Répondre
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL CONVERSATION MÉDECIN ─────────────────────────── -->
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 21 — MODAL CONFIGURATION CONSULTATION VIDÉO (2 étapes)
+    ══════════════════════════════════════════════════════════ -->
+    <div class="video-modal-overlay" *ngIf="showVideoConfigModal()" (click)="showVideoConfigModal.set(false)">
+        <div class="video-config-modal" (click)="$event.stopPropagation()">
+
+            <!-- ── En-tête avec progression ────────────────────────── -->
+            <div class="video-config-header">
+                <div class="video-config-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                </div>
+                <div class="video-config-header-text">
+                    <h3 class="video-config-title">Consultation à distance</h3>
+                    <p class="video-config-sub">
+                        <ng-container *ngIf="videoConfigStep() === 'select-aidant'">
+                            Étape 1 sur 2 — Choisir l'aidant
+                        </ng-container>
+                        <ng-container *ngIf="videoConfigStep() === 'configure'">
+                            Étape 2 sur 2 — Configurer le type d'appel
+                        </ng-container>
+                    </p>
+                </div>
+                <button class="video-config-close" (click)="showVideoConfigModal.set(false)">✕</button>
+            </div>
+
+            <!-- Barre de progression -->
+            <div class="video-progress-bar">
+                <div class="video-progress-fill"
+                     [style.width]="videoConfigStep() === 'select-aidant' ? '50%' : '100%'"></div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════
+                 ÉTAPE 1 — SÉLECTION DE L'AIDANT
+            ════════════════════════════════════════════════════ -->
+            <div *ngIf="videoConfigStep() === 'select-aidant'" class="video-config-body">
+
+                <!-- Barre de recherche -->
+                <div class="video-aidant-search-row">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input class="video-aidant-search-input"
+                           type="text"
+                           placeholder="Rechercher un aidant ou patient…"
+                           [value]="videoAidantSearch()"
+                           (input)="videoAidantSearch.set($any($event.target).value)"
+                           autofocus>
+                    <button *ngIf="videoAidantSearch()"
+                            class="video-aidant-search-clear"
+                            (click)="videoAidantSearch.set('')">✕</button>
+                </div>
+
+                <!-- Compteur -->
+                <p class="video-aidant-count">
+                    {{ getFilteredAidantsForVideo().length }} aidant(s) disponible(s)
+                </p>
+
+                <!-- Liste des aidants -->
+                <div class="video-aidant-list">
+                    <div *ngIf="getFilteredAidantsForVideo().length === 0" class="video-aidant-empty">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <p>Aucun aidant trouvé pour « {{ videoAidantSearch() }} »</p>
+                    </div>
+
+                    <div *ngFor="let aidant of getFilteredAidantsForVideo()"
+                         class="video-aidant-card"
+                         (click)="selectAidantForVideo(aidant)">
+
+                        <!-- Avatar initiales -->
+                        <div class="video-aidant-avatar">
+                            {{ (aidant.prenom[0] || '') + (aidant.nom[0] || '') }}
+                        </div>
+
+                        <!-- Infos principales -->
+                        <div class="video-aidant-info">
+                            <div class="video-aidant-name">
+                                {{ aidant.prenom }} {{ aidant.nom }}
+                                <span class="video-aidant-relation" *ngIf="aidant.relation">
+                                    · {{ aidant.relation }}
+                                </span>
+                            </div>
+                            <div class="video-aidant-meta">
+                                <span *ngIf="aidant.email" class="video-aidant-email">{{ aidant.email }}</span>
+                                <span *ngIf="aidant.telephone" class="video-aidant-phone">
+                                    📞 {{ aidant.telephone }}
+                                </span>
+                            </div>
+                            <div class="video-aidant-tags">
+                                <!-- Patient lié -->
+                                <span class="video-tag video-tag-patient" *ngIf="aidant.patientId">
+                                    👤 Patient #{{ aidant.patientId }}
+                                </span>
+                                <!-- Messages actifs -->
+                                <span class="video-tag video-tag-msg"
+                                      *ngIf="getAidantMessageCount(aidant) > 0">
+                                    💬 {{ getAidantMessageCount(aidant) }} message(s)
+                                </span>
+                                <!-- Dernier appel -->
+                                <span class="video-tag video-tag-call"
+                                      *ngIf="getLastCallDate(aidant) as lastDate">
+                                    📹 Dernier : {{ lastDate }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Flèche -->
+                        <div class="video-aidant-arrow">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════
+                 ÉTAPE 2 — CONFIGURATION DU TYPE D'APPEL
+            ════════════════════════════════════════════════════ -->
+            <div *ngIf="videoConfigStep() === 'configure'" class="video-config-body">
+
+                <!-- Récap aidant sélectionné -->
+                <div class="video-selected-aidant-recap" *ngIf="videoSelectedAidant() as sel">
+                    <div class="recap-avatar">
+                        {{ (sel.prenom[0] || '') + (sel.nom[0] || '') }}
+                    </div>
+                    <div class="recap-info">
+                        <strong>{{ sel.prenom }} {{ sel.nom }}</strong>
+                        <span>{{ sel.email }}</span>
+                    </div>
+                    <button class="recap-change-btn" (click)="videoConfigStep.set('select-aidant')">
+                        Changer
+                    </button>
+                </div>
+
+                <p class="video-config-label" style="margin-top:18px">Type de consultation</p>
+                <div class="video-mode-cards">
+                    <div class="video-mode-card" [class.selected]="videoCallMode() === 'immediate'"
+                         (click)="videoCallMode.set('immediate')">
+                        <div class="video-mode-icon">⚡</div>
+                        <strong>Consultation immédiate</strong>
+                        <p>Démarrer maintenant — L'aidant reçoit une notification push</p>
+                    </div>
+                    <div class="video-mode-card" [class.selected]="videoCallMode() === 'scheduled'"
+                         (click)="videoCallMode.set('scheduled')">
+                        <div class="video-mode-icon">📅</div>
+                        <strong>Planifier un rendez-vous</strong>
+                        <p>Choisir une date et heure futures — rappel automatique</p>
+                    </div>
+                </div>
+
+                <!-- Champs planification -->
+                <div *ngIf="videoCallMode() === 'scheduled'" class="video-schedule-fields">
+                    <div class="video-field-group">
+                        <label>Date</label>
+                        <input type="date" class="video-date-input"
+                               [value]="scheduledCallDate()"
+                               (change)="scheduledCallDate.set($any($event.target).value)">
+                    </div>
+                    <div class="video-field-group">
+                        <label>Heure</label>
+                        <input type="time" class="video-date-input"
+                               [value]="scheduledCallTime()"
+                               (change)="scheduledCallTime.set($any($event.target).value)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Pied de modal ─────────────────────────────────── -->
+            <div class="video-config-footer">
+                <button class="btn-video-cancel"
+                        (click)="videoConfigStep() === 'configure' ? videoConfigStep.set('select-aidant') : showVideoConfigModal.set(false)">
+                    {{ videoConfigStep() === 'configure' ? '← Retour' : 'Annuler' }}
+                </button>
+
+                <ng-container *ngIf="videoConfigStep() === 'configure'">
+                    <button *ngIf="videoCallMode() === 'immediate'"
+                            class="btn-video-start"
+                            [disabled]="!videoSelectedAidant()"
+                            (click)="startImmediateCall()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="23 7 16 12 23 17 23 7"/>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                        Appeler l'aidant
+                    </button>
+                    <button *ngIf="videoCallMode() === 'scheduled'"
+                            class="btn-video-schedule"
+                            [disabled]="!videoSelectedAidant()"
+                            (click)="scheduleVideoCall()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        Planifier le rendez-vous
+                    </button>
+                </ng-container>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 21 — INTERFACE VIDÉO MÉDECIN (plein écran)
+    ══════════════════════════════════════════════════════════ -->
+    <div class="video-call-fullscreen" *ngIf="showDoctorVideoUI()">
+        <!-- En-tête barre -->
+        <div class="video-call-topbar">
+            <div class="video-call-topbar-left">
+                <div class="video-status-dot" [class.connected]="videoCallConnected()"></div>
+                <span class="video-call-label">
+                    {{ videoCallConnected() ? 'Consultation en cours' : 'En attente de connexion de l\'aidant…' }}
+                </span>
+                <span class="video-call-patient">· {{ aidantData.patientName }}</span>
+            </div>
+            <div class="video-call-topbar-right">
+                <button class="btn-video-end" (click)="endVideoCall(true)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07C8.44 17.29 6.71 15.56 5.46 13.6A19.79 19.79 0 0 1 2.39 5a2 2 0 0 1 2-2.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 10.9a16 16 0 0 0 5.59 5.59l1-1a2 2 0 0 1 2.11-.45z"/>
+                        <line x1="23" y1="1" x2="1" y2="23"/>
+                    </svg>
+                    Terminer l'appel
+                </button>
+            </div>
+        </div>
+
+        <!-- Zone vidéo principale -->
+        <div class="video-call-stage">
+            <!-- Flux aidant (grand) -->
+            <div class="video-remote-area" [class.waiting]="!videoCallConnected()">
+                <div *ngIf="!videoCallConnected()" class="video-waiting-state">
+                    <div class="video-waiting-spinner"></div>
+                    <p>En attente de connexion de l'aidant…</p>
+                    <p class="video-waiting-hint">L'aidant recevra une notification pour rejoindre la consultation.</p>
+                </div>
+                <div *ngIf="videoCallConnected()" class="video-aidant-connected">
+                    <div class="video-aidant-placeholder">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <p>Flux vidéo de l'aidant</p>
+                    </div>
+                </div>
+                <div class="video-remote-label">Aidant — {{ aidantData.patientName }}</div>
+            </div>
+
+            <!-- Caméra locale médecin (petit, coin) -->
+            <div class="video-local-pip">
+                <video id="doctor-local-video" autoplay muted playsinline
+                       [class.cam-off]="doctorCamOff()" class="video-local-feed"></video>
+                <div *ngIf="doctorCamOff()" class="video-cam-off-overlay">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                    <span>Caméra coupée</span>
+                </div>
+                <div class="video-local-label">Vous (Dr. Martin)</div>
+            </div>
+        </div>
+
+        <!-- Barre de contrôles -->
+        <div class="video-controls-bar">
+            <button class="video-ctrl-btn" [class.active]="doctorMicMuted()" (click)="toggleDoctorMic()"
+                    [title]="doctorMicMuted() ? 'Activer le micro' : 'Couper le micro'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path *ngIf="!doctorMicMuted()" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path *ngIf="!doctorMicMuted()" d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line *ngIf="!doctorMicMuted()" x1="12" y1="19" x2="12" y2="23"/>
+                    <line *ngIf="!doctorMicMuted()" x1="8" y1="23" x2="16" y2="23"/>
+                    <line *ngIf="doctorMicMuted()" x1="1" y1="1" x2="23" y2="23"/>
+                    <path *ngIf="doctorMicMuted()" d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+                    <path *ngIf="doctorMicMuted()" d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
+                    <line *ngIf="doctorMicMuted()" x1="12" y1="19" x2="12" y2="23"/>
+                    <line *ngIf="doctorMicMuted()" x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+                <span>{{ doctorMicMuted() ? 'Activer micro' : 'Couper micro' }}</span>
+            </button>
+
+            <button class="video-ctrl-btn" [class.active]="doctorCamOff()" (click)="toggleDoctorCam()"
+                    [title]="doctorCamOff() ? 'Activer caméra' : 'Désactiver caméra'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon *ngIf="!doctorCamOff()" points="23 7 16 12 23 17 23 7"/>
+                    <rect *ngIf="!doctorCamOff()" x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    <line *ngIf="doctorCamOff()" x1="1" y1="1" x2="23" y2="23"/>
+                    <path *ngIf="doctorCamOff()" d="M21 21H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3m3 0h9a2 2 0 0 1 2 2v7.5"/>
+                    <polyline *ngIf="doctorCamOff()" points="16 12 23 7 23 17 16 12"/>
+                </svg>
+                <span>{{ doctorCamOff() ? 'Activer caméra' : 'Désactiver cam.' }}</span>
+            </button>
+
+            <button class="video-ctrl-btn" (click)="shareScreen()" title="Partager l'écran">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+                <span>Partager écran</span>
+            </button>
+
+            <button class="video-ctrl-btn video-ctrl-end" (click)="endVideoCall(true)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07C8.44 17.29 6.71 15.56 5.46 13.6A19.79 19.79 0 0 1 2.39 5a2 2 0 0 1 2-2.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 10.9a16 16 0 0 0 5.59 5.59l1-1a2 2 0 0 1 2.11-.45z"/>
+                    <line x1="23" y1="1" x2="1" y2="23"/>
+                </svg>
+                <span>Terminer</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 21 — MODAL COMPTE RENDU POST-CONSULTATION
+    ══════════════════════════════════════════════════════════ -->
+    <div class="video-modal-overlay" *ngIf="showVideoReportModal()" (click)="showVideoReportModal.set(false)">
+        <div class="video-report-modal" (click)="$event.stopPropagation()">
+            <div class="video-report-header">
+                <h3>📝 Compte rendu de consultation</h3>
+                <p>Résumé de la séance avec {{ aidantData.patientName }}</p>
+            </div>
+            <div class="video-report-body">
+                <textarea class="video-report-textarea"
+                          [value]="videoReport()"
+                          (input)="videoReport.set($any($event.target).value)"
+                          placeholder="Résumé de la consultation, observations, instructions transmises à l'aidant…"
+                          rows="6"></textarea>
+            </div>
+            <div class="video-report-footer">
+                <button class="btn-video-cancel" (click)="showVideoReportModal.set(false)">Ignorer</button>
+                <button class="btn-video-save" (click)="saveVideoReport()">
+                    💾 Sauvegarder dans le dossier
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 22 — NOTIFICATION APPEL ENTRANT (aidant)
+    ══════════════════════════════════════════════════════════ -->
+    <div class="incoming-call-banner" *ngIf="incomingCall() as call">
+        <div class="incoming-call-inner">
+            <div class="incoming-call-pulse">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+            </div>
+            <div class="incoming-call-info">
+                <strong>📹 DEMANDE DE CONSULTATION À DISTANCE</strong>
+                <span>De : {{ call.doctorName }} · Patient : {{ call.patientName }}</span>
+            </div>
+            <div class="incoming-call-actions">
+                <button class="btn-call-accept" (click)="acceptCall()">✅ ACCEPTER</button>
+                <button class="btn-call-decline" (click)="openDeclineCallModal()">❌ REFUSER</button>
+                <button class="btn-call-propose" (click)="openProposeTimeModal()">📅 PROPOSER AUTRE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 22 — INTERFACE VIDÉO AIDANT
+    ══════════════════════════════════════════════════════════ -->
+    <div class="video-call-fullscreen video-call-aidant" *ngIf="showAidantVideoUI()">
+        <div class="video-call-topbar">
+            <div class="video-call-topbar-left">
+                <div class="video-status-dot connected"></div>
+                <span class="video-call-label">Consultation en cours</span>
+                <span class="video-call-patient">· Dr. Martin</span>
+            </div>
+            <div class="video-call-topbar-right">
+                <button class="btn-video-end" (click)="endVideoCall(false)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="23" y1="1" x2="1" y2="23"/><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07C8.44 17.29 6.71 15.56 5.46 13.6A19.79 19.79 0 0 1 2.39 5a2 2 0 0 1 2-2.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 10.9a16 16 0 0 0 5.59 5.59l1-1a2 2 0 0 1 2.11-.45z"/>
+                    </svg>
+                    Quitter la consultation
+                </button>
+            </div>
+        </div>
+
+        <div class="video-call-stage">
+            <!-- Flux médecin (grand) -->
+            <div class="video-remote-area">
+                <div class="video-aidant-connected">
+                    <div class="video-aidant-placeholder">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <p>Flux vidéo du médecin</p>
+                    </div>
+                </div>
+                <div class="video-remote-label">Dr. Martin</div>
+            </div>
+
+            <!-- Caméra locale aidant (petit) -->
+            <div class="video-local-pip">
+                <!-- Mode test : canvas animé -->
+                <canvas *ngIf="aidantTestMode()" id="aidant-sim-canvas"
+                        width="200" height="150" class="video-local-feed"></canvas>
+                <!-- Mode réel : video -->
+                <video *ngIf="!aidantTestMode()" id="aidant-local-video"
+                       autoplay muted playsinline class="video-local-feed"></video>
+                <div *ngIf="aidantTestMode()" class="video-test-badge">🔬 MODE TEST</div>
+                <div class="video-local-label">Vous (Aidant)</div>
+            </div>
+        </div>
+
+        <div class="video-controls-bar">
+            <button class="video-ctrl-btn video-ctrl-end" (click)="endVideoCall(false)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="23" y1="1" x2="1" y2="23"/><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07C8.44 17.29 6.71 15.56 5.46 13.6A19.79 19.79 0 0 1 2.39 5a2 2 0 0 1 2-2.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 10.9a16 16 0 0 0 5.59 5.59l1-1a2 2 0 0 1 2.11-.45z"/>
+                </svg>
+                <span>Quitter</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 22 — MODAL REFUS APPEL
+    ══════════════════════════════════════════════════════════ -->
+    <div class="video-modal-overlay" *ngIf="showDeclineCallModal()" (click)="showDeclineCallModal.set(false)">
+        <div class="video-decline-modal" (click)="$event.stopPropagation()">
+            <h3>❌ Refus de la consultation</h3>
+            <p>Motif du refus (optionnel)</p>
+            <textarea class="video-report-textarea"
+                      [value]="callDeclineReason()"
+                      (input)="callDeclineReason.set($any($event.target).value)"
+                      placeholder="Indisponible, autre priorité…"
+                      rows="3"></textarea>
+            <div class="video-report-footer">
+                <button class="btn-video-cancel" (click)="showDeclineCallModal.set(false)">Annuler</button>
+                <button class="btn-video-end-red" (click)="declineCall()">Confirmer le refus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 22 — MODAL PROPOSITION AUTRE HORAIRE
+    ══════════════════════════════════════════════════════════ -->
+    <div class="video-modal-overlay" *ngIf="showProposeTimeModal()" (click)="showProposeTimeModal.set(false)">
+        <div class="video-propose-modal" (click)="$event.stopPropagation()">
+            <h3>📅 Proposer un autre horaire</h3>
+            <p>Le médecin recevra votre proposition et pourra l'accepter ou la refuser.</p>
+            <div class="video-schedule-fields" style="margin-top:16px">
+                <div class="video-field-group">
+                    <label>Date</label>
+                    <input type="date" class="video-date-input"
+                           [value]="proposeDate()"
+                           (change)="proposeDate.set($any($event.target).value)">
+                </div>
+                <div class="video-field-group">
+                    <label>Heure</label>
+                    <input type="time" class="video-date-input"
+                           [value]="proposeTime()"
+                           (change)="proposeTime.set($any($event.target).value)">
+                </div>
+            </div>
+            <div class="video-report-footer" style="margin-top:20px">
+                <button class="btn-video-cancel" (click)="showProposeTimeModal.set(false)">Annuler</button>
+                <button class="btn-video-schedule" (click)="proposeOtherTime()">Envoyer la proposition</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         ÉTAPE 23 — RENDEZ-VOUS PLANIFIÉS (aidant)
+    ══════════════════════════════════════════════════════════ -->
+    <div *ngIf="selectedRole() === 'aidant' && scheduledAppointments().length > 0" class="aidant-appointments-banner">
+        <div *ngFor="let apt of scheduledAppointments()" class="aidant-apt-card"
+             [class.apt-upcoming]="apt.status === 'scheduled'">
+            <div class="aidant-apt-left">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+            </div>
+            <div class="aidant-apt-body">
+                <strong>{{ apt.status === 'scheduled' ? '📅 Consultation planifiée' : '✅ Consultation terminée' }}</strong>
+                <span>{{ apt.date | date:'dd/MM/yyyy à HH:mm' }} · {{ apt.doctorName }}</span>
+            </div>
+            <div class="aidant-apt-actions" *ngIf="apt.status === 'scheduled'">
+                <button class="btn-apt-calendar" (click)="addToCalendar(apt)" title="Ajouter au calendrier">
+                    📆 Ajouter au calendrier
+                </button>
+                <button class="btn-apt-join" (click)="joinScheduledCall(apt)">
+                    📹 Rejoindre
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="doc-conv-overlay" *ngIf="showDoctorConvModal() && doctorConvRec() as rec"
+         (click)="showDoctorConvModal.set(false)">
+        <div class="doc-conv-modal" (click)="$event.stopPropagation()">
+
+            <!-- En-tête -->
+            <div class="doc-conv-header">
+                <div class="doc-conv-header-left">
+                    <div class="doc-conv-avatar">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="doc-conv-header-info">
+                        <h3 class="doc-conv-title">Conversation avec l'aidant</h3>
+                        <p class="doc-conv-subtitle">{{ rec.action | slice:0:55 }}{{ rec.action.length > 55 ? '…' : '' }}</p>
+                    </div>
+                </div>
+                <button class="doc-conv-close" (click)="showDoctorConvModal.set(false)">✕</button>
+            </div>
+
+            <!-- Priorité badge -->
+            <div class="doc-conv-rec-info">
+                <span class="doc-conv-priority-pill"
+                      [style.background-color]="getPriorityColor(rec.priority) + '18'"
+                      [style.color]="getPriorityColor(rec.priority)"
+                      [style.border-color]="getPriorityColor(rec.priority)">
+                    {{ getPriorityEmoji(rec.priority) }} {{ getPriorityLabel(rec.priority) }}
+                </span>
+                <span class="doc-conv-status-pill"
+                      [style.color]="getStatusColor(rec.status)"
+                      [style.border-color]="getStatusColor(rec.status)">
+                    {{ getStatusLabel(rec.status) }}
+                </span>
+            </div>
+
+            <!-- Thread messages -->
+            <div class="doc-conv-thread" #doctorThread>
+                <div *ngIf="getDoctorMessages(rec.id!).length === 0" class="doc-conv-empty">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="1.5">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <p>Aucun message pour cette recommandation.</p>
+                    <p class="doc-conv-empty-sub">L'aidant peut vous envoyer des questions ici.</p>
+                </div>
+
+                <div *ngFor="let msg of getDoctorMessages(rec.id!)"
+                     class="doc-conv-bubble-row"
+                     [class.from-doctor]="msg.from === 'MEDECIN'"
+                     [class.from-aidant]="msg.from === 'AIDANT'">
+
+                    <div class="doc-conv-bubble-meta">
+                        <span class="doc-conv-sender">
+                            {{ msg.from === 'MEDECIN' ? 'Vous' : 'Aidant' }}
+                        </span>
+                        <span class="doc-conv-time">{{ msg.sentAt | date:'dd/MM HH:mm' }}</span>
+                        <span class="doc-conv-priority-tag" *ngIf="msg.priority === 'HAUTE'"
+                              style="color:#e65100;font-size:10px;font-weight:700;">⚠ HAUTE</span>
+                    </div>
+
+                    <div class="doc-conv-bubble"
+                         [class.bubble-doctor]="msg.from === 'MEDECIN'"
+                         [class.bubble-aidant]="msg.from === 'AIDANT'">
+                        {{ msg.text }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zone de réponse -->
+            <div class="doc-conv-reply-area">
+                <div class="doc-conv-priority-toggle">
+                    <button class="doc-priority-btn"
+                            [class.active]="doctorReplyPriority() === 'NORMALE'"
+                            (click)="doctorReplyPriority.set('NORMALE')">
+                        Normale
+                    </button>
+                    <button class="doc-priority-btn doc-priority-haute"
+                            [class.active]="doctorReplyPriority() === 'HAUTE'"
+                            (click)="doctorReplyPriority.set('HAUTE')">
+                        ⚠ Haute priorité
+                    </button>
+                </div>
+                <div class="doc-conv-input-row">
+                    <textarea class="doc-conv-textarea"
+                              [value]="doctorReplyText()"
+                              (input)="doctorReplyText.set($any($event.target).value)"
+                              placeholder="Écrire votre réponse à l'aidant…"
+                              rows="3"
+                              (keydown.control.enter)="sendDoctorReply()"></textarea>
+                    <button class="doc-conv-send-btn"
+                            [disabled]="!doctorReplyText().trim()"
+                            (click)="sendDoctorReply()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="doc-conv-hint">Ctrl + Entrée pour envoyer</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Dashboard Content -->
+    <div *ngIf="selectedRole() === 'patient'" class="dashboard-patient">
+        <header class="dashboard-header-simple">
+            <div class="breadcrumb">
+                <button class="btn-back" (click)="selectedRole.set(null)">
+                    <lucide-icon [img]="icons.ChevronRight" size="14" style="transform: rotate(180deg);"></lucide-icon>
+                    Retour
+                </button>
+            </div>
+            <h1 class="welcome-title">Bonjour, {{ selectedPatientForDashboard()?.prenom || 'Patient' }} ! 👋</h1>
+            <p class="welcome-subtitle">Voici votre tableau de bord</p>
+        </header>
+
+        <section class="patient-main-status-card">
+            <div class="card-inner-patient">
+                <div class="card-header-patient">
+                    <h2 class="patient-section-title">Mon État Cognitif</h2>
+                    <span class="status-pill-patient">
+                        <span class="dot"></span>
+                        {{ patientData.stage }}
+                    </span>
+                </div>
+
+                <div class="score-display-patient">
+                    <div class="score-label-container">
+                        <span class="label">Votre score actuel (MMSE)</span>
+                        <ng-container *ngIf="patientMmseScore() as score">
+                            <ng-container *ngIf="score.hasPassedTest">
+                                <span class="value">{{ score.mmseScore | number:'1.0-0' }}/30</span>
+                            </ng-container>
+                            <ng-container *ngIf="!score.hasPassedTest">
+                                <span class="value">0%</span>
+                            </ng-container>
+                        </ng-container>
+                        <ng-container *ngIf="!patientMmseScore()">
+                            <span class="value">-</span>
+                        </ng-container>
+                    </div>
+                    <div class="progress-bar-patient">
+                        <ng-container *ngIf="patientMmseScore() as score">
+                            <ng-container *ngIf="score.hasPassedTest">
+                                <div class="fill" [style.width.%]="(score.mmseScore / 30 * 100)"></div>
+                            </ng-container>
+                            <ng-container *ngIf="!score.hasPassedTest">
+                                <div class="fill" style="width: 0%"></div>
+                            </ng-container>
+                        </ng-container>
+                        <ng-container *ngIf="!patientMmseScore()">
+                            <div class="fill" style="width: 0%"></div>
+                        </ng-container>
+                    </div>
+                    <div class="score-values">
+                        <ng-container *ngIf="patientMmseScore() as score">
+                            <ng-container *ngIf="score.hasPassedTest">
+                                <span class="score-main">{{ score.mmseScore | number:'1.0-0' }}/30</span>
+                                <span class="score-perc">{{ (score.mmseScore / 30 * 100) | number:'1.0-0' }}%</span>
+                            </ng-container>
+                            <ng-container *ngIf="!score.hasPassedTest">
+                                <span class="score-main">0%</span>
+                                <span class="score-perc">0%</span>
+                            </ng-container>
+                        </ng-container>
+                        <ng-container *ngIf="!patientMmseScore()">
+                            <span class="score-main">-</span>
+                            <span class="score-perc">-</span>
+                        </ng-container>
+                    </div>
+                </div>
+
+                <ng-container *ngIf="patientMmseScore() as score">
+                    <ng-container *ngIf="!score.hasPassedTest">
+                        <div class="doctor-note-box">
+                            <div class="note-icon">⚠️</div>
+                            <p class="note-text">Ce patient n'a pas passé le test MMSE. Veuillez planifier un test MMSE pour évaluer les fonctions cognitives.</p>
+                        </div>
+                    </ng-container>
+                    <ng-container *ngIf="score.hasPassedTest">
+                        <div class="doctor-note-box">
+                            <div class="note-icon">📚</div>
+                            <p class="note-text">{{ patientData.doctorNote }}</p>
+                        </div>
+                    </ng-container>
+                </ng-container>
+
+                <button class="btn-patient-info">
+                    En savoir plus sur mon suivi <lucide-icon [img]="icons.ChevronRight" size="18"></lucide-icon>
+                </button>
+            </div>
+        </section>
+
+        <div class="patient-bottom-grid">
+            <!-- Mes Tests à Faire -->
+            <div class="bottom-section-card">
+                <div class="section-card-header">
+                    <h3 class="card-title">
+                        <lucide-icon [img]="icons.Clock" size="20"></lucide-icon>
+                        Mes Tests à Faire
+                    </h3>
+                    <span class="counter-badge blue" *ngIf="patientAssignments().length > 0">{{
+                        patientAssignments().length }}</span>
+                </div>
+                <div class="tests-list-patient">
+                    <!-- Real assignments from backend -->
+                    <div *ngFor="let assign of patientAssignments()" class="test-to-do-card" [ngClass]="{
+                        'test-card-assigned': assign.status === 'ASSIGNED',
+                        'test-card-in-progress': assign.status === 'IN_PROGRESS',
+                        'test-card-completed': assign.status === 'COMPLETED'
+                    }">
+                        <div class="test-card-top">
+                            <div class="test-type-icon-wrapper">
+                                <lucide-icon [img]="getTestStyle(assign.test?.type).icon" size="20"></lucide-icon>
+                            </div>
+                            <div class="test-card-header-info">
+                                <h4 class="test-to-do-title">{{ assign.test?.titre || 'Test Cognitif' }}</h4>
+                                <span class="test-type-badge">{{ assign.test?.type }}</span>
+                            </div>
+                            <span class="status-badge" [ngClass]="{
+                                'status-assigned': assign.status === 'ASSIGNED',
+                                'status-in-progress': assign.status === 'IN_PROGRESS',
+                                'status-completed': assign.status === 'COMPLETED'
+                            }">{{ assign.status === 'ASSIGNED' ? 'À faire' : assign.status === 'IN_PROGRESS' ? 'En
+                                cours' : 'Terminé' }}</span>
+                        </div>
+
+                        <p class="test-to-do-desc">{{ assign.test?.description || 'Évaluation cognitive assignée par
+                            votre médecin.' }}</p>
+
+                        <div class="test-to-do-meta">
+                            <span class="meta-item" *ngIf="assign.test?.durationMinutes">
+                                <lucide-icon [img]="icons.Clock" size="14"></lucide-icon>
+                                {{ assign.test.durationMinutes }} min
+                            </span>
+                            <span class="meta-item deadline-item" *ngIf="assign.dateLimite">
+                                📅 À faire avant le {{ assign.dateLimite | date:'dd/MM/yyyy' }}
+                            </span>
+                        </div>
+
+                        <p class="test-instructions" *ngIf="assign.instructions">
+                            📋 {{ assign.instructions }}
+                        </p>
+
+                        <button class="btn-start-test" [disabled]="assign.status === 'COMPLETED'"
+                            (click)="startPatientTest(assign)"
+                            [ngClass]="{'btn-completed': assign.status === 'COMPLETED'}">
+                            {{ assign.status === 'COMPLETED' ? '✅ Terminé' : assign.status === 'IN_PROGRESS' ? '▶
+                            Continuer le test' : '🚀 Commencer le test' }}
+                        </button>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div *ngIf="patientAssignments().length === 0" class="empty-assignments">
+                        <lucide-icon [img]="icons.CheckCircle2" size="40" class="empty-icon"></lucide-icon>
+                        <p>Aucun test assigné pour le moment.</p>
+                        <span>Votre médecin vous assignera des tests prochainement.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mes Recommandations -->
+            <div class="bottom-section-card">
+                <div class="section-card-header">
+                    <h3 class="card-title">
+                        <lucide-icon [img]="icons.Brain" size="20"></lucide-icon>
+                        Mes Recommandations
+                    </h3>
+                    <span class="counter-badge blue" *ngIf="patientRecommendations().length > 0">
+                        {{ patientRecommendations().length }}
+                    </span>
+                </div>
+                <div class="recommendations-list-patient">
+
+                    <!-- Recommandations réelles depuis le backend -->
+                    <ng-container *ngIf="patientRecommendations().length > 0">
+                        <div *ngFor="let rec of patientRecommendations().slice(0, 4)"
+                             class="rec-item-patient rec-item-real"
+                             [class.rec-item-urgent]="rec.priority === PriorityLevel.URGENT">
+                            <div class="rec-icon-box"
+                                 [style.background-color]="getPriorityColor(rec.priority) + '20'">
+                                <span style="font-size:18px">{{ getPriorityEmoji(rec.priority) }}</span>
+                            </div>
+                            <div class="rec-text">
+                                <span class="rec-title">{{ rec.action }}</span>
+                                <span class="rec-desc">
+                                    {{ getPriorityLabel(rec.priority) }} &bull;
+                                    {{ getStatusLabel(rec.status) }}
+                                    <span *ngIf="rec.deadline"> &bull; {{ formatDeadlineText(rec.deadline) }}</span>
+                                </span>
+                            </div>
+                            <button class="btn-discuss-rec" 
+                                    *ngIf="activatedRoute.snapshot.queryParams['role'] === 'patient'"
+                                    (click)="loadAllRecMessages(); openDoctorConversation(rec)"
+                                    title="Ouvrir la discussion sur cette recommandation">
+                                💬 Discuter
+                            </button>
+                        </div>
+                    </ng-container>
+
+                    <!-- Fallback données mock si aucune depuis le backend -->
+                    <ng-container *ngIf="patientRecommendations().length === 0">
+                        <div *ngFor="let rec of patientData.recommendations" class="rec-item-patient">
+                            <div class="rec-icon-box">
+                                <lucide-icon [img]="rec.icon" size="20"></lucide-icon>
+                            </div>
+                            <div class="rec-text">
+                                <span class="rec-title">{{ rec.title }}</span>
+                                <span class="rec-desc">{{ rec.desc }}</span>
+                            </div>
+                        </div>
+                    </ng-container>
+
+                    <button class="btn-outline-action full-width">
+                        Voir toutes les recommandations
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="patient-footer-appointment">
+            <div class="footer-appoint-content">
+                <div class="footer-icon-box">
+                    <lucide-icon [img]="icons.Calendar" size="24"></lucide-icon>
+                </div>
+                <div class="footer-text">
+                    <span class="footer-label">PROCHAIN RENDEZ-VOUS</span>
+                    <span class="footer-value">{{ patientData.nextAppointment.date }}</span>
+                    <span class="footer-loc">{{ patientData.nextAppointment.location }}</span>
+                </div>
+            </div>
+            <button class="btn-detail-footer" (click)="openCalendar()">Calendrier</button>
+        </div>
+    </div>
+
+    <!-- Other Roles Content placeholder removed as it is now implemented -->
+
+    <!-- MODAL ASSIGNER NOUVEAU TEST -->
+    <div *ngIf="showNewTestModal()" class="modal-overlay" (click)="handleCloseModal()">
+        <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+            <div class="modal-header-premium">
+                <div class="header-title-group">
+                    <lucide-icon [img]="icons.Plus" size="24" class="purple-text"></lucide-icon>
+                    <h2 class="modal-title-premium">Assigner un nouveau test</h2>
+                </div>
+                <button class="btn-close-modal" (click)="handleCloseModal()">
+                    <lucide-icon [img]="icons.X" size="24"></lucide-icon>
+                </button>
+            </div>
+
+            <div class="modal-body-scrollable">
+                <!-- RECHERCHER UN PATIENT -->
+                <div class="form-section-premium">
+                    <label class="label-premium">🔍 RECHERCHER UN PATIENT</label>
+                    <div class="search-input-wrapper">
+                        <input type="text" class="input-premium" placeholder="Nom du patient..."
+                            [ngModel]="searchQuery()"
+                            (ngModelChange)="searchQuery.set($event); selectedPatientId.set(null)">
+                        <lucide-icon [img]="icons.Search" size="20" class="search-icon-inside"></lucide-icon>
+                        <!-- Dynamic Results -->
+                        <div *ngIf="filteredPatients.length > 0 && !selectedPatientId()"
+                            class="search-results-dropdown">
+                            <div *ngFor="let patient of filteredPatients" class="result-item"
+                                (click)="selectPatient(patient)">
+                                <span class="patient-dot"></span>
+                                <span class="patient-result-name">{{ patient.prenom }} {{ patient.nom }}</span>
+                            </div>
+                            <div class="result-add-new">
+                                <lucide-icon [img]="icons.Plus" size="16"></lucide-icon>
+                                Ajouter un nouveau patient
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QUICK PATIENT SELECTION -->
+                <div class="form-section-premium">
+                    <label class="label-premium">👥 SÉLECTION RAPIDE</label>
+
+                    <div *ngIf="patientsList().length > 0" class="quick-patients-grid">
+                        <div *ngFor="let patient of patientsList()" class="quick-patient-card"
+                            [ngClass]="{'active': selectedPatientId() === patient.id.toString()}"
+                            (click)="selectPatient(patient)">
+                            <div class="patient-avatar-small">
+                                {{ patient.prenom.charAt(0) }}{{ patient.nom.charAt(0) }}
+                            </div>
+                            <span class="quick-patient-name">{{ patient.prenom }} {{ patient.nom }}</span>
+                            <div class="check-overlay" *ngIf="selectedPatientId() === patient.id.toString()">
+                                <lucide-icon [img]="icons.CheckCircle2" size="16"></lucide-icon>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EMPTY STATE / LOADING -->
+                    <div *ngIf="patientsList().length === 0" class="empty-patients-state">
+                        <div class="empty-content">
+                            <lucide-icon [img]="icons.AlertTriangle" size="24" class="empty-icon"></lucide-icon>
+                            <div class="empty-text">
+                                <span class="empty-title">Aucun patient trouvé</span>
+                                <span class="empty-subtitle">Vérifiez la connexion au module utilisateur ou ajoutez un
+                                    patient manuellement.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STADE DU PATIENT -->
+                <div class="form-section-premium">
+                    <label class="label-premium">📊 STADE DU PATIENT</label>
+                    <div class="radio-group-premium">
+                        <label class="radio-item-premium" [ngClass]="{'active': testStage() === 'STABLE'}">
+                            <input type="radio" name="stage" value="STABLE" [ngModel]="testStage()"
+                                (ngModelChange)="testStage.set($event); selectedTestType.set(null); selectedTestId.set(null)">
+                            <span class="radio-pill stable">Stable (léger)</span>
+                        </label>
+                        <label class="radio-item-premium" [ngClass]="{'active': testStage() === 'MOYEN'}">
+                            <input type="radio" name="stage" value="MOYEN" [ngModel]="testStage()"
+                                (ngModelChange)="testStage.set($event); selectedTestType.set(null); selectedTestId.set(null)">
+                            <span class="radio-pill moyen">Moyen</span>
+                        </label>
+                        <label class="radio-item-premium" [ngClass]="{'active': testStage() === 'CRITIQUE'}">
+                            <input type="radio" name="stage" value="CRITIQUE" [ngModel]="testStage()"
+                                (ngModelChange)="testStage.set($event); selectedTestType.set(null); selectedTestId.set(null)">
+                            <span class="radio-pill critique">Critique</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- TYPE DE TEST -->
+                <div class="form-section-premium" *ngIf="testStage()">
+                    <label class="label-premium">🧪 TYPE DE TEST</label>
+                    <select class="select-premium" [ngModel]="selectedTestType()"
+                        (ngModelChange)="selectedTestType.set($event); selectedTestId.set(null)">
+                        <option [value]="null" disabled selected>Choisir un type...</option>
+                        <option *ngFor="let type of availableTestTypes" [value]="type">{{ type }}</option>
+                    </select>
+                </div>
+
+                <!-- TEST SPECIFIQUE -->
+                <div class="form-section-premium" *ngIf="selectedTestType()">
+                    <label class="label-premium">📋 SÉLECTIONNER LE TEST</label>
+                    <select class="select-premium" [ngModel]="selectedTestId()"
+                        (ngModelChange)="selectedTestId.set($event)">
+                        <option [value]="null" disabled selected>Choisir un test...</option>
+                        <option *ngFor="let test of availableSpecificTests" [value]="test.titre">{{ test.titre }}
+                        </option>
+                    </select>
+                </div>
+
+                <!-- DATE LIMITE -->
+                <div class="form-section-half">
+                    <div class="form-section-premium">
+                        <label class="label-premium">⏰ DATE LIMITE</label>
+                        <input type="date" class="input-premium" [ngModel]="testDeadline()"
+                            (ngModelChange)="testDeadline.set($event)">
+                        <span class="helper-text-premium">À passer avant cette date</span>
+                    </div>
+                </div>
+
+                <!-- NOTES -->
+                <div class="form-section-premium">
+                    <label class="label-premium">📝 NOTES / INSTRUCTIONS (optionnel)</label>
+                    <textarea class="textarea-premium" placeholder="..." [ngModel]="testNotes()"
+                        (ngModelChange)="testNotes.set($event)"></textarea>
+                </div>
+
+                <!-- TESTS PERSONNALISÉS -->
+                <div class="form-section-premium personalized-section">
+                    <label class="label-premium">🎯 TESTS PERSONNALISÉS (Remplis par le médecin)</label>
+                    <div class="personalized-tests-container">
+                        <!-- STABLE -->
+                        <div class="personalized-stage-group">
+                            <div class="personalized-stage-header stable">
+                                <span class="stage-dot stable"></span>
+                                STABLE
+                            </div>
+                            <div class="personalized-tests-list">
+                                <label *ngFor="let test of personalizedTests.STABLE" class="personalized-test-item">
+                                    <input type="checkbox" [checked]="test.selected"
+                                        (change)="togglePersonalizedTest('STABLE', test.name)">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="test-label">{{ test.name }}</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- MOYEN -->
+                        <div class="personalized-stage-group">
+                            <div class="personalized-stage-header moyen">
+                                <span class="stage-dot moyen"></span>
+                                MOYEN
+                            </div>
+                            <div class="personalized-tests-list">
+                                <label *ngFor="let test of personalizedTests.MOYEN" class="personalized-test-item">
+                                    <input type="checkbox" [checked]="test.selected"
+                                        (change)="togglePersonalizedTest('MOYEN', test.name)">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="test-label">{{ test.name }}</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- CRITIQUE -->
+                        <div class="personalized-stage-group">
+                            <div class="personalized-stage-header critique">
+                                <span class="stage-dot critique"></span>
+                                CRITIQUE
+                            </div>
+                            <div class="personalized-tests-list">
+                                <label *ngFor="let test of personalizedTests.CRITIQUE" class="personalized-test-item">
+                                    <input type="checkbox" [checked]="test.selected"
+                                        (change)="togglePersonalizedTest('CRITIQUE', test.name)">
+                                    <span class="custom-checkbox"></span>
+                                    <span class="test-label">{{ test.name }}</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-premium">
+                <button class="btn-modal-secondary" (click)="handleCloseModal()">ANNULER</button>
+                <button class="btn-modal-primary" [disabled]="!isFormValid()" [ngClass]="{'disabled': !isFormValid()}"
+                    (click)="handleAssignTest()">
+                    ASSIGNER LE TEST
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SELECTION PERSONNE (PATIENT OU AIDANT) -->
+    <div *ngIf="showSelectionModal()" class="modal-overlay" (click)="handleCloseSelectionModal()">
+        <div class="modal-content selection-modal" (click)="$event.stopPropagation()">
+            <div class="modal-header-premium">
+                <div class="header-title-group">
+                    <lucide-icon [img]="selectionType() === 'PATIENT' ? icons.UserCircle : icons.Users" size="24"
+                        class="purple-text"></lucide-icon>
+                    <h2 class="modal-title-premium">
+                        Sélectionner {{ selectionType() === 'PATIENT' ? 'le patient' : 'l\'accompagnant' }}
+                    </h2>
+                </div>
+                <button class="btn-close-modal" (click)="handleCloseSelectionModal()">
+                    <lucide-icon [img]="icons.X" size="24"></lucide-icon>
+                </button>
+            </div>
+
+            <div class="modal-body-scrollable">
+                <div class="selection-grid">
+                    <ng-container *ngIf="selectionType() === 'PATIENT'">
+                        <div *ngFor="let p of patientsList()" class="selection-item-card"
+                            [ngClass]="{'selected': selectedPersonId() === p.id}" (click)="selectedPersonId.set(p.id)">
+                            <div class="selection-avatar">{{ p.prenom.charAt(0) }}{{ p.nom.charAt(0) }}</div>
+                            <div class="selection-info">
+                                <span class="selection-name">{{ p.prenom }} {{ p.nom }}</span>
+                                <span class="selection-sub">Patient ID: {{ p.id }}</span>
+                            </div>
+                            <div class="selection-check" *ngIf="selectedPersonId() === p.id">
+                                <lucide-icon [img]="icons.CheckCircle2" size="20"></lucide-icon>
+                            </div>
+                        </div>
+                    </ng-container>
+
+                    <ng-container *ngIf="selectionType() === 'AIDANT'">
+                        <div *ngFor="let a of aidantsList()" class="selection-item-card"
+                            [ngClass]="{'selected': selectedPersonId() === a.id}" (click)="selectedPersonId.set(a.id)">
+                            <div class="selection-avatar aidant">{{ a.prenom.charAt(0) }}{{ a.nom.charAt(0) }}</div>
+                            <div class="selection-info">
+                                <span class="selection-name">{{ a.prenom }} {{ a.nom }}</span>
+                                <span class="selection-sub">{{ a.role }}</span>
+                            </div>
+                            <div class="selection-check" *ngIf="selectedPersonId() === a.id">
+                                <lucide-icon [img]="icons.CheckCircle2" size="20"></lucide-icon>
+                            </div>
+                        </div>
+                    </ng-container>
+                </div>
+
+                <div *ngIf="(selectionType() === 'PATIENT' && patientsList().length === 0) || (selectionType() === 'AIDANT' && aidantsList().length === 0)"
+                    class="empty-selection">
+                    <p>Aucune personne trouvée dans la base de données.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer-premium">
+                <button class="btn-modal-secondary" (click)="handleCloseSelectionModal()">ANNULER</button>
+                <button class="btn-modal-primary" [disabled]="!selectedPersonId()"
+                    [ngClass]="{'disabled': !selectedPersonId()}" (click)="confirmSelection()">
+                    CONFIRMER ET ACCÉDER
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ASSIGNATIONS MÉDECIN -->
+<div *ngIf="showDoctorAssignmentsModal()" class="modal-overlay" (click)="showDoctorAssignmentsModal.set(false)">
+    <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+        <div class="modal-header-premium">
+            <div class="header-title-group">
+                <lucide-icon [img]="icons.ClipboardList" size="24" class="purple-text"></lucide-icon>
+                <h2 class="modal-title-premium">Mes Assignations de Tests</h2>
+            </div>
+            <button class="btn-close-modal" (click)="showDoctorAssignmentsModal.set(false)">
+                <lucide-icon [img]="icons.X" size="24"></lucide-icon>
+            </button>
+        </div>
+
+        <div class="modal-body-scrollable">
+            <!-- Empty state -->
+            <div *ngIf="doctorAssignments().length === 0" class="empty-assignments">
+                <lucide-icon [img]="icons.ClipboardList" size="40" class="empty-icon"></lucide-icon>
+                <p>Aucune assignation trouvée.</p>
+                <span>Utilisez le bouton "Assigner Test" pour créer une nouvelle assignation.</span>
+            </div>
+
+            <!-- Assignments list -->
+            <div *ngIf="doctorAssignments().length > 0" class="assignments-table-container">
+                <table class="assignments-table">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Test</th>
+                            <th>Date Assignation</th>
+                            <th>Date Limite</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let assign of doctorAssignments()" class="assignment-row">
+                            <td class="patient-cell">
+                                <div class="patient-avatar-small">{{ getPatientName(assign.patientId).charAt(0) }}</div>
+                                <span>{{ getPatientName(assign.patientId) }}</span>
+                            </td>
+                            <td>
+                                <span class="test-name-cell">{{ assign.test?.titre || 'Test Inconnu' }}</span>
+                                <span class="test-type-badge">{{ assign.test?.type }}</span>
+                            </td>
+                            <td class="date-cell">
+                                {{ assign.dateAssignation | date:'dd/MM/yyyy HH:mm' }}
+                            </td>
+                            <td class="date-cell">
+                                <span *ngIf="assign.dateLimite">{{ assign.dateLimite | date:'dd/MM/yyyy' }}</span>
+                                <span *ngIf="!assign.dateLimite" class="no-date">—</span>
+                            </td>
+                            <td>
+                                <span class="meta-item status-badge" [ngClass]="{
+                                    'status-assigned': assign.status === 'ASSIGNED',
+                                    'status-in-progress': assign.status === 'IN_PROGRESS',
+                                    'status-completed': assign.status === 'COMPLETED'
+                                }">{{ assign.status }}</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer-premium">
+            <button class="btn-modal-secondary" (click)="showDoctorAssignmentsModal.set(false)">FERMER</button>
+            <button class="btn-modal-primary"
+                (click)="showDoctorAssignmentsModal.set(false); showNewTestModal.set(true)">
+                <lucide-icon [img]="icons.Plus" size="16"></lucide-icon>
+                NOUVELLE ASSIGNATION
+            </button>
+        </div>
+    </div>
+</div>

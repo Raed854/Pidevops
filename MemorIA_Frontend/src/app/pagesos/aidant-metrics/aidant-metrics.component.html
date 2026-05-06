@@ -1,0 +1,205 @@
+<div class="p-6 bg-gray-50 min-h-screen">
+  <h1 class="text-2xl font-bold mb-6 flex items-center gap-2">
+    <lucide-icon [name]="icons.BarChart3"></lucide-icon>
+    Métriques Aidant
+  </h1>
+
+  @if (!metrics() && !scoreGlobal()) {
+    <div class="text-gray-500">Chargement des métriques...</div>
+  } @else {
+
+    <!-- ══ SCORE GLOBAL COMPOSITE ══════════════════════════════════════════════ -->
+    @if (scoreGlobal()) {
+      <div class="bg-white rounded-xl shadow-md p-6 mb-6 border-l-4"
+           [class.border-green-500]="scoreGlobal()?.colorCode === 'VERT'"
+           [class.border-yellow-500]="scoreGlobal()?.colorCode === 'JAUNE'"
+           [class.border-red-500]="scoreGlobal()?.colorCode === 'ROUGE'"
+           [class.border-gray-300]="scoreGlobal()?.status === 'NON_EVALUABLE'">
+
+        <div class="flex items-start justify-between flex-wrap gap-4">
+          <!-- Titre + patient -->
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <lucide-icon [name]="icons.Activity" class="text-indigo-600"></lucide-icon>
+              <h2 class="text-lg font-semibold text-gray-800">Score cognitif global</h2>
+            </div>
+            @if (scoreGlobal()?.patientName) {
+              <p class="text-sm text-gray-500">Patient : <strong>{{ scoreGlobal()?.patientName }}</strong></p>
+            }
+            <p class="text-sm text-gray-400 mt-1">Basé sur {{ scoreGlobal()?.testCount }} test(s) valide(s)</p>
+          </div>
+
+          <!-- Badge score -->
+          <div class="flex flex-col items-center">
+            @if (scoreGlobal()?.status === 'NON_EVALUABLE') {
+              <span class="px-4 py-2 rounded-full bg-gray-100 text-gray-500 font-semibold text-sm">
+                Non évaluable
+              </span>
+            } @else {
+              <span class="text-4xl font-extrabold"
+                    [class.text-green-600]="scoreGlobal()?.colorCode === 'VERT'"
+                    [class.text-yellow-600]="scoreGlobal()?.colorCode === 'JAUNE'"
+                    [class.text-red-600]="scoreGlobal()?.colorCode === 'ROUGE'">
+                {{ scoreGlobal()?.globalScore | number:'1.2-2' }}
+              </span>
+              <span class="text-xs text-gray-400 mt-1">z-score pondéré</span>
+              <span class="mt-2 px-3 py-1 rounded-full text-xs font-semibold"
+                    [class]="scoreGlobalClasses().badge">
+                {{ scoreGlobal()?.colorCode === 'VERT' ? 'Normal' :
+                   scoreGlobal()?.colorCode === 'JAUNE' ? 'Surveillance' : 'Alerte' }}
+              </span>
+            }
+          </div>
+        </div>
+
+        <!-- Interprétation -->
+        <p class="mt-4 text-sm text-gray-600 italic">{{ scoreGlobal()?.interpretation }}</p>
+
+        <!-- Détail par type -->
+        @if (scoreGlobalEntries().length > 0) {
+          <div class="mt-4 pt-4 border-t border-gray-100">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              Détail par type de test
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              @for (entry of scoreGlobalEntries(); track entry[0]) {
+                <div class="bg-gray-50 rounded-lg px-3 py-2">
+                  <div class="text-xs text-gray-500">{{ entry[0] }}</div>
+                  <div class="font-bold text-sm mt-0.5"
+                       [class.text-green-600]="entry[1] > -1"
+                       [class.text-yellow-600]="entry[1] <= -1 && entry[1] > -2"
+                       [class.text-red-600]="entry[1] <= -2">
+                    {{ entry[1] | number:'1.2-2' }}
+                  </div>
+                  <!-- Mini barre de progression -->
+                  <div class="mt-1 h-1 rounded bg-gray-200 overflow-hidden">
+                    <div class="h-full rounded transition-all"
+                         [class]="scoreGlobalClasses().bar"
+                         [style.width.%]="((entry[1] + 3) / 6) * 100 | number:'1.0-0'">
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ══ FILTRE PÉRIODE ══════════════════════════════════════════════════════ -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        <lucide-icon [name]="icons.Filter"></lucide-icon>
+        Période
+      </h2>
+      <div class="flex flex-wrap gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="period" value="current"
+                 [checked]="selectedPeriod() === 'current'"
+                 (change)="selectedPeriod.set('current')">
+          <span>Mois en cours</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="period" value="6"
+                 [checked]="selectedPeriod() === '6'"
+                 (change)="selectedPeriod.set('6')">
+          <span>6 derniers mois</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="period" value="12"
+                 [checked]="selectedPeriod() === '12'"
+                 (change)="selectedPeriod.set('12')">
+          <span>12 derniers mois</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="period" value="all"
+                 [checked]="selectedPeriod() === 'all'"
+                 (change)="selectedPeriod.set('all')">
+          <span>Tout</span>
+        </label>
+      </div>
+      <button class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              (click)="exportToCSV()">
+        Exporter en CSV
+      </button>
+    </div>
+
+    <!-- ══ KPI CARDS ═══════════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex items-center gap-2 text-blue-600 mb-1">
+          <lucide-icon [name]="icons.Users"></lucide-icon>
+          <span class="text-sm font-medium">Total assigné</span>
+        </div>
+        <div class="text-2xl font-bold">{{ metrics()?.totalAssigned }}</div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex items-center gap-2 text-green-600 mb-1">
+          <lucide-icon [name]="icons.CheckCircle"></lucide-icon>
+          <span class="text-sm font-medium">Total complété</span>
+        </div>
+        <div class="text-2xl font-bold">{{ metrics()?.totalCompleted }}</div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex items-center gap-2 text-purple-600 mb-1">
+          <lucide-icon [name]="icons.TrendingUp"></lucide-icon>
+          <span class="text-sm font-medium">Taux réussite</span>
+        </div>
+        <div class="text-2xl font-bold">{{ successRate().toFixed(1) }}%</div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex items-center gap-2 text-orange-600 mb-1">
+          <lucide-icon [name]="icons.BarChart3"></lucide-icon>
+          <span class="text-sm font-medium">Score moyen</span>
+        </div>
+        <div class="text-2xl font-bold">
+          {{ avgScore() > 0 ? (avgScore() | number:'1.1-1') : 0 }}
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DÉTAILS PAR TYPE + ÉVOLUTION ═══════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <lucide-icon [name]="icons.BarChart3"></lucide-icon>
+          Score moyen par type de test
+        </h2>
+        @if (avgScoreByTypeEntries().length > 0) {
+          <ul class="space-y-2">
+            @for (entry of avgScoreByTypeEntries(); track entry[0]) {
+              <li class="flex justify-between items-center py-2 border-b border-gray-100">
+                <span class="font-medium text-gray-700">{{ entry[0] }}</span>
+                <span class="text-blue-600 font-bold">{{ entry[1] | number:'1.1-1' }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="text-gray-400 text-center py-8">Aucune donnée</div>
+        }
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <lucide-icon [name]="icons.Calendar"></lucide-icon>
+          Évolution mensuelle (tests complétés)
+        </h2>
+        @if (monthlyCountsEntries().length > 0) {
+          <ul class="space-y-2">
+            @for (entry of monthlyCountsEntries(); track entry[0]) {
+              <li class="flex justify-between items-center py-2 border-b border-gray-100">
+                <span class="font-medium text-gray-700">{{ entry[0] }}</span>
+                <span class="text-green-600 font-bold">{{ entry[1] }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="text-gray-400 text-center py-8">Aucune donnée</div>
+        }
+      </div>
+    </div>
+  }
+</div>

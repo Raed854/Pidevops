@@ -1,0 +1,462 @@
+/* ═══════════════════════════════════════════════════════════
+   DOCTOR PLANNING  —  MemoriA Design System
+   Palette : #541A75 │ #7E7F9A │ #C0E0DE │ #00635D │ #CB1527
+   ═══════════════════════════════════════════════════════════ */
+:host {
+  --pv:    #541A75;
+  --pvl:   #6d2491;
+  --pvbg:  #f5eefa;
+  --gv:    #7E7F9A;
+  --ac:    #C0E0DE;
+  --gm:    #00635D;
+  --ra:    #CB1527;
+  --ya:    #F59E0B;
+  --bg:    #F4F6FB;
+  --white: #ffffff;
+  --text:  #1a1a2e;
+  --bord:  #E2E8F0;
+  --r:     12px;
+  --rsm:   8px;
+  --sh:    0 2px 10px rgba(84,26,117,.07);
+  --shmd:  0 4px 18px rgba(84,26,117,.12);
+}
+
+/* ─── PAGE ENTIÈRE ─────────────────────────────────────── */
+.dp-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* ─── BODY (sous la navbar) ────────────────────────────── */
+.dp-body {
+  display: flex;
+  flex: 1;
+  margin-top: 70px; /* compense la navbar fixe */
+}
+
+app-sidebar { flex-shrink: 0; }
+
+/* ─── MAIN (zone droite de la sidebar) ─────────────────── */
+.dp-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-left: 242px; /* compense la sidebar fixe */
+  min-width: 0;
+  height: calc(100vh - 70px);
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════════════════
+   HEADER
+   ══════════════════════════════════════════════════════════ */
+.dp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  height: 48px;
+  min-height: 48px;
+  background: var(--white);
+  border-bottom: 1px solid var(--bord);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.dp-header-left { display: flex; align-items: center; gap: 12px; }
+
+.dp-header-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--pv) 0%, var(--pvl) 100%);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 15px;
+  flex-shrink: 0;
+}
+
+.dp-title {
+  margin: 0;
+  font-size: 17px; font-weight: 700;
+  color: var(--pv);
+}
+
+.dp-subtitle {
+  margin: 1px 0 0;
+  font-size: 11px; color: var(--gv);
+  display: flex; align-items: center; gap: 4px;
+}
+
+.dp-dot-online {
+  display: inline-block; width: 6px; height: 6px;
+  background: var(--gm); border-radius: 50%;
+}
+
+.dp-header-right { display: flex; align-items: center; gap: 8px; }
+
+.dp-btn-add {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--pv) 0%, var(--pvl) 100%);
+  color: white; border: none;
+  border-radius: var(--rsm);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  box-shadow: 0 2px 8px rgba(84,26,117,.25);
+}
+.dp-btn-add:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(84,26,117,.35); }
+.dp-btn-add:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Bouton Export PDF ── */
+.dp-btn-pdf {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #CB1527 0%, #a01020 100%);
+  color: white; border: none;
+  border-radius: var(--rsm);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  box-shadow: 0 2px 8px rgba(203,21,39,.25);
+}
+.dp-btn-pdf:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(203,21,39,.4); }
+.dp-btn-pdf:disabled { opacity: .45; cursor: not-allowed; }
+
+.dp-badge-loading {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  background: var(--ac); border-radius: 16px;
+  font-size: 11px; color: var(--gm); font-weight: 500;
+}
+
+/* ── Badges compteurs rappels dans le header ─────────────── */
+.dp-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dp-badge-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dp-badge-pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.dp-badge-missed {
+  background: rgba(203, 21, 39, 0.10);
+  color: #CB1527;
+  border: 1px solid rgba(203, 21, 39, 0.3);
+}
+
+/* ══════════════════════════════════════════════════════════
+   SPINNERS
+   ══════════════════════════════════════════════════════════ */
+.dp-spin-sm {
+  display: inline-block; width: 12px; height: 12px;
+  border: 2px solid rgba(0,99,93,.2);
+  border-top-color: var(--gm);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+.dp-spin-lg {
+  width: 36px; height: 36px;
+  border: 3px solid var(--pvbg);
+  border-top-color: var(--pv);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══════════════════════════════════════════════════════════
+   LAYOUT : Patients (240px) | Calendrier (1fr) | Stats (220px)
+   ══════════════════════════════════════════════════════════ */
+.dp-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 220px;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ─── COLONNE CALENDRIER ──────────────────────────────── */
+.dp-cal-col {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 14px 14px;
+  background: var(--bg);
+}
+.dp-cal-col::-webkit-scrollbar { width: 5px; }
+.dp-cal-col::-webkit-scrollbar-thumb { background: #d0d0e0; border-radius: 3px; }
+
+.dp-cal-wrap {
+  background: var(--white);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--sh);
+  border: 1px solid var(--bord);
+}
+
+/* ─── ÉTAT VIDE ───────────────────────────────────────── */
+.dp-empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 340px; text-align: center; gap: 10px;
+  background: var(--white);
+  border-radius: var(--r);
+  border: 2px dashed var(--bord);
+  padding: 32px;
+}
+
+.dp-empty-icon {
+  width: 60px; height: 60px;
+  background: linear-gradient(135deg, var(--ac) 0%, #e0f5f3 100%);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: var(--gm);
+}
+.dp-empty h3 { font-size: 16px; font-weight: 700; color: var(--pv); margin: 0; }
+.dp-empty p  { font-size: 12px; color: var(--gv); margin: 0; max-width: 240px; line-height: 1.5; }
+.dp-empty-hint {
+  padding: 6px 14px;
+  background: linear-gradient(135deg, var(--pv) 0%, var(--pvl) 100%);
+  color: white; border-radius: 16px; font-size: 11px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+
+/* ─── CHARGEMENT CALENDRIER ───────────────────────────── */
+.dp-cal-loading {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 320px; gap: 12px;
+  color: var(--gv); font-size: 12px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   COLONNE PATIENTS  (gauche, 240px)
+   ══════════════════════════════════════════════════════════ */
+.dp-pat-col {
+  display: flex; flex-direction: column;
+  background: var(--white);
+  border-right: 1px solid var(--bord);
+  overflow: hidden;
+}
+
+/* En-tête "MES PATIENTS" */
+.dp-pat-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--bord);
+  flex-shrink: 0;
+}
+.dp-pat-head-title {
+  font-size: 12px; font-weight: 800; color: var(--text);
+  text-transform: uppercase; letter-spacing: .8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.dp-pat-head-title i { color: var(--pv); }
+
+/* Badge nombre patients — cercle violet */
+.dp-pat-badge {
+  min-width: 22px; height: 22px; padding: 0 5px;
+  background: var(--pv);
+  color: white; border-radius: 11px;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ─── Barre de recherche ─────────────────────────────── */
+.dp-search-wrap {
+  position: relative;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--bord);
+  flex-shrink: 0;
+}
+.dp-search-ico {
+  position: absolute; left: 20px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--gv); font-size: 11px; pointer-events: none;
+}
+.dp-search-inp {
+  width: 100%; box-sizing: border-box;
+  padding: 7px 8px 7px 26px;
+  border: 1px solid var(--bord); border-radius: var(--rsm);
+  font-size: 12px; color: var(--text); background: #f9faff;
+  outline: none; transition: border-color .2s;
+}
+.dp-search-inp::placeholder { color: var(--gv); }
+.dp-search-inp:focus {
+  border-color: var(--pv);
+  box-shadow: 0 0 0 2px rgba(84,26,117,.08);
+  background: var(--white);
+}
+
+/* ─── Spinner / vide ─────────────────────────────────── */
+.dp-pat-spin {
+  display: flex; align-items: center; justify-content: center;
+  gap: 7px; padding: 24px;
+  color: var(--gv); font-size: 12px;
+}
+.dp-pat-vide {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 7px; padding: 24px;
+  color: var(--gv); font-size: 12px;
+}
+.dp-pat-vide i { font-size: 20px; opacity: .3; }
+
+/* ─── Liste scrollable ───────────────────────────────── */
+.dp-pat-list { overflow-y: auto; flex: 1; }
+.dp-pat-list::-webkit-scrollbar { width: 4px; }
+.dp-pat-list::-webkit-scrollbar-thumb { background: var(--ac); border-radius: 2px; }
+
+/* ══════════════════════════════════════════════════════════
+   CARTE PATIENT  — fidèle à la capture (initiales + nom + badge %)
+   ══════════════════════════════════════════════════════════ */
+.dp-pcard {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background .15s;
+  border-bottom: 1px solid #f0f2f8;
+  position: relative;
+  background: transparent;
+}
+.dp-pcard:hover { background: #faf7fd; }
+
+/* Carte active — fond dégradé + bordure gauche violette */
+.dp-pcard--active {
+  background: linear-gradient(135deg, rgba(84,26,117,.05) 0%, rgba(192,224,222,.10) 100%) !important;
+  border-left: 3px solid var(--pv);
+}
+
+/* Barre violette gauche sélection */
+.dp-pcard-bar {
+  position: absolute; left: 0; top: 8px; bottom: 8px;
+  width: 3px; background: var(--pv);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Avatar initiales */
+.dp-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 11px; font-weight: 800;
+  flex-shrink: 0;
+  text-transform: uppercase; letter-spacing: .3px;
+  user-select: none;
+}
+
+/* Corps de la carte (entre avatar et badge) */
+.dp-pcard-body { flex: 1; min-width: 0; }
+
+.dp-pcard-name {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.dp-pcard-meta {
+  display: flex; align-items: center; gap: 5px;
+  margin-top: 2px; font-size: 11px; color: var(--gv);
+}
+
+/* Badge stade Alzheimer */
+.dp-stage {
+  padding: 1px 5px; border-radius: 8px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+}
+.dp-stage--leger  { background: #e8f8e8; color: #2e7d32; }
+.dp-stage--modere { background: #fff3e0; color: #e65100; }
+.dp-stage--avance { background: #fce4ec; color: #c62828; }
+
+/* ─── Badge % observance (cercle à droite) ───────────── */
+.dp-obs-circle {
+  width: 38px; height: 38px;
+  flex-shrink: 0;
+  position: relative;
+}
+.dp-obs-circle svg { width: 38px; height: 38px; transform: rotate(-90deg); }
+.dp-obs-circle-track { fill: none; stroke: #EEF0F7; stroke-width: 3; }
+.dp-obs-circle-fill  { fill: none; stroke-width: 3; stroke-linecap: round;
+  transition: stroke-dashoffset .5s ease;
+}
+.dp-obs-pct-text {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700;
+}
+
+/* Barre d'observance (sous le nom, optionnelle) */
+.dp-obs-track {
+  height: 3px; background: #eef0f4;
+  border-radius: 2px; margin-top: 4px; overflow: hidden;
+}
+.dp-obs-fill {
+  height: 100%; border-radius: 2px;
+  transition: width .5s ease;
+}
+
+.dp-pcard-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 2px; font-size: 10px;
+}
+.dp-obs-pct { font-weight: 700; }
+.dp-rdv { color: var(--gv); display: flex; align-items: center; gap: 3px; }
+
+/* ══════════════════════════════════════════════════════════
+   COLONNE STATS  (droite, 220px)
+   ══════════════════════════════════════════════════════════ */
+.dp-stats-col {
+  display: flex; flex-direction: column;
+  background: var(--white);
+  border-left: 1px solid var(--bord);
+  overflow-y: auto;
+}
+.dp-stats-col::-webkit-scrollbar { width: 4px; }
+.dp-stats-col::-webkit-scrollbar-thumb { background: var(--ac); border-radius: 2px; }
+
+.dp-stat-loading {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; padding: 30px;
+  color: var(--gv); font-size: 12px;
+}
+
+.dp-stats-empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; padding: 24px; text-align: center;
+  color: var(--gv); font-size: 12px; height: 100%;
+}
+.dp-stats-empty i { font-size: 28px; opacity: .2; color: var(--pv); }
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 1280px) {
+  .dp-layout { grid-template-columns: 220px 1fr 200px; }
+}
+@media (max-width: 1024px) {
+  .dp-stats-col { display: none; }
+  .dp-layout    { grid-template-columns: 220px 1fr; }
+}
+@media (max-width: 700px) {
+  .dp-pat-col { display: none; }
+  .dp-layout  { grid-template-columns: 1fr; }
+}
+

@@ -1,0 +1,364 @@
+<!-- ★ PATIENT PLANNING - OPTIMIZED DESIGN ★ -->
+<div class="patient-planning-container">
+
+  <!-- NAVBAR -->
+  <app-navbar></app-navbar>
+
+  <!-- MAIN LAYOUT -->
+  <div class="main-layout">
+    <app-sidebar-diagnostic></app-sidebar-diagnostic>
+
+    <!-- CONTENT -->
+    <div class="content-wrapper" [class.dark-mode]="isDarkMode">
+
+      <!-- HEADER COMPACT -->
+      <header class="header-bar">
+        <div class="header-content">
+          <!-- Title -->
+          <div class="header-title">
+            <div class="icon-badge">
+              <i class="fas fa-calendar-check"></i>
+            </div>
+            <div>
+              <h1>Mon Planning</h1>
+              <p class="subtitle">{{ currentDate | date:'EEEE d MMMM yyyy':'':'fr-FR' }}</p>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="header-controls">
+            <div class="control-group">
+              <button class="control-btn" (click)="decreaseFontSize()" title="Réduire taille">
+                <i class="fas fa-minus"></i>
+                <span class="control-btn-label">A-</span>
+              </button>
+              <span class="control-text">{{ (textSizeMultiplier * 100) | number:'1.0-0' }}%</span>
+              <button class="control-btn" (click)="increaseFontSize()" title="Augmenter taille">
+                <i class="fas fa-plus"></i>
+                <span class="control-btn-label">A+</span>
+              </button>
+            </div>
+
+            <button class="control-btn" (click)="toggleDarkMode()" title="Mode {{ isDarkMode ? 'clair' : 'sombre' }}">
+              <i [class]="isDarkMode ? 'fas fa-sun' : 'fas fa-moon'"></i>
+            </button>
+
+            <button class="control-btn btn-pdf" (click)="exportPDF()" title="Exporter PDF">
+              <i class="fas fa-file-pdf"></i>
+              <span class="control-btn-label">PDF</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- MAIN CONTENT -->
+      <main class="main-content">
+
+        <!-- LOADING -->
+        <div *ngIf="isLoading" class="loading-state">
+          <div class="spinner"></div>
+          <p>Chargement de votre planning...</p>
+        </div>
+
+        <!-- CONTENT -->
+        <div *ngIf="!isLoading" class="content-grid">
+
+          <!-- STATS CARDS -->
+          <div class="stats-grid">
+            <!-- Confirmés -->
+            <div class="stat-card stat-success">
+              <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value">{{ getConfirmedCount() }}</div>
+                <div class="stat-label">Confirmés</div>
+              </div>
+              <div class="stat-progress">
+                <div class="stat-progress-bar"
+                     [style.width.%]="(getConfirmedCount() / (todayReminders.length || 1)) * 100">
+                </div>
+              </div>
+            </div>
+
+            <!-- Restants -->
+            <div class="stat-card stat-pending">
+              <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value">{{ getRemainingCount() }}</div>
+                <div class="stat-label">À faire</div>
+              </div>
+              <div class="stat-progress">
+                <div class="stat-progress-bar"
+                     [style.width.%]="(getRemainingCount() / (todayReminders.length || 1)) * 100">
+                </div>
+              </div>
+            </div>
+
+            <!-- Progrès global -->
+            <div class="stat-card stat-info">
+              <div class="stat-icon">
+                <i class="fas fa-chart-pie"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value">{{ getCompletionRate() }}%</div>
+                <div class="stat-label">Complétude</div>
+              </div>
+              <div class="stat-progress">
+                <div class="stat-progress-bar"
+                     [style.width.%]="getCompletionRate()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- VOICE CONTROLS -->
+          <div class="voice-card">
+            <div class="voice-header">
+              <i class="fas fa-microphone"></i>
+              <h2>Assistant Vocal</h2>
+            </div>
+
+            <div class="voice-actions">
+              <button class="voice-btn voice-primary"
+                      (click)="readTodayPlan()"
+                      [disabled]="isLoading"
+                      [class.speaking]="isSpeaking">
+                <i [class]="isSpeaking ? 'fas fa-stop' : 'fas fa-volume-up'"></i>
+                <span>{{ isSpeaking ? 'Arrêter' : 'Lire mon planning' }}</span>
+              </button>
+
+              <button class="voice-btn voice-secondary"
+                      (click)="activateVoiceConfirmation()"
+                      [disabled]="isLoading"
+                      [class.listening]="isListening">
+                <i [class]="isListening ? 'fas fa-circle recording' : 'fas fa-microphone'"></i>
+                <span>{{ isListening ? 'Écoute en cours...' : 'Confirmation vocale' }}</span>
+              </button>
+            </div>
+
+            <p class="voice-hint">
+              <i class="fas fa-info-circle"></i>
+              Dites "j'ai pris", "confirmé" ou "fait" pour valider rapidement
+            </p>
+          </div>
+
+          <!-- REMINDERS LIST -->
+          <div class="reminders-card">
+            <div class="reminders-header">
+              <h2>
+                <i class="fas fa-list-check"></i>
+                Vos rappels du jour
+              </h2>
+              <span class="badge-count">{{ todayReminders.length }}</span>
+            </div>
+
+            <!-- EMPTY STATE -->
+            <div *ngIf="todayReminders.length === 0" class="empty-state">
+              <div class="empty-icon">✨</div>
+              <h3>Aucun rappel aujourd'hui</h3>
+              <p>Profitez de votre journée !</p>
+            </div>
+
+            <!-- REMINDERS -->
+            <div *ngIf="todayReminders.length > 0" class="reminders-list">
+              <div *ngFor="let reminder of todayReminders; trackBy: trackById"
+                   class="reminder-item"
+                   [class.reminder-confirmed]="reminder.status === 'confirmed' || reminder.status === 'confirmed_late'"
+                   [class.reminder-pending]="reminder.status === 'pending' && !isOverdue(reminder)"
+                   [class.reminder-planned]="reminder.status === 'planned' && !isOverdue(reminder)"
+                   [class.reminder-overdue]="isActionable(reminder) && isOverdue(reminder)"
+                   [class.reminder-missed]="reminder.status === 'missed'"
+                   [class.reminder-rescheduled]="reminder.status === 'rescheduled'"
+                   [class.reminder-delayed]="reminder.status === 'delayed'">
+
+                <!-- Time -->
+                <div class="reminder-time">
+                  <div class="time-badge" [attr.data-type]="reminder.type">
+                    {{ formatTime(reminder.scheduledTime) }}
+                  </div>
+                  <div class="time-icon">{{ getTypeIcon(reminder.type) }}</div>
+                </div>
+
+                <!-- Content -->
+                <div class="reminder-content">
+                  <h3 class="reminder-title">{{ getSimpleLabel(reminder) }}</h3>
+                  <p *ngIf="reminder.description" class="reminder-desc">
+                    {{ reminder.description }}
+                  </p>
+                  <div class="reminder-meta">
+                    <span class="type-label" [attr.data-type]="reminder.type">
+                      {{ getTypeLabel(reminder.type) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Status & Actions -->
+                <div class="reminder-action">
+
+                  <!-- Badge statut actuel -->
+                  <div class="status-badge" [attr.data-status]="reminder.status">
+                    <i [class]="getStatusIcon(reminder.status)"></i>
+                    <span>{{ getStatusLabel(reminder.status) }}</span>
+                  </div>
+
+                  <!-- ══ BOUTONS D'ACTION (uniquement si le rappel est actionnable) ══ -->
+                  <ng-container *ngIf="isActionable(reminder)">
+
+                    <!-- ⚠️ CAS 1 : Temps ÉCOULÉ → badge Manqué + 2 boutons -->
+                    <ng-container *ngIf="isOverdue(reminder)">
+
+                      <!-- Badge alerte temps dépassé -->
+                      <div class="overdue-badge">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Temps dépassé !</span>
+                      </div>
+
+                      <!-- ✅ J'ai fait quand même -->
+                      <button
+                        class="btn-action btn-confirm"
+                        (click)="confirmReminder(reminder)"
+                        [disabled]="loadingId === reminder.id"
+                        title="Marquer comme fait">
+                        <span *ngIf="loadingId === reminder.id" class="btn-spinner"></span>
+                        <ng-container *ngIf="loadingId !== reminder.id">
+                          <i class="fas fa-check-circle"></i>
+                          <span>✓ J'ai fait !</span>
+                        </ng-container>
+                        <span *ngIf="loadingId === reminder.id">En cours...</span>
+                      </button>
+
+                      <!-- ⏰ Reporter -->
+                      <button
+                        class="btn-action btn-delay"
+                        (click)="openDelayModal(reminder)"
+                        [disabled]="loadingId === reminder.id"
+                        title="Reporter ce rappel">
+                        <i class="fas fa-clock"></i>
+                        <span>Reporter</span>
+                      </button>
+
+                    </ng-container>
+
+                    <!-- ✅ CAS 2 : Temps NON ÉCOULÉ → uniquement bouton J'ai fait -->
+                    <ng-container *ngIf="!isOverdue(reminder)">
+
+                      <button
+                        class="btn-action btn-confirm"
+                        (click)="confirmReminder(reminder)"
+                        [disabled]="loadingId === reminder.id"
+                        title="Marquer comme fait">
+                        <span *ngIf="loadingId === reminder.id" class="btn-spinner"></span>
+                        <ng-container *ngIf="loadingId !== reminder.id">
+                          <i class="fas fa-check-circle"></i>
+                          <span>✓ J'ai fait !</span>
+                        </ng-container>
+                        <span *ngIf="loadingId === reminder.id">En cours...</span>
+                      </button>
+
+                    </ng-container>
+
+                  </ng-container><!-- /isActionable -->
+
+                  <!-- ✔ Message succès animé -->
+                  <div class="confirm-success"
+                       *ngIf="reminder.status === 'confirmed' || reminder.status === 'confirmed_late'">
+                    <i class="fas fa-check-double"></i>
+                    <span>Bravo !</span>
+                  </div>
+
+                  <!-- ✘ Message annulé -->
+                  <div class="canceled-msg" *ngIf="reminder.status === 'canceled'">
+                    <i class="fas fa-ban"></i>
+                    <span>Annulé</span>
+                  </div>
+
+                </div><!-- /reminder-action -->
+              </div>
+            </div>
+          </div>
+
+          <!-- TIPS CARD -->
+          <div class="tips-card">
+            <div class="tips-header">
+              <i class="fas fa-lightbulb"></i>
+              <h3>Conseils d'utilisation</h3>
+            </div>
+            <ul class="tips-list">
+              <li>
+                <i class="fas fa-hand-pointer"></i>
+                <span>Appuyez sur <strong>"J'ai fait"</strong> pour confirmer vos rappels</span>
+              </li>
+              <li>
+                <i class="fas fa-microphone"></i>
+                <span>Utilisez les <strong>commandes vocales</strong> pour une interaction mains libres</span>
+              </li>
+              <li>
+                <i class="fas fa-text-height"></i>
+                <span>Ajustez la <strong>taille du texte</strong> selon votre confort</span>
+              </li>
+              <li>
+                <i class="fas fa-moon"></i>
+                <span>Activez le <strong>mode sombre</strong> pour réduire la fatigue visuelle</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       MODAL : Reporter un rappel
+  ══════════════════════════════════════════ -->
+  <div class="modal-overlay" *ngIf="showDelayModal" (click)="closeDelayModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <div class="modal-icon"><i class="fas fa-clock"></i></div>
+        <div>
+          <h3 class="modal-title">Reporter le rappel</h3>
+          <p class="modal-sub" *ngIf="reminderToDelay">{{ reminderToDelay.title }}</p>
+        </div>
+        <button class="modal-close" (click)="closeDelayModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="delay-options">
+          <button class="delay-opt" (click)="delayBy(30)">
+            <i class="fas fa-forward"></i>
+            <span>+ 30 min</span>
+          </button>
+          <button class="delay-opt" (click)="delayBy(60)">
+            <i class="fas fa-forward"></i>
+            <span>+ 1 heure</span>
+          </button>
+          <button class="delay-opt" (click)="delayBy(120)">
+            <i class="fas fa-forward"></i>
+            <span>+ 2 heures</span>
+          </button>
+          <button class="delay-opt delay-opt--tomorrow" (click)="delayToTomorrow()">
+            <i class="fas fa-calendar-day"></i>
+            <span>Demain</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TOAST : Confirmation visuelle
+  ══════════════════════════════════════════ -->
+  <div class="toast-confirm" [class.toast-show]="showToast">
+    <i class="fas fa-check-circle"></i>
+    <span>{{ toastMessage }}</span>
+  </div>
+
+</div>

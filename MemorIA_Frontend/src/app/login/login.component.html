@@ -1,0 +1,125 @@
+<div class="login-page">
+
+  <!-- ── Left: Form ── -->
+  <div class="form-panel">
+    <div class="form-wrapper">
+
+      <div class="brand">
+        <div class="brand-logo"><i class="pi pi-brain"></i></div>
+        <span class="brand-name">MemorIA</span>
+      </div>
+
+      <h2 class="form-title">Welcome back</h2>
+      <p class="form-subtitle">Sign in to continue to your account</p>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+
+        <div class="field">
+          <label for="email">Email address</label>
+          <div class="input-wrapper">
+            <i class="pi pi-envelope input-icon"></i>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              placeholder="you@example.com"
+              class="form-input"
+            />
+          </div>
+          @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+            <small class="field-error">Please enter a valid email.</small>
+          }
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <i class="pi pi-lock input-icon"></i>
+            <input
+              id="password"
+              type="password"
+              formControlName="password"
+              placeholder="••••••••"
+              class="form-input"
+            />
+          </div>
+          @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+            <small class="field-error">Password is required.</small>
+          }
+        </div>
+
+        @if (errorMessage) {
+          <div class="error-alert">
+            <i class="pi pi-exclamation-circle"></i>
+            {{ errorMessage }}
+          </div>
+        }
+
+        <button
+          type="submit"
+          class="sign-in-button"
+          [disabled]="isSubmitting"
+        >
+          <i class="pi pi-sign-in"></i>
+          {{ isSubmitting ? 'Signing in...' : 'Sign In' }}
+        </button>
+      </form>
+
+      <p class="signup-link">
+        Don't have an account? <a routerLink="/signup">Create one here</a>
+      </p>
+
+    </div>
+  </div>
+
+  <!-- ── Right: Motivational panel ── -->
+  <div class="info-panel">
+    <div class="info-content">
+
+      <div class="info-logo">
+        <i class="pi pi-brain info-logo-icon"></i>
+      </div>
+
+      <h1 class="info-title">MemorIA</h1>
+      <p class="info-tagline">Empowering lives touched by dementia</p>
+
+      <div class="info-divider"></div>
+
+      <p class="info-description">
+        Dementia affects millions of families worldwide. MemorIA is your dedicated platform — built
+        to support patients, caregivers, and healthcare professionals with intelligent cognitive
+        assessments, personalized monitoring, and compassionate care.
+      </p>
+
+      <div class="info-features">
+        <div class="feature">
+          <div class="feature-icon"><i class="pi pi-chart-line"></i></div>
+          <div>
+            <strong>Track Progress</strong>
+            <p>Monitor cognitive health over time with detailed diagnostics and AI-powered insights.</p>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon"><i class="pi pi-users"></i></div>
+          <div>
+            <strong>Connected Care</strong>
+            <p>Unite patients, soignants, and accompagnants in one shared care ecosystem.</p>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon"><i class="pi pi-shield"></i></div>
+          <div>
+            <strong>Safe & Secure</strong>
+            <p>Your medical data stays private and protected at all times.</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="info-quote">
+        "Together, we can slow the progression and improve quality of life."
+      </p>
+
+    </div>
+  </div>
+
+</div>

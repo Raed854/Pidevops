@@ -1,0 +1,287 @@
+<p-toast />
+
+<div class="medical-record-wrapper">
+
+  <!-- Loading state -->
+  <div *ngIf="isLoading" class="state-box">
+    <i class="pi pi-spin pi-spinner state-icon"></i>
+    <p>Chargement du dossier médical…</p>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="!isLoading && errorMessage" class="state-box error">
+    <i class="pi pi-exclamation-triangle state-icon"></i>
+    <p>{{ errorMessage }}</p>
+    <div class="state-actions">
+      <button *ngIf="isNotFound && currentUserRole === 'PATIENT'"
+              pButton label="Créer mon dossier médical" icon="pi pi-plus"
+              class="p-button-primary" (click)="onCreateOwnRecord()"></button>
+      <button pButton label="Retour" icon="pi pi-arrow-left"
+              class="p-button-secondary p-button-outlined" (click)="goBack()"></button>
+    </div>
+  </div>
+
+  <!-- Dossier content -->
+  <div *ngIf="!isLoading && !errorMessage && dossier" class="record-container">
+
+    <!-- Header bar -->
+    <div class="record-header">
+      <div class="record-title">
+        <i class="pi pi-file-edit"></i>
+        <h1>Dossier Médical</h1>
+      </div>
+      <div class="record-actions">
+        <button *ngIf="canEdit" pButton label="Modifier" icon="pi pi-pencil"
+                class="p-button-outlined p-button-sm" (click)="onEdit()"></button>
+        <button *ngIf="canDelete" pButton label="Supprimer" icon="pi pi-trash"
+                class="p-button-danger p-button-sm ml-2" (click)="onDelete()"></button>
+      </div>
+    </div>
+
+    <!-- ─── 1. Basic Information ───────────────────────────────────────────── -->
+    <p-card styleClass="record-card">
+      <ng-template pTemplate="header">
+        <div class="card-header-label">
+          <i class="pi pi-user"></i> Informations générales
+        </div>
+      </ng-template>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Contact</span>
+          <span class="info-value">{{ dossier.contactPatient || '—' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Dernière visite</span>
+          <span class="info-value">{{ dossier.derniereVisite ? (dossier.derniereVisite | date:'dd/MM/yyyy') : '—' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Dossier créé le</span>
+          <span class="info-value">{{ dossier.dateCreation ? (dossier.dateCreation | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Dernière modification</span>
+          <span class="info-value">{{ dossier.dateModification ? (dossier.dateModification | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 2. Diagnosis ──────────────────────────────────────────────────── -->
+    <p-card styleClass="record-card">
+      <ng-template pTemplate="header">
+        <div class="card-header-label">
+          <i class="pi pi-heart"></i> Diagnostic
+        </div>
+      </ng-template>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Type</span>
+          <span class="info-value">{{ dossier.typeDiagnostic || '—' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Stade</span>
+          <p-tag *ngIf="dossier.stade" [value]="stadeLabel(dossier.stade)"
+                 [severity]="stadeSeverity(dossier.stade)" />
+          <span *ngIf="!dossier.stade" class="info-value">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Date du diagnostic</span>
+          <span class="info-value">{{ dossier.dateDiagnostic ? (dossier.dateDiagnostic | date:'dd/MM/yyyy') : '—' }}</span>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 3. Health & History ───────────────────────────────────────────── -->
+    <p-card styleClass="record-card">
+      <ng-template pTemplate="header">
+        <div class="card-header-label">
+          <i class="pi pi-history"></i> Santé & Antécédents
+        </div>
+      </ng-template>
+
+      <div class="info-grid">
+        <div class="info-item full-width">
+          <span class="info-label">Maladies principales</span>
+          <span class="info-value multiline">{{ dossier.maladiesPrincipales || '—' }}</span>
+        </div>
+        <div class="info-item full-width">
+          <span class="info-label">Allergies</span>
+          <span class="info-value multiline">{{ dossier.allergies || '—' }}</span>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 4. Cognitive State ────────────────────────────────────────────── -->
+    <p-card styleClass="record-card">
+      <ng-template pTemplate="header">
+        <div class="card-header-label">
+          <i class="pi pi-brain"></i> État cognitif
+        </div>
+      </ng-template>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Niveau de mémoire</span>
+          <span class="info-value">{{ dossier.niveauMemoire || '—' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Orientation</span>
+          <span class="info-value">{{ orientationLabel(dossier.orientation) }}</span>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 5. Daily Function ─────────────────────────────────────────────── -->
+    <p-card styleClass="record-card">
+      <ng-template pTemplate="header">
+        <div class="card-header-label">
+          <i class="pi pi-calendar"></i> Fonctionnement quotidien
+        </div>
+      </ng-template>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Autonomie</span>
+          <span class="info-value">{{ fonctionnementLabel(dossier.niveauFonctionnement) }}</span>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 6. Medications ────────────────────────────────────────────────── -->
+    <p-card styleClass="record-card">
+      <ng-template pTemplate="header">
+        <div class="card-header-label">
+          <i class="pi pi-box"></i> Médicaments en cours
+        </div>
+      </ng-template>
+
+      <div class="info-grid">
+        <div class="info-item full-width">
+          <span class="info-label">Traitements actuels</span>
+          <span class="info-value multiline">{{ dossier.medicamentsActuels || '—' }}</span>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 7. Behavior ───────────────────────────────────────────────────── -->
+    <p-card styleClass="record-card">
+      <ng-template pTemplate="header">
+        <div class="card-header-label">
+          <i class="pi pi-users"></i> Comportement
+        </div>
+      </ng-template>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">État comportemental</span>
+          <span class="info-value">{{ comportementLabel(dossier.etatComportement) }}</span>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 8. Caregiver ──────────────────────────────────────────────────── -->
+    <p-card styleClass="record-card">
+      <ng-template pTemplate="header">
+        <div class="card-header-label">
+          <i class="pi pi-id-card"></i> Accompagnant / Aidant
+        </div>
+      </ng-template>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Nom</span>
+          <span class="info-value">{{ dossier.accompagnantNom || '—' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Contact</span>
+          <span class="info-value">{{ dossier.accompagnantContact || '—' }}</span>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 9. Notes & Follow-up ──────────────────────────────────────────── -->
+    <p-card styleClass="record-card">
+      <ng-template pTemplate="header">
+        <div class="card-header-label">
+          <i class="pi pi-pencil"></i> Notes médicales & Suivi
+        </div>
+      </ng-template>
+
+      <div class="info-grid">
+        <div class="info-item full-width">
+          <span class="info-label">Notes du médecin</span>
+          <span class="info-value multiline notes-text">{{ dossier.notesMedecin || 'Aucune note.' }}</span>
+        </div>
+      </div>
+    </p-card>
+
+    <!-- ─── 10. QR Code & Sharing ────────────────────────────────────────── -->
+    <p-card styleClass="record-card">
+      <ng-template pTemplate="header">
+        <div class="card-header-label">
+          <i class="pi pi-share-alt"></i> QR Code & Partage du dossier
+        </div>
+      </ng-template>
+
+      <div class="qr-section">
+
+        <!-- QR Code image (generated via free qrserver.com API) -->
+        <div class="qr-code-wrapper">
+          <img [src]="qrCodeUrl" alt="QR Code du dossier médical" class="qr-code-img" />
+          <p class="qr-hint">
+            <i class="pi pi-info-circle"></i>
+            Scannez ce QR Code pour lire les informations du dossier
+          </p>
+        </div>
+
+        <!-- Share buttons -->
+        <div class="share-panel">
+          <h4 class="share-title">
+            <i class="pi pi-send"></i> Partager les informations
+          </h4>
+          <p class="share-desc">
+            Envoyez un résumé complet du dossier médical via votre application préférée.
+          </p>
+
+          <div class="share-actions">
+
+            <!-- WhatsApp -->
+            <button pButton
+                    icon="pi pi-whatsapp"
+                    label="Envoyer via WhatsApp"
+                    class="share-btn share-whatsapp"
+                    (click)="shareViaWhatsApp()"
+                    pTooltip="Ouvre WhatsApp Web avec le message pré-rempli"
+                    tooltipPosition="top">
+            </button>
+
+            <!-- Email -->
+            <button pButton
+                    icon="pi pi-envelope"
+                    label="Envoyer par Email"
+                    class="share-btn share-email"
+                    (click)="shareViaEmail()"
+                    pTooltip="Ouvre votre client email avec le dossier en corps du message"
+                    tooltipPosition="top">
+            </button>
+
+            <!-- Messenger / Copy -->
+            <button pButton
+                    [icon]="copyDone ? 'pi pi-check' : 'pi pi-copy'"
+                    [label]="copyDone ? 'Copié !' : 'Copier pour Messenger'"
+                    class="share-btn share-copy"
+                    [class.copy-done]="copyDone"
+                    (click)="copyForMessenger()"
+                    pTooltip="Copie le dossier dans le presse-papier — collez dans Messenger ou toute autre app"
+                    tooltipPosition="top">
+            </button>
+
+          </div>
+        </div>
+
+      </div>
+    </p-card>
+
+  </div>
+</div>

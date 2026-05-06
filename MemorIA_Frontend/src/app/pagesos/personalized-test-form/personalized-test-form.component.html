@@ -1,0 +1,372 @@
+<div class="test-form-container">
+    <div class="form-header">
+        <h1>CRÉATION TEST PERSONNALISÉ - {{ testTitle() }}</h1>
+        <div class="patient-info">
+            <p><strong>PATIENT :</strong> {{ patientName() }}</p>
+            <p><strong>STADE :</strong> <span class="badge" [ngClass]="stage()">{{ stage() }}</span></p>
+        </div>
+    </div>
+
+    <div class="form-body">
+
+        <!-- GEMINI AI BUTTON -->
+        <div class="ai-generate-bar">
+            <button class="btn-ai-generate" type="button" (click)="generateWithAI()" [disabled]="generatingAI()">
+                @if (generatingAI()) {
+                    <span class="spinner-ai"></span>
+                    Génération en cours...
+                } @else {
+                    <lucide-icon [img]="icons.Sparkles" size="18"></lucide-icon>
+                    Générer avec Gemini IA
+                }
+            </button>
+            <span class="ai-hint">Génère automatiquement des questions adaptées au stade {{ stage() }}</span>
+        </div>
+
+        <!-- NOTIFICATION BANNER -->
+        @if (notification()) {
+            <div class="validation-banner" [ngClass]="notification()!.type">
+                <div class="banner-icon">
+                    @if (notification()!.type === 'error') { <span>✕</span> }
+                    @if (notification()!.type === 'warning') { <span>⚠</span> }
+                    @if (notification()!.type === 'success') { <span>✓</span> }
+                </div>
+                <div class="banner-content">
+                    <strong>{{ notification()!.title }}</strong>
+                    @if (notification()!.messages.length > 1) {
+                        <ul class="banner-list">
+                            @for (msg of notification()!.messages; track msg) {
+                                <li>{{ msg }}</li>
+                            }
+                        </ul>
+                    } @else {
+                        <p class="banner-single">{{ notification()!.messages[0] }}</p>
+                    }
+                </div>
+                @if (notification()!.type !== 'success') {
+                    <button class="banner-close" type="button" (click)="clearNotification()">✕</button>
+                }
+            </div>
+        }
+
+        <!-- FACES & RELATIVES -->
+        <div *ngIf="testType() === 'FACES' || testType() === 'RELATIVES'" class="items-list">
+            <div *ngFor="let item of items(); let i = index" class="form-item-card"
+                [class.has-error]="isFieldInvalid('item_' + i + '_question') || isFieldInvalid('item_' + i + '_reponse') || isFieldInvalid('item_' + i + '_nom') || isFieldInvalid('item_' + i + '_lien')">
+                <div class="item-header">
+                    <h3>{{ testType() === 'FACES' ? 'PERSONNE À RECONNAÎTRE' : 'PROCHE FAMILIAL' }} (Question {{ i + 1 }})</h3>
+                    <button class="btn-icon-danger" (click)="removeItem(i)" *ngIf="items().length > 1">
+                        <lucide-icon [img]="icons.Trash2" size="18"></lucide-icon>
+                    </button>
+                </div>
+
+                <div class="form-group-row">
+                    <div class="file-upload">
+                        <label>Photo :</label>
+                        <input type="file" (change)="onFileSelected($event, i)" accept="image/*">
+                        <div *ngIf="item.imageUrl" class="preview">
+                            <img [src]="item.imageUrl" alt="Preview">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Nom de la personne / Prénom :</label>
+                    <input type="text" [(ngModel)]="item.metadata['nom']" placeholder="Ex: Jean Dupont"
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_nom')">
+                    @if (isFieldInvalid('item_' + i + '_nom')) {
+                        <span class="field-error-msg">Le nom de la personne est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Lien avec le patient :</label>
+                    <div class="radio-group" [class.radio-invalid]="isFieldInvalid('item_' + i + '_lien')">
+                        <label><input type="radio" name="lien_{{i}}" value="Médecin"
+                                [(ngModel)]="item.metadata['lien']"> Médecin</label>
+                        <label><input type="radio" name="lien_{{i}}" value="Infirmier"
+                                [(ngModel)]="item.metadata['lien']"> Infirmier</label>
+                        <label><input type="radio" name="lien_{{i}}" value="Voisin"
+                                [(ngModel)]="item.metadata['lien']"> Voisin</label>
+                        <label><input type="radio" name="lien_{{i}}" value="Famille"
+                                [(ngModel)]="item.metadata['lien']"> Famille</label>
+                        <label><input type="radio" name="lien_{{i}}" value="Autre"
+                                [(ngModel)]="item.metadata['lien']"> Autre</label>
+                    </div>
+                    @if (isFieldInvalid('item_' + i + '_lien')) {
+                        <span class="field-error-msg">Le lien avec le patient est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Question à poser :</label>
+                    <input type="text" [(ngModel)]="item.question" placeholder="Qui est cette personne ?"
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_question')">
+                    @if (isFieldInvalid('item_' + i + '_question')) {
+                        <span class="field-error-msg">La question est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Réponse attendue :</label>
+                    <input type="text" [(ngModel)]="item.reponse" placeholder="Réponse correcte"
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_reponse')">
+                    @if (isFieldInvalid('item_' + i + '_reponse')) {
+                        <span class="field-error-msg">La réponse est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Points :</label>
+                    <input type="number" [(ngModel)]="item.score" min="1" max="10">
+                </div>
+            </div>
+        </div>
+
+        <!-- CROSSWORDS -->
+        <div *ngIf="testType() === 'CROSSWORDS'" class="items-list">
+            <div class="form-group">
+                <label>Taille de la grille :</label>
+                <select>
+                    <option value="4x4">4x4</option>
+                    <option value="6x6">6x6</option>
+                    <option value="8x8">8x8</option>
+                </select>
+            </div>
+
+            <div *ngFor="let item of items(); let i = index" class="form-item-card"
+                [class.has-error]="isFieldInvalid('item_' + i + '_question') || isFieldInvalid('item_' + i + '_reponse')">
+                <div class="item-header">
+                    <h3>MOT À DEVINER (Question {{ i + 1 }})</h3>
+                    <button class="btn-icon-danger" (click)="removeItem(i)" *ngIf="items().length > 1">
+                        <lucide-icon [img]="icons.Trash2" size="18"></lucide-icon>
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>Mot :</label>
+                    <input type="text" [(ngModel)]="item.reponse" placeholder="MOT"
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_reponse')">
+                    @if (isFieldInvalid('item_' + i + '_reponse')) {
+                        <span class="field-error-msg">Le mot est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Indice / Question :</label>
+                    <textarea [(ngModel)]="item.question" placeholder="Indice pour le mot..."
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_question')"></textarea>
+                    @if (isFieldInvalid('item_' + i + '_question')) {
+                        <span class="field-error-msg">L'indice est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group-row">
+                    <div class="form-group half">
+                        <label>Direction :</label>
+                        <select [(ngModel)]="item.metadata['direction']">
+                            <option value="HORIZONTAL">Horizontal</option>
+                            <option value="VERTICAL">Vertical</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label>Position (Ligne/Col) :</label>
+                        <input type="text" [(ngModel)]="item.metadata['position']" placeholder="1,1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Points :</label>
+                    <input type="number" [(ngModel)]="item.score" min="1" max="10">
+                </div>
+            </div>
+        </div>
+
+        <!-- MEMORY -->
+        <div *ngIf="testType() === 'MEMORY'" class="items-list">
+            <div *ngFor="let item of items(); let i = index" class="form-item-card">
+                <div class="item-header">
+                    <h3>PAIRE D'IMAGES (Paire {{ i + 1 }})</h3>
+                    <button class="btn-icon-danger" (click)="removeItem(i)" *ngIf="items().length > 1">
+                        <lucide-icon [img]="icons.Trash2" size="18"></lucide-icon>
+                    </button>
+                </div>
+
+                <div class="file-upload">
+                    <label>Image (sera dupliquée pour faire la paire) :</label>
+                    <input type="file" (change)="onFileSelected($event, i)" accept="image/*">
+                    <div *ngIf="item.imageUrl" class="preview">
+                        <img [src]="item.imageUrl" alt="Preview">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Description de l'image (pour accessibilité) :</label>
+                    <input type="text" [(ngModel)]="item.metadata['description']" placeholder="Description courte">
+                </div>
+
+                <div class="form-group">
+                    <label>Question (optionnel) :</label>
+                    <input type="text" [(ngModel)]="item.question" placeholder="Trouvez la paire identique">
+                </div>
+
+                <div class="form-group">
+                    <label>Points si paire trouvée :</label>
+                    <input type="number" [(ngModel)]="item.score" min="1" max="10" [value]="2">
+                </div>
+            </div>
+        </div>
+
+        <!-- SCENTS -->
+        <div *ngIf="testType() === 'SCENTS'" class="items-list">
+            <div *ngFor="let item of items(); let i = index" class="form-item-card"
+                [class.has-error]="isFieldInvalid('item_' + i + '_description') || isFieldInvalid('item_' + i + '_question') || isFieldInvalid('item_' + i + '_reponse')">
+                <div class="item-header">
+                    <h3>ODEUR À RECONNAÎTRE (Question {{ i + 1 }})</h3>
+                    <button class="btn-icon-danger" (click)="removeItem(i)" *ngIf="items().length > 1">
+                        <lucide-icon [img]="icons.Trash2" size="18"></lucide-icon>
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>Description de l'odeur (Contexte) :</label>
+                    <input type="text" [(ngModel)]="item.metadata['description']"
+                        placeholder="Café du matin, Lavande..."
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_description')">
+                    @if (isFieldInvalid('item_' + i + '_description')) {
+                        <span class="field-error-msg">La description de l'odeur est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Question à poser :</label>
+                    <input type="text" [(ngModel)]="item.question" placeholder="Quelle odeur est-ce ?"
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_question')">
+                    @if (isFieldInvalid('item_' + i + '_question')) {
+                        <span class="field-error-msg">La question est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Réponse attendue :</label>
+                    <input type="text" [(ngModel)]="item.reponse" placeholder="Ex: Café"
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_reponse')">
+                    @if (isFieldInvalid('item_' + i + '_reponse')) {
+                        <span class="field-error-msg">La réponse est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Points :</label>
+                    <input type="number" [(ngModel)]="item.score" min="1" max="10">
+                </div>
+            </div>
+        </div>
+
+        <!-- SONGS -->
+        <div *ngIf="testType() === 'SONGS'" class="items-list">
+            <div *ngFor="let item of items(); let i = index" class="form-item-card"
+                [class.has-error]="isFieldInvalid('item_' + i + '_titre') || isFieldInvalid('item_' + i + '_artiste') || isFieldInvalid('item_' + i + '_question') || isFieldInvalid('item_' + i + '_reponse')">
+                <div class="item-header">
+                    <h3>QUESTION SUR UNE CHANSON (Question {{ i + 1 }})</h3>
+                    <button class="btn-icon-danger" (click)="removeItem(i)" *ngIf="items().length > 1">
+                        <lucide-icon [img]="icons.Trash2" size="18"></lucide-icon>
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>Titre de la chanson :</label>
+                    <input type="text" [(ngModel)]="item.metadata['titre']" placeholder="Titre"
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_titre')">
+                    @if (isFieldInvalid('item_' + i + '_titre')) {
+                        <span class="field-error-msg">Le titre de la chanson est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Artiste / Interprète :</label>
+                    <input type="text" [(ngModel)]="item.metadata['artiste']" placeholder="Artiste"
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_artiste')">
+                    @if (isFieldInvalid('item_' + i + '_artiste')) {
+                        <span class="field-error-msg">L'artiste est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Contexte / Période :</label>
+                    <input type="text" [(ngModel)]="item.metadata['contexte']" placeholder="Mariage, Jeunesse...">
+                </div>
+
+                <div class="form-group">
+                    <label>Question à poser :</label>
+                    <input type="text" [(ngModel)]="item.question" placeholder="Reconnaissez-vous cette chanson ?"
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_question')">
+                    @if (isFieldInvalid('item_' + i + '_question')) {
+                        <span class="field-error-msg">La question est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Réponse attendue :</label>
+                    <input type="text" [(ngModel)]="item.reponse" placeholder="Oui / Non / Titre"
+                        [class.field-invalid]="isFieldInvalid('item_' + i + '_reponse')">
+                    @if (isFieldInvalid('item_' + i + '_reponse')) {
+                        <span class="field-error-msg">La réponse est obligatoire</span>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Points :</label>
+                    <input type="number" [(ngModel)]="item.score" min="1" max="10">
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-add-item" type="button" (click)="addItem()">
+            <lucide-icon [img]="icons.Plus" size="18"></lucide-icon>
+            AJOUTER UN ÉLÉMENT
+        </button>
+
+        <hr class="divider">
+
+        <div class="form-section">
+            <div class="form-group" [class.has-field-error]="isFieldInvalid('dateLimite')">
+                <label>
+                    DATE LIMITE :
+                    <span class="required-star">*</span>
+                </label>
+                <input type="date" [(ngModel)]="dateLimite"
+                    [class.field-invalid]="isFieldInvalid('dateLimite')">
+                @if (isFieldInvalid('dateLimite')) {
+                    <span class="field-error-msg">La date limite est obligatoire</span>
+                }
+            </div>
+
+            <div class="form-group">
+                <label>ASSIGNER À (optionnel) :</label>
+                <select [(ngModel)]="selectedAidantId">
+                    <option [ngValue]="null">Sélectionner un aidant...</option>
+                    <option *ngFor="let aidant of aidants()" [ngValue]="aidant?.id">
+                        {{ aidant?.prenom }} {{ aidant?.nom }} ({{ aidant?.relation }})
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>INSTRUCTIONS POUR L'AIDANT :</label>
+                <textarea [(ngModel)]="instructions" placeholder="Instructions spécifiques..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-footer">
+        <button class="btn-cancel" type="button" (click)="cancel()">ANNULER</button>
+        <button class="btn-submit" type="button" (click)="submitForm()" [disabled]="submitting()">
+            @if (submitting()) {
+                <span class="spinner"></span> ENVOI EN COURS...
+            } @else {
+                CRÉER ET ASSIGNER
+            }
+        </button>
+    </div>
+</div>

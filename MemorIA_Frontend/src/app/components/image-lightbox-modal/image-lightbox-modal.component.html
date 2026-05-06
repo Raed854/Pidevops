@@ -1,0 +1,11 @@
+<div class="lightbox-overlay" (click)="onOverlayClick($event)">
+  <button class="lightbox-close" (click)="onClose()">
+    <i class="fas fa-times"></i>
+  </button>
+  <button class="lightbox-download" (click)="downloadImage()" title="Télécharger">
+    <i class="fas fa-download"></i>
+  </button>
+  <div class="lightbox-content">
+    <img [src]="imageUrl" alt="Image" />
+  </div>
+</div>
