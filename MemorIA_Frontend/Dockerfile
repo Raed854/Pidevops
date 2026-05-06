@@ -1,6 +1,8 @@
 # Stage 1 — build the Angular app
 FROM node:20-alpine AS build
 WORKDIR /app
+# Give Node up to 4 GB heap so Angular 18's bundler doesn't OOM on a small VM
+ENV NODE_OPTIONS=--max_old_space_size=4096
 COPY package*.json ./
 RUN npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-maxtimeout=600000 --fetch-timeout=900000
 COPY . .

@@ -5,7 +5,9 @@ pipeline {
   options {
     timestamps()
     buildDiscarder(logRotator(numToKeepStr: '10'))
-    timeout(time: 30, unit: 'MINUTES')
+    // Frontend image build is slow: npm ci pulls ~1000 deps + Angular 18
+    // bundler can take 25-35 min on a small VM. 60 min covers cold-cache runs.
+    timeout(time: 60, unit: 'MINUTES')
   }
 
   environment {
