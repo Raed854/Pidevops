@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemorIA - Suivi GPS Patients</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Header ─────────────────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: #fff;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,.15);
+            z-index: 10;
+        }
+        .header h1 { font-size: 1.3rem; font-weight: 600; }
+        .header .status-badge {
+            font-size: .8rem;
+            padding: 4px 12px;
+            border-radius: 12px;
+            background: rgba(255,255,255,.2);
+        }
+        .header .status-badge.connected { background: #43a047; }
+        .header .status-badge.disconnected { background: #e53935; }
+
+        /* ── Layout ─────────────────────────────────────────── */
+        .layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Sidebar ────────────────────────────────────────── */
+        .sidebar {
+            width: 380px;
+            min-width: 320px;
+            background: #fff;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .sidebar-header {
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .sidebar-header h2 {
+            font-size: 1.05rem;
+            color: #1a73e8;
+            margin-bottom: 10px;
+        }
+        .search-box {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: .9rem;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .search-box:focus { border-color: #1a73e8; }
+
+        .patient-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        .patient-card {
+            padding: 12px 14px;
+            margin-bottom: 6px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all .15s;
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .patient-card:hover { background: #f0f6ff; }
+        .patient-card.active {
+            background: #e3f0ff;
+            border-color: #1a73e8;
+        }
+        .patient-card .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #1a73e8;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: .9rem;
+            flex-shrink: 0;
+        }
+        .patient-card .info { flex: 1; min-width: 0; }
+        .patient-card .name {
+            font-weight: 600;
+            font-size: .92rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .patient-card .details {
+            font-size: .78rem;
+            color: #777;
+            margin-top: 2px;
+        }
+        .patient-card .sim-badge {
+            font-size: .7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #43a047;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        /* ── Main panel ─────────────────────────────────────── */
+        .main-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Controls bar ───────────────────────────────────── */
+        .controls {
+            padding: 12px 20px;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .controls .selected-info {
+            font-size: .9rem;
+            color: #555;
+            flex: 1;
+        }
+        .controls .selected-info strong { color: #1a73e8; }
+
+        .btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            font-size: .85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-start {
+            background: #43a047;
+            color: #fff;
+        }
+        .btn-start:hover:not(:disabled) { background: #388e3c; }
+        .btn-stop {
+            background: #e53935;
+            color: #fff;
+        }
+        .btn-stop:hover:not(:disabled) { background: #c62828; }
+        .btn-secondary {
+            background: #eee;
+            color: #333;
+        }
+        .btn-secondary:hover:not(:disabled) { background: #ddd; }
+
+        /* ── Map ────────────────────────────────────────────── */
+        #map {
+            flex: 1;
+            min-height: 300px;
+        }
+
+        /* ── Info bar ───────────────────────────────────────── */
+        .info-bar {
+            padding: 8px 20px;
+            background: #fff;
+            border-top: 1px solid #eee;
+            font-size: .8rem;
+            color: #777;
+            display: flex;
+            gap: 24px;
+        }
+        .info-bar span strong { color: #333; }
+
+        /* ── Empty state ────────────────────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        .empty-state .icon { font-size: 2rem; margin-bottom: 10px; }
+
+        /* ── Loading spinner ────────────────────────────────── */
+        .spinner {
+            width: 28px; height: 28px;
+            border: 3px solid #ddd;
+            border-top-color: #1a73e8;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────── -->
+<div class="header">
+    <h1>MemorIA - Suivi GPS Patients</h1>
+    <span class="status-badge disconnected" id="backendStatus">Backend: verification...</span>
+</div>
+
+<!-- ── Layout ──────────────────────────────────────────────────── -->
+<div class="layout">
+
+    <!-- Sidebar: patient list -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Patients</h2>
+            <input class="search-box" id="searchBox" type="text" placeholder="Rechercher un patient..." />
+        </div>
+        <div class="patient-list" id="patientList">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <!-- Main: map + controls -->
+    <div class="main-panel">
+        <div class="controls">
+            <div class="selected-info" id="selectedInfo">Aucun patient selectionne</div>
+            <button class="btn btn-start" id="btnStart" disabled>Demarrer simulation</button>
+            <button class="btn btn-stop" id="btnStop" disabled>Arreter simulation</button>
+            <button class="btn btn-secondary" id="btnStopAll" disabled>Tout arreter</button>
+        </div>
+        <div id="map"></div>
+        <div class="info-bar" id="infoBar">
+            <span>Positions actives : <strong id="posCount">0</strong></span>
+            <span>Derniere MAJ : <strong id="lastUpdate">--</strong></span>
+            <span id="coordsDisplay">Lat: --  |  Lon: --</span>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────
+const BACKEND  = "http://localhost:8080/api";
+const LAUNCHER = "http://localhost:5000/api";
+const POLL_INTERVAL = 1500; // ms
+
+// ── State ──────────────────────────────────────────────────────────
+let patients = [];
+let selectedPatient = null;
+let selectedTraitement = null;
+let pollingTimer = null;
+let runningSimulations = new Set();
+
+// Leaflet objects
+let map, markersLayer, zonesLayer;
+const markerMap = {};  // user_id -> marker
+
+// ── Init map ───────────────────────────────────────────────────────
+function initMap() {
+    map = L.map("map").setView([48.8566, 2.3522], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+        maxZoom: 19
+    }).addTo(map);
+    markersLayer = L.layerGroup().addTo(map);
+    zonesLayer   = L.layerGroup().addTo(map);
+}
+
+// ── Fetch patients from Spring Boot ────────────────────────────────
+async function loadPatients() {
+    const listEl = document.getElementById("patientList");
+    try {
+        const res = await fetch(`${BACKEND}/patients`);
+        if (!res.ok) throw new Error(res.statusText);
+        patients = await res.json();
+        renderPatients(patients);
+        updateBackendStatus(true);
+    } catch (e) {
+        listEl.innerHTML = `<div class="empty-state">
+            <div class="icon">&#9888;</div>
+            <div>Impossible de charger les patients.<br>Verifiez que le backend Spring Boot tourne sur le port 8080.</div>
+        </div>`;
+        updateBackendStatus(false);
+    }
+}
+
+// ── Render patient list ────────────────────────────────────────────
+function renderPatients(list) {
+    const listEl = document.getElementById("patientList");
+    if (!list.length) {
+        listEl.innerHTML = `<div class="empty-state">
+            <div class="icon">&#128100;</div>
+            <div>Aucun patient trouve.</div>
+        </div>`;
+        return;
+    }
+    listEl.innerHTML = list.map(p => {
+        const user = p.user || {};
+        const initials = ((user.prenom || "")[0] || "") + ((user.nom || "")[0] || "");
+        const isActive = selectedPatient && selectedPatient.id === p.id;
+        const isRunning = runningSimulations.has(String(p.id));
+        return `
+            <div class="patient-card ${isActive ? 'active' : ''}" data-id="${p.id}" onclick="selectPatient(${p.id})">
+                <div class="avatar">${initials.toUpperCase() || "?"}</div>
+                <div class="info">
+                    <div class="name">${user.prenom || ""} ${user.nom || ""}</div>
+                    <div class="details">ID: ${p.id} | ${p.ville || "Ville ?"} | ${p.sexe || ""} | ${p.dateNaissance || ""}</div>
+                </div>
+                ${isRunning ? '<span class="sim-badge">EN COURS</span>' : ''}
+            </div>`;
+    }).join("");
+}
+
+// ── Search filter ──────────────────────────────────────────────────
+document.getElementById("searchBox").addEventListener("input", (e) => {
+    const q = e.target.value.toLowerCase();
+    const filtered = patients.filter(p => {
+        const user = p.user || {};
+        const text = `${user.prenom} ${user.nom} ${p.ville} ${p.id}`.toLowerCase();
+        return text.includes(q);
+    });
+    renderPatients(filtered);
+});
+
+// ── Select a patient ───────────────────────────────────────────────
+async function selectPatient(id) {
+    selectedPatient = patients.find(p => p.id === id);
+    if (!selectedPatient) return;
+
+    const user = selectedPatient.user || {};
+    document.getElementById("selectedInfo").innerHTML =
+        `Patient : <strong>${user.prenom || ""} ${user.nom || ""}</strong> (ID: ${id})`;
+
+    document.getElementById("btnStart").disabled = false;
+    document.getElementById("btnStop").disabled = !runningSimulations.has(String(id));
+
+    // Re-render list to update active state
+    renderPatients(patients.filter(p => {
+        const q = document.getElementById("searchBox").value.toLowerCase();
+        if (!q) return true;
+        const u = p.user || {};
+        return `${u.prenom} ${u.nom} ${p.ville} ${p.id}`.toLowerCase().includes(q);
+    }));
+
+    // Fetch treatments for this patient
+    await loadTreatments(id);
+}
+
+// ── Load treatments & zones ────────────────────────────────────────
+async function loadTreatments(patientId) {
+    selectedTraitement = null;
+    try {
+        const res = await fetch(`${BACKEND}/treatments/patient/${patientId}`);
+        if (!res.ok) throw new Error(res.statusText);
+        const affectations = await res.json();
+
+        if (affectations.length > 0) {
+            // Use the first active treatment
+            const aff = affectations[0];
+            selectedTraitement = aff.traitements;
+
+            const info = document.getElementById("selectedInfo");
+            const traitementName = selectedTraitement ? selectedTraitement.titre : "?";
+            info.innerHTML += ` | Traitement : <strong>${traitementName}</strong>`;
+
+            // Load zones for this treatment
+            if (selectedTraitement) {
+                await loadZones(selectedTraitement.idTraitement);
+            }
+        }
+    } catch (e) {
+        console.warn("Impossible de charger les traitements:", e);
+    }
+}
+
+// ── Load authorized zones and display on map ───────────────────────
+async function loadZones(traitementId) {
+    zonesLayer.clearLayers();
+    try {
+        const res = await fetch(`${BACKEND}/authorized-zones/traitement/${traitementId}`);
+        if (!res.ok) return;
+        const zones = await res.json();
+
+        zones.forEach(z => {
+            if (!z.latitude || !z.longitude) return;
+
+            // Draw zone circle
+            const circle = L.circle([z.latitude, z.longitude], {
+                radius: z.rayon || 200,
+                color: z.actif ? "#1a73e8" : "#999",
+                fillColor: z.actif ? "#1a73e8" : "#999",
+                fillOpacity: 0.1,
+                weight: 2,
+                dashArray: z.actif ? null : "5,5"
+            }).addTo(zonesLayer);
+
+            circle.bindPopup(`<b>${z.nom || "Zone"}</b><br>Rayon: ${z.rayon}m<br>${z.actif ? "Active" : "Inactive"}`);
+
+            // Center map on the first zone
+            map.setView([z.latitude, z.longitude], 16);
+        });
+    } catch (e) {
+        console.warn("Impossible de charger les zones:", e);
+    }
+}
+
+// ── Start simulation ───────────────────────────────────────────────
+document.getElementById("btnStart").addEventListener("click", async () => {
+    if (!selectedPatient) return;
+
+    const user = selectedPatient.user || {};
+    const userName = `${user.prenom || "patient"}_${user.nom || selectedPatient.id}`;
+    const traitementId = selectedTraitement ? selectedTraitement.idTraitement : 1;
+
+    try {
+        // Start GPS server first
+        await fetch(`${LAUNCHER}/gps-server/start`, { method: "POST" });
+
+        // Start simulation
+        const res = await fetch(`${LAUNCHER}/simulation/start`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                patient_id: selectedPatient.id,
+                user_name: userName,
+                traitement_id: traitementId
+            })
+        });
+
+        if (res.ok) {
+            runningSimulations.add(String(selectedPatient.id));
+            document.getElementById("btnStop").disabled = false;
+            document.getElementById("btnStopAll").disabled = false;
+            startPolling();
+            renderPatients(patients);
+        }
+    } catch (e) {
+        alert("Erreur: Verifiez que app.py (launcher) tourne sur le port 5000.\n" + e.message);
+    }
+});
+
+// ── Stop simulation ────────────────────────────────────────────────
+document.getElementById("btnStop").addEventListener("click", async () => {
+    if (!selectedPatient) return;
+
+    try {
+        await fetch(`${LAUNCHER}/simulation/stop`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ patient_id: selectedPatient.id })
+        });
+
+        runningSimulations.delete(String(selectedPatient.id));
+        document.getElementById("btnStop").disabled = true;
+
+        // Remove marker for this patient
+        const user = selectedPatient.user || {};
+        const userName = `${user.prenom || "patient"}_${user.nom || selectedPatient.id}`;
+        if (markerMap[userName]) {
+            markersLayer.removeLayer(markerMap[userName]);
+            delete markerMap[userName];
+        }
+
+        if (runningSimulations.size === 0) {
+            stopPolling();
+            document.getElementById("btnStopAll").disabled = true;
+        }
+        renderPatients(patients);
+    } catch (e) {
+        console.error("Erreur arret simulation:", e);
+    }
+});
+
+// ── Stop all simulations ───────────────────────────────────────────
+document.getElementById("btnStopAll").addEventListener("click", async () => {
+    try {
+        await fetch(`${LAUNCHER}/simulation/stop-all`, { method: "POST" });
+        runningSimulations.clear();
+        markersLayer.clearLayers();
+        Object.keys(markerMap).forEach(k => delete markerMap[k]);
+        stopPolling();
+        document.getElementById("btnStop").disabled = true;
+        document.getElementById("btnStopAll").disabled = true;
+        renderPatients(patients);
+    } catch (e) {
+        console.error("Erreur arret global:", e);
+    }
+});
+
+// ── Poll positions from Spring Boot ────────────────────────────────
+function startPolling() {
+    if (pollingTimer) return;
+    pollPositions();
+    pollingTimer = setInterval(pollPositions, POLL_INTERVAL);
+}
+
+function stopPolling() {
+    if (pollingTimer) {
+        clearInterval(pollingTimer);
+        pollingTimer = null;
+    }
+}
+
+async function pollPositions() {
+    try {
+        const res = await fetch(`${BACKEND}/positions`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const positions = data.positions || [];
+
+        document.getElementById("posCount").textContent = positions.length;
+        document.getElementById("lastUpdate").textContent = new Date().toLocaleTimeString("fr-FR");
+
+        positions.forEach(pos => {
+            updateMarker(pos);
+        });
+
+        // Update coords display for selected patient
+        if (selectedPatient) {
+            const user = selectedPatient.user || {};
+            const userName = `${user.prenom || "patient"}_${user.nom || selectedPatient.id}`;
+            const p = positions.find(pos => pos.user_id === userName);
+            if (p) {
+                document.getElementById("coordsDisplay").textContent =
+                    `Lat: ${p.lat.toFixed(6)}  |  Lon: ${p.lon.toFixed(6)}`;
+            }
+        }
+    } catch (e) {
+        // Backend may be temporarily unreachable
+    }
+}
+
+// ── Update / create marker on map ──────────────────────────────────
+function updateMarker(pos) {
+    const key = pos.user_id;
+    if (markerMap[key]) {
+        markerMap[key].setLatLng([pos.lat, pos.lon]);
+    } else {
+        const icon = L.divIcon({
+            className: "",
+            html: `<div style="
+                background: #e53935;
+                width: 14px; height: 14px;
+                border-radius: 50%;
+                border: 3px solid #fff;
+                box-shadow: 0 1px 4px rgba(0,0,0,.4);
+            "></div>`,
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        });
+        const marker = L.marker([pos.lat, pos.lon], { icon })
+            .addTo(markersLayer)
+            .bindPopup(`<b>${key}</b>`);
+        markerMap[key] = marker;
+    }
+}
+
+// ── Backend status check ───────────────────────────────────────────
+function updateBackendStatus(ok) {
+    const el = document.getElementById("backendStatus");
+    if (ok) {
+        el.textContent = "Backend: connecte";
+        el.className = "status-badge connected";
+    } else {
+        el.textContent = "Backend: deconnecte";
+        el.className = "status-badge disconnected";
+    }
+}
+
+// ── Boot ───────────────────────────────────────────────────────────
+initMap();
+loadPatients();
+
+// Refresh simulation status periodically
+setInterval(async () => {
+    try {
+        const res = await fetch(`${LAUNCHER}/simulation/status`);
+        if (!res.ok) return;
+        const status = await res.json();
+        let anyRunning = false;
+        for (const [pid, st] of Object.entries(status)) {
+            if (st === "running") {
+                runningSimulations.add(pid);
+                anyRunning = true;
+            } else {
+                runningSimulations.delete(pid);
+            }
+        }
+        if (anyRunning && !pollingTimer) startPolling();
+        if (!anyRunning && pollingTimer) stopPolling();
+        document.getElementById("btnStopAll").disabled = runningSimulations.size === 0;
+    } catch (e) { /* launcher not running yet */ }
+}, 3000);
+</script>
+
+</body>
+</html>

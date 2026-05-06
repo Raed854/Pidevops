@@ -1,0 +1,1808 @@
+package MemorIA.service;
+
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import MemorIA.dto.*;
+import MemorIA.entity.*;
+import MemorIA.entity.alerts.Alert;
+import MemorIA.entity.alerts.AlertRecipient;
+import MemorIA.entity.alerts.AlertType;
+import MemorIA.entity.Planning.Reminder;
+import MemorIA.entity.Planning.ReminderType;
+import MemorIA.entity.Planning.Priority;
+import MemorIA.repository.*;
+
+/**
+ * Essential Alert Service - handles basic alert CRUD operations
+ * Complex dashboard and analytics logic is in AlertServiceEnhanced
+ */
+@Service
+@RequiredArgsConstructor
+public class AlertService {
+    
+    private static final Logger log = LoggerFactory.getLogger(AlertService.class);
+    
+    private final AlertRepository alertRepository;
+    private final AlertRecipientRepository alertRecipientRepository;
+    private final PatientRepository patientRepository;
+    private final UserRepository userRepository;
+    private final CaregiverLinkRepository caregiverLinkRepository;
+    private final Map<Long, List<ChatMessageDTO>> chatMessagesByPatient = new ConcurrentHashMap<>();
+
+    /**
+     * Gets alerts for current user based on role
+     */
+    @Transactional(readOnly = true)
+    public List<AlertDTO> getAlertsForCurrentUser(Long userId, String rawRole) {
+        Long currentUserId = requireUserId(userId);
+        String role = requireSupportedRole(rawRole);
+
+        log.info("[alerts] fetching alerts for userId={} role={}", currentUserId, role);
+
+        try {
+            if ("DOCTOR".equals(role)) {
+                List<Alert> allAlerts = safeFindAllAlerts(currentUserId);
+                return mapAlertsToDtoSafe(allAlerts, currentUserId, role);
+            }
+
+            if ("CAREGIVER".equals(role)) {
+                Set<Long> patientIds = getAssignedPatientIds(currentUserId);
+                if (patientIds.isEmpty()) {
+                    return List.of();
+                }
+                List<Alert> alerts = safeFindByPatientIds(patientIds, currentUserId);
+                return mapAlertsToDtoSafe(alerts, currentUserId, role);
+            }
+
+            if ("PATIENT".equals(role)) {
+                Long patientId = findPatientIdForUser(currentUserId);
+                List<Alert> alerts = safeFindByPatientId(patientId, currentUserId);
+                return mapAlertsToDtoSafe(alerts, currentUserId, role);
+            }
+
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Role not authorized for alerts");
+        } catch (ResponseStatusException ex) {
+            log.warn("[alerts] getAlertsForCurrentUser business error userId={} role={} status={} reason={}",
+                    currentUserId, role, ex.getStatusCode().value(), ex.getReason());
+            throw ex;
+        } catch (Exception ex) {
+            log.error("[alerts] unexpected failure while loading alerts for userId={} role={}: {}",
+                    currentUserId, role, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to load alerts");
+        }
+    }
+
+    /**
+     * Creates a new alert with strict validation
+     */
+    @Transactional
+    public AlertDTO createAlert(CreateAlertRequest request, Long userId, String rawRole) {
+        Long currentUserId = requireUserId(userId);
+        String role = requireSupportedRole(rawRole);
+
+        if (!"CAREGIVER".equals(role) && !"DOCTOR".equals(role)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only caregiver or doctor can create alerts");
+        }
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert payload is required");
+        }
+        if (request.type() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert type is required");
+        }
+        if (request.severity() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert severity is required");
+        }
+
+        log.info("[alerts] creating alert by userId={} role={} type={} severity={}",
+                currentUserId, role, request.type(), request.severity());
+
+        try {
+            User creator = userRepository.findById(currentUserId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
+
+            Patient patient = resolvePatientForCreate(currentUserId, role, request.patientId());
+
+            Alert alert = new Alert();
+            alert.setPatient(patient);
+            alert.setCreatedBy(creator);
+            alert.setType(request.type());
+            alert.setTitle(sanitizeTitle(request.title()));
+            alert.setDescription(sanitizeDescription(request.description()));
+            alert.setSeverity(request.severity());
+            alert.setStatus(Alert.AlertStatus.UNREAD);
+            alert.setRead(false);
+
+            if (request.assignedToUserId() != null) {
+                User assignedUser = userRepository.findById(request.assignedToUserId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Assigned user not found"));
+                alert.setAssignedToUser(assignedUser);
+                alert.setAssignedAt(LocalDateTime.now());
+            }
+
+            Alert saved = alertRepository.save(alert);
+
+            try {
+                createRecipientsForAlert(saved, creator, patient);
+            } catch (Exception recipientError) {
+                log.error("[alerts] alert {} created but recipient distribution failed: {}",
+                        saved.getId(), recipientError.getMessage(), recipientError);
+            }
+
+            log.info("[alerts] alert {} created for patientId={} by userId={}",
+                    saved.getId(), patient.getId(), currentUserId);
+            return toDto(saved);
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("[alerts] unexpected error while creating alert for userId={}: {}",
+                    currentUserId, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to create alert");
+        }
+    }
+
+    /**
+     * Creates a missed reminder alert
+     */
+    @Transactional
+    public AlertDTO createReminderMissedAlert(Reminder reminder) {
+        if (reminder == null || reminder.getIdReminder() == null || reminder.getPatientId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reminder payload is incomplete");
+        }
+
+        Patient patient = patientRepository.findById(reminder.getPatientId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found for reminder"));
+
+        Alert alert = new Alert();
+        alert.setPatient(patient);
+        alert.setType(AlertType.REMINDER_MISSED);
+        alert.setTitle("Missed reminder");
+        alert.setDescription(buildReminderMissedMessage(reminder));
+        alert.setSeverity(calculateReminderSeverity(reminder));
+        alert.setStatus(Alert.AlertStatus.UNREAD);
+        alert.setRead(false);
+        alert.setLinkedReminderId(reminder.getIdReminder());
+        alert.setAutoGenerated(true);
+
+        Alert saved = alertRepository.save(alert);
+
+        try {
+            createRecipientsForAlert(saved, null, patient);
+        } catch (Exception ex) {
+            log.error("Auto alert {} saved but recipient distribution failed: {}", saved.getId(), ex.getMessage(), ex);
+        }
+
+        return toDto(saved);
+    }
+
+    /**
+     * Resolves an alert
+     */
+    @Transactional
+    public AlertDTO resolveAlert(Long alertId, Long userId, String rawRole) {
+        Long currentUserId = requireUserId(userId);
+        String role = normalizeRole(rawRole);
+
+        log.info("Resolving alert {} by user {} with role {}", alertId, currentUserId, role);
+
+        try {
+            Alert alert = findAuthorizedAlert(alertId, currentUserId, role);
+            User resolver = userRepository.findById(currentUserId).orElse(null);
+
+            alert.setStatus(Alert.AlertStatus.RESOLVED);
+            alert.setRead(true);
+            alert.setResolvedAt(LocalDateTime.now());
+            alert.setResolvedByUser(resolver);
+
+            Alert saved = alertRepository.save(alert);
+            log.info("Alert {} resolved successfully by user {}", alertId, currentUserId);
+            return toDto(saved);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error resolving alert {}: {}", alertId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to resolve alert");
+        }
+    }
+
+    /**
+     * Marks an alert as read
+     */
+    @Transactional
+    public AlertDTO markRead(Long alertId, Long userId, String rawRole) {
+        Long currentUserId = requireUserId(userId);
+        String role = normalizeRole(rawRole);
+
+        log.debug("Marking alert {} as read by user {}", alertId, currentUserId);
+
+        try {
+            Alert alert = findAuthorizedAlert(alertId, currentUserId, role);
+            alert.setRead(true);
+
+            if (alert.getStatus() == Alert.AlertStatus.UNREAD) {
+                alert.setStatus(Alert.AlertStatus.IN_PROGRESS);
+            }
+
+            Alert saved = alertRepository.save(alert);
+            log.debug("Alert {} marked as read", alertId);
+            return toDto(saved);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error marking alert {} as read: {}", alertId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to mark alert as read");
+        }
+    }
+
+    /**
+     * Marks an alert as in progress
+     */
+    @Transactional
+    public AlertDTO markInProgress(Long alertId, Long userId, String rawRole) {
+        Long currentUserId = requireUserId(userId);
+        String role = normalizeRole(rawRole);
+
+        log.debug("Marking alert {} as in progress by user {}", alertId, currentUserId);
+
+        try {
+            Alert alert = findAuthorizedAlert(alertId, currentUserId, role);
+            alert.setStatus(Alert.AlertStatus.IN_PROGRESS);
+            alert.setRead(true);
+
+            if (alert.getAssignedToUser() == null) {
+                userRepository.findById(currentUserId).ifPresent(user -> {
+                    alert.setAssignedToUser(user);
+                    alert.setAssignedAt(LocalDateTime.now());
+                });
+            }
+
+            Alert saved = alertRepository.save(alert);
+            log.debug("Alert {} marked as in progress", alertId);
+            return toDto(saved);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error marking alert {} as in progress: {}", alertId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to mark alert as in progress");
+        }
+    }
+
+    /**
+     * Deletes an alert
+     */
+    @Transactional
+    public void deleteAlert(Long alertId, Long userId, String rawRole) {
+        Long currentUserId = requireUserId(userId);
+        String role = normalizeRole(rawRole);
+
+        log.info("Deleting alert {} by user {} with role {}", alertId, currentUserId, role);
+
+        if (!"CAREGIVER".equals(role) && !"DOCTOR".equals(role)) {
+            log.warn("Role {} not authorized to delete alerts", role);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only caregiver or doctor can delete alerts");
+        }
+
+        try {
+            Alert alert = findAuthorizedAlert(alertId, currentUserId, role);
+            alertRecipientRepository.deleteByAlertId(alert.getId());
+            alertRepository.delete(alert);
+            log.info("Alert {} deleted successfully by user {}", alertId, currentUserId);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error deleting alert {}: {}", alertId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete alert");
+        }
+    }
+
+    // ==================== Helper Methods ====================
+
+    private Alert findAuthorizedAlert(Long alertId, Long userId, String role) {
+        Alert alert = alertRepository.findByIdWithRelations(alertId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Alert not found"));
+
+        if ("DOCTOR".equals(role)) {
+            return alert;
+        }
+
+        Long patientId = safePatientId(alert);
+
+        if ("CAREGIVER".equals(role)) {
+            verifyCaregiveAccessToPatient(userId, patientId);
+            return alert;
+        }
+
+        if ("PATIENT".equals(role)) {
+            Long currentPatientId = patientRepository.findByUserId(userId)
+                    .map(Patient::getId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Patient profile not found"));
+
+            if (!Objects.equals(currentPatientId, patientId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot access this alert");
+            }
+            return alert;
+        }
+
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Role not authorized for alerts");
+    }
+
+    private void verifyCaregiveAccessToPatient(Long caregiverUserId, Long patientId) {
+        if (caregiverUserId == null || patientId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Caregiver and patient id are required");
+        }
+
+        try {
+            String caregiverEmail = resolveUserEmail(caregiverUserId);
+
+            boolean hasAccess = caregiverLinkRepository
+                    .findByCaregiverUserAndPatientId(caregiverUserId, caregiverEmail, patientId)
+                    .isPresent();
+
+            if (!hasAccess) {
+                boolean hasLegacy = patientRepository.findById(patientId)
+                        .map(Patient::getAccompagnant)
+                        .map(acc -> acc == null ? null : acc.getUser())
+                        .map(User::getId)
+                        .map(id -> Objects.equals(id, caregiverUserId))
+                        .orElse(false);
+
+                if (!hasLegacy) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No access to this patient");
+                }
+            }
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Caregiver access verification failed caregiverId={} patientId={}: {}",
+                    caregiverUserId, patientId, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Unable to verify access");
+        }
+    }
+
+    private Patient resolvePatientForCreate(Long caregiverUserId, String role, Long requestedPatientId) {
+        if ("DOCTOR".equals(role)) {
+            if (requestedPatientId == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Doctor must specify patientId");
+            }
+            return patientRepository.findById(requestedPatientId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found"));
+        }
+
+        String caregiverEmail = resolveUserEmail(caregiverUserId);
+        Map<Long, Patient> candidates = new LinkedHashMap<>();
+
+        caregiverLinkRepository.findPrimaryAcceptedByCaregiverUser(caregiverUserId, caregiverEmail)
+                .map(CaregiverLink::getPatient)
+                .ifPresent(p -> candidates.putIfAbsent(p.getId(), p));
+
+        caregiverLinkRepository.findAcceptedByCaregiverUser(caregiverUserId, caregiverEmail).stream()
+                .map(CaregiverLink::getPatient)
+                .forEach(p -> candidates.putIfAbsent(p.getId(), p));
+
+        if (candidates.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No linked patient found for this caregiver");
+        }
+
+        return candidates.values().iterator().next();
+    }
+
+    private void createRecipientsForAlert(Alert alert, User creator, Patient patient) {
+        List<AlertRecipient> recipients = new ArrayList<>();
+
+        if (creator != null && creator.getId() != null) {
+            AlertRecipient r = new AlertRecipient();
+            r.setAlert(alert);
+            r.setUser(creator);
+            r.setRecipientRole("DOCTOR".equals(normalizeRole(creator.getRole())) 
+                ? AlertRecipient.RecipientRole.DOCTOR 
+                : AlertRecipient.RecipientRole.CAREGIVER);
+            recipients.add(r);
+        }
+
+        if (patient != null && patient.getUser() != null && patient.getUser().getId() != null) {
+            if (creator == null || !Objects.equals(patient.getUser().getId(), creator.getId())) {
+                AlertRecipient r = new AlertRecipient();
+                r.setAlert(alert);
+                r.setUser(patient.getUser());
+                r.setRecipientRole(AlertRecipient.RecipientRole.PATIENT);
+                recipients.add(r);
+            }
+        }
+
+        if (!recipients.isEmpty()) {
+            alertRecipientRepository.saveAll(recipients);
+        }
+    }
+
+    private Set<Long> getAssignedPatientIds(Long caregiverUserId) {
+        if (caregiverUserId == null) {
+            return Set.of();
+        }
+
+        String caregiverEmail = resolveUserEmail(caregiverUserId);
+
+        Set<Long> fromLinks = caregiverLinkRepository.findAcceptedByCaregiverUser(caregiverUserId, caregiverEmail).stream()
+                .filter(Objects::nonNull)
+                .map(CaregiverLink::getPatient)
+                .filter(Objects::nonNull)
+                .map(Patient::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (!fromLinks.isEmpty()) {
+            return fromLinks;
+        }
+
+        return patientRepository.findAllByAccompagnantUserId(caregiverUserId).stream()
+                .filter(Objects::nonNull)
+                .map(Patient::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    private Long findPatientIdForUser(Long currentUserId) {
+        return patientRepository.findByUserId(currentUserId)
+                .map(Patient::getId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient profile not found"));
+    }
+
+    private List<AlertDTO> mapAlertsToDtoSafe(List<Alert> alerts, Long userId, String role) {
+        if (alerts == null || alerts.isEmpty()) {
+            return List.of();
+        }
+
+        return alerts.stream()
+                .filter(Objects::nonNull)
+                .map(this::toDto)
+                .toList();
+    }
+
+    private List<Alert> safeFindAllAlerts(Long userId) {
+        try {
+            return alertRepository.findAllByOrderByCreatedAtDesc();
+        } catch (Exception ex) {
+            log.error("[alerts] failed loading all alerts for userId={}: {}", userId, ex.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Failed to load alerts");
+        }
+    }
+
+    private List<Alert> safeFindByPatientIds(Set<Long> patientIds, Long userId) {
+        try {
+            return alertRepository.findByPatientIdInOrderByCreatedAtDesc(patientIds);
+        } catch (Exception ex) {
+            log.error("[alerts] failed loading alerts for userId={}: {}", userId, ex.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Failed to load alerts");
+        }
+    }
+
+    private List<Alert> safeFindByPatientId(Long patientId, Long userId) {
+        try {
+            return alertRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
+        } catch (Exception ex) {
+            log.error("[alerts] failed loading alerts for patientId={}: {}", patientId, ex.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Failed to load alerts");
+        }
+    }
+
+    private String requireSupportedRole(String rawRole) {
+        String role = normalizeRole(rawRole);
+        if (role.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User role cannot be resolved");
+        }
+        return role;
+    }
+
+    private String sanitizeTitle(String text) {
+        String value = text == null ? "" : text.trim();
+        if (value.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert title is required");
+        }
+        return value;
+    }
+
+    private String sanitizeDescription(String text) {
+        String value = text == null ? "" : text.trim();
+        if (value.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert description is required");
+        }
+        return value;
+    }
+
+    private Alert.AlertSeverity calculateReminderSeverity(Reminder reminder) {
+        if (reminder.getType() == ReminderType.MEDICATION_VITAL || reminder.getType() == ReminderType.MEDICAL_APPOINTMENT) {
+            return Alert.AlertSeverity.CRITICAL;
+        }
+        if (reminder.getPriority() == Priority.URGENT || reminder.getPriority() == Priority.HIGH) {
+            return Alert.AlertSeverity.HIGH;
+        }
+        if (reminder.getCriticalityLevel() != null && reminder.getCriticalityLevel() >= 50) {
+            return Alert.AlertSeverity.MEDIUM;
+        }
+        return Alert.AlertSeverity.LOW;
+    }
+
+    private String buildReminderMissedMessage(Reminder reminder) {
+        String title = reminder.getTitle() == null || reminder.getTitle().isBlank() ? "reminder" : reminder.getTitle().trim();
+        return "Reminder '" + title + "' was not confirmed.";
+    }
+
+    private Long safePatientId(Alert alert) {
+        if (alert.getPatient() == null || alert.getPatient().getId() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Alert is not attached to a patient");
+        }
+        return alert.getPatient().getId();
+    }
+
+    private Long requireUserId(Long userId) {
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user id is required");
+        }
+        return userId;
+    }
+
+    private String normalizeRole(String rawRole) {
+        if (rawRole == null) {
+            return "";
+        }
+
+        String role = rawRole.trim().toUpperCase(Locale.ROOT)
+                .replace("[", "").replace("]", "")
+                .split("[,;\\s]+")[0];
+
+        if ("SOIGNANT".equals(role) || "DOCTOR".equals(role) || "MEDECIN".equals(role)) {
+            return "DOCTOR";
+        }
+        if ("ACCOMPAGNANT".equals(role) || "AIDANT".equals(role) || "CAREGIVER".equals(role)) {
+            return "CAREGIVER";
+        }
+        if ("PATIENT".equals(role)) {
+            return "PATIENT";
+        }
+        return "";
+    }
+
+    private String resolveUserEmail(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userRepository.findById(userId)
+                .map(User::getEmail)
+                .map(String::trim)
+                .filter(e -> !e.isBlank())
+                .orElse(null);
+    }
+
+    private String toDisplayName(User user) {
+        if (user == null) {
+            return null;
+        }
+        String firstName = user.getPrenom() == null ? "" : user.getPrenom().trim();
+        String lastName = user.getNom() == null ? "" : user.getNom().trim();
+        String fullName = (firstName + " " + lastName).trim();
+        return fullName.isBlank() ? user.getEmail() : fullName;
+    }
+
+    private AlertDTO toDto(Alert alert) {
+        String patientName = null;
+        Long patientId = null;
+
+        if (alert.getPatient() != null) {
+            patientId = alert.getPatient().getId();
+            patientName = toDisplayName(alert.getPatient().getUser());
+        }
+
+        Integer gravityScore = calculateGravityScore(alert);
+        String gravityExplanation = generateGravityExplanation(alert, gravityScore);
+        String color = getColorFromGravityScore(gravityScore);
+        boolean isCritical = gravityScore >= 70 || Alert.AlertSeverity.CRITICAL.equals(alert.getSeverity());
+
+        return new AlertDTO(
+                alert.getId(),
+                patientId,
+                patientName,
+                alert.getTitle(),
+                alert.getDescription(),
+                alert.getType(),
+                alert.getStatus(),
+                alert.getSeverity(),
+                alert.getCreatedAt(),
+                alert.getUpdatedAt(),
+                alert.getAssignedAt(),
+                alert.getResolvedAt(),
+                alert.isRead(),
+                alert.getCreatedBy() != null ? alert.getCreatedBy().getId() : null,
+                toDisplayName(alert.getCreatedBy()),
+                alert.getAssignedToUser() != null ? alert.getAssignedToUser().getId() : null,
+                toDisplayName(alert.getAssignedToUser()),
+                alert.getResolvedByUser() != null ? alert.getResolvedByUser().getId() : null,
+                toDisplayName(alert.getResolvedByUser()),
+                alert.getReminderId(),
+                alert.isAutoGenerated(),
+                gravityScore,
+                gravityExplanation,
+                color,
+                isCritical,
+                alert.getClinicalNote()
+        );
+    }
+
+    /**
+     * Gets chat messages for an alert associated with a patient
+     */
+    @Transactional(readOnly = true)
+    public List<ChatMessageDTO> getChatMessages(Long patientId, Long userId, String rawRole) {
+        Long currentUserId = requireUserId(userId);
+        String role = requireSupportedRole(rawRole);
+
+        if (patientId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Patient ID is required");
+        }
+        if (!patientRepository.existsById(patientId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found");
+        }
+
+        log.debug("[chat] Getting chat messages for patientId={} userId={} role={}", patientId, currentUserId, role);
+
+        try {
+            // Verify access to the patient
+            if ("DOCTOR".equals(role)) {
+                // Doctors can see all patient chats
+            } else if ("CAREGIVER".equals(role)) {
+                // Caregiver/Accompagnant can participate in patient chat via role-based access.
+            } else if ("PATIENT".equals(role)) {
+                // Patient can only see their own chats
+                Long currentPatientId = findPatientIdForUser(currentUserId);
+                if (!Objects.equals(currentPatientId, patientId)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot access this chat");
+                }
+            }
+
+            List<ChatMessageDTO> history = chatMessagesByPatient.getOrDefault(patientId, List.of());
+            return history.stream()
+                    .sorted(Comparator.comparing(ChatMessageDTO::sentAt))
+                    .toList();
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("[chat] Error getting messages for patientId={}: {}", patientId, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to load chat messages");
+        }
+    }
+
+    /**
+     * Sends a chat message for an alert
+     */
+    @Transactional
+    public ChatMessageDTO sendChatMessage(SendChatMessageRequest request, Long userId, String rawRole) {
+        Long currentUserId = requireUserId(userId);
+        String role = requireSupportedRole(rawRole);
+
+        log.debug("[chat] Sending message from userId={} role={}", currentUserId, role);
+
+        try {
+            if (request == null || request.patientId() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Patient ID is required");
+            }
+            if (!patientRepository.existsById(request.patientId())) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found");
+            }
+
+            // Verify access to the patient
+            if ("DOCTOR".equals(role)) {
+                // Doctors can send messages
+            } else if ("CAREGIVER".equals(role)) {
+                // Caregiver/Accompagnant can send messages in patient chat via role-based access.
+            } else if ("PATIENT".equals(role)) {
+                Long currentPatientId = findPatientIdForUser(currentUserId);
+                if (!Objects.equals(currentPatientId, request.patientId())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot send messages for this patient");
+                }
+            }
+
+                ChatMessageDTO message = new ChatMessageDTO(
+                    request.patientId(),
+                    currentUserId,
+                    role,
+                    toDisplayName(userRepository.findById(currentUserId).orElse(null)),
+                    request.content(),
+                    LocalDateTime.now()
+            );
+
+                chatMessagesByPatient
+                    .computeIfAbsent(request.patientId(), ignored -> new CopyOnWriteArrayList<>())
+                    .add(message);
+
+                return message;
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("[chat] Error sending message: {}", ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send message");
+        }
+    }
+
+    /**
+     * ============================================
+     * ADVANCED ALERT ANALYTICS & BUSINESS LOGIC
+     * ============================================
+     */
+
+    /**
+     * Calculate gravity score (0-100) based on alert metadata and historical patterns
+     * Rules:
+     * +40 if reminder missed (MEDICATION_MISSED, REMINDER_MISSED)
+     * +30 if severity is CRITICAL
+     * +20 if severity is HIGH/ELEVE
+     * +10 if escalated alert
+     * +5 if unread
+     * Max: 100
+     */
+    @Transactional(readOnly = true)
+    public Integer calculateGravityScore(Alert alert) {
+        if (alert == null) {
+            return 0;
+        }
+
+        int score = 0;
+        
+        // +40 if reminder missed
+        if (alert.isAutoGenerated() && alert.getReminderId() != null) {
+            if (AlertType.MEDICATION_MISSED.equals(alert.getType()) ||
+                AlertType.REMINDER_MISSED.equals(alert.getType())) {
+                score += 40;
+                log.debug("[alerts] +40 for reminder missed alert id={}", alert.getId());
+            }
+        }
+
+        // +30 if severity is CRITICAL
+        if (Alert.AlertSeverity.CRITICAL.equals(alert.getSeverity())) {
+            score += 30;
+            log.debug("[alerts] +30 for CRITICAL severity alert id={}", alert.getId());
+        } else if (Alert.AlertSeverity.HIGH.equals(alert.getSeverity()) ||
+                   Alert.AlertSeverity.ELEVE.equals(alert.getSeverity())) {
+            // +20 for HIGH severity
+            score += 20;
+            log.debug("[alerts] +20 for HIGH severity alert id={}", alert.getId());
+        }
+
+        // +10 if escalated
+        if (alert.isEscalated()) {
+            score += 10;
+            log.debug("[alerts] +10 for escalated alert id={}", alert.getId());
+        }
+
+        // +5 if unread (requires attention)
+        if (!alert.isRead()) {
+            score += 5;
+            log.debug("[alerts] +5 for unread alert id={}", alert.getId());
+        }
+
+        // Cap at 100
+        score = Math.min(score, 100);
+        
+        log.info("[alerts] Calculated gravity_score={} for alert id={} type={} severity={}",
+                score, alert.getId(), alert.getType(), alert.getSeverity());
+        
+        return score;
+    }
+
+    /**
+     * Generate human-readable explanation for gravity score
+     */
+    @Transactional(readOnly = true)
+    public String generateGravityExplanation(Alert alert, Integer gravityScore) {
+        if (alert == null || gravityScore == null) {
+            return "Unable to assess";
+        }
+
+        StringBuilder explanation = new StringBuilder();
+        
+        if (gravityScore >= 70) {
+            explanation.append("CRITICAL: ");
+            if (alert.isAutoGenerated() && alert.getReminderId() != null) {
+                explanation.append("Reminder missed ");
+            }
+            if (Alert.AlertSeverity.CRITICAL.equals(alert.getSeverity())) {
+                explanation.append("+ Critical severity ");
+            }
+        } else if (gravityScore >= 40) {
+            explanation.append("HIGH: ");
+            if (Alert.AlertSeverity.HIGH.equals(alert.getSeverity())) {
+                explanation.append("High severity alert");
+            } else {
+                explanation.append("Requires attention");
+            }
+        } else if (gravityScore >= 20) {
+            explanation.append("MEDIUM: ");
+            explanation.append("Routine monitoring required");
+        } else {
+            explanation.append("LOW: ");
+            explanation.append("Standard alert");
+        }
+
+        return explanation.toString();
+    }
+
+    /**
+     * Determine alert color based on gravity score
+     * RED: gravityScore >= 70
+     * ORANGE: gravityScore 40-69
+     * YELLOW: gravityScore 20-39
+     * GREEN: gravityScore < 20
+     */
+    public String getColorFromGravityScore(Integer gravityScore) {
+        if (gravityScore == null) {
+            gravityScore = 0;
+        }
+        
+        if (gravityScore >= 70) return "RED";
+        if (gravityScore >= 40) return "ORANGE";
+        if (gravityScore >= 20) return "YELLOW";
+        return "GREEN";
+    }
+
+    /**
+     * Generate daily summary for dashboard (AI-like message)
+     */
+    @Transactional(readOnly = true)
+    public String generateDailySummary(Long patientId) {
+        if (patientId == null) {
+            return "Unable to generate summary";
+        }
+
+        try {
+            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+            List<Alert> todayAlerts = alertRepository.findByPatientIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
+                    patientId, startOfDay
+            );
+
+            if (todayAlerts.isEmpty()) {
+                return "No alerts today. Patient is stable.";
+            }
+
+            int criticalCount = (int) todayAlerts.stream()
+                    .filter(a -> Alert.AlertSeverity.CRITICAL.equals(a.getSeverity()))
+                    .count();
+            
+            int highCount = (int) todayAlerts.stream()
+                    .filter(a -> Alert.AlertSeverity.HIGH.equals(a.getSeverity()) || 
+                               Alert.AlertSeverity.ELEVE.equals(a.getSeverity()))
+                    .count();
+            
+            int medicationMissed = (int) todayAlerts.stream()
+                    .filter(a -> AlertType.MEDICATION_MISSED.equals(a.getType()))
+                    .count();
+
+            StringBuilder summary = new StringBuilder();
+            summary.append("Daily Summary (").append(todayAlerts.size()).append(" alerts): ");
+
+            if (criticalCount > 0) {
+                summary.append(criticalCount).append(" critical issue").append(criticalCount > 1 ? "s" : "");
+                if (highCount > 0 || medicationMissed > 0) summary.append(", ");
+            }
+
+            if (highCount > 0) {
+                summary.append(highCount).append(" high-priority alert").append(highCount > 1 ? "s" : "");
+                if (medicationMissed > 0) summary.append(", ");
+            }
+
+            if (medicationMissed > 0) {
+                summary.append(medicationMissed).append(" medication reminder").append(medicationMissed > 1 ? "s" : "");
+            }
+
+            summary.append(". ");
+            
+            if (criticalCount > 0 || highCount > 0) {
+                summary.append("Immediate attention required.");
+            } else {
+                summary.append("Routine monitoring sufficient.");
+            }
+
+            return summary.toString();
+        } catch (Exception ex) {
+            log.error("[alerts] Error generating daily summary for patientId={}: {}", patientId, ex.getMessage());
+            return "Unable to generate summary";
+        }
+    }
+
+    /**
+     * Generate predictive alerts for upcoming risks
+     * Detects patterns like:
+     * - High medication miss rate (>30% in past 7 days)
+     * - Declining adherence tendency
+     * - Time-of-day risks (patient forgets at specific times)
+     */
+    @Transactional(readOnly = true)
+    public List<PredictiveAlertDTO> generatePredictiveAlerts(Long patientId) {
+        List<PredictiveAlertDTO> predictions = new ArrayList<>();
+
+        if (patientId == null) {
+            return predictions;
+        }
+
+        try {
+            LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+            List<Alert> recentAlerts = alertRepository.findByPatientIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
+                    patientId, sevenDaysAgo
+            );
+
+            if (recentAlerts.isEmpty()) {
+                return predictions;
+            }
+
+            // Calculate medication miss rate
+            long medicationMissCount = recentAlerts.stream()
+                    .filter(a -> AlertType.MEDICATION_MISSED.equals(a.getType()))
+                    .count();
+
+            if (medicationMissCount > 0) {
+                double missRate = (double) medicationMissCount / recentAlerts.size();
+                
+                if (missRate > 0.3) {  // More than 30% medication misses
+                    predictions.add(PredictiveAlertDTO.builder()
+                            .predictedType("High Medication Miss Rate")
+                            .patternDescription(String.format("Patient has missed %.0f%% of medication in past 7 days. Risk of treatment interruption.", missRate * 100))
+                            .predictedSeverity("HIGH")
+                            .confidenceScore(75.0)
+                            .recommendedActions("Increase medication reminder frequency and check compliance barriers")
+                            .build());
+                }
+                
+                // Check if recent miss rate is worse than 7-day average
+                LocalDateTime twoWeeksAgo = LocalDateTime.now().minusDays(14);
+                List<Alert> twoWeekAlerts = alertRepository.findByPatientIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
+                        patientId, twoWeeksAgo
+                );
+                
+                if (twoWeekAlerts.size() > recentAlerts.size()) {
+                    List<Alert> olderAlerts = new ArrayList<>(twoWeekAlerts);
+                    olderAlerts.removeAll(recentAlerts);
+                    
+                    long olderMissCount = olderAlerts.stream()
+                            .filter(a -> AlertType.MEDICATION_MISSED.equals(a.getType()))
+                            .count();
+                    
+                    if (olderAlerts.size() > 0) {
+                        double olderMissRate = (double) olderMissCount / olderAlerts.size();
+                        
+                        if (missRate > olderMissRate * 1.5) {  // 50% worse than before
+                            predictions.add(PredictiveAlertDTO.builder()
+                                    .predictedType("Declining Medication Adherence")
+                                    .patternDescription("Patient adherence is declining. Recent week has more misses than previous week.")
+                                    .predictedSeverity("MEDIUM")
+                                    .confidenceScore(60.0)
+                                    .recommendedActions("Schedule follow-up with patient to understand barriers to compliance")
+                                    .build());
+                        }
+                    }
+                }
+            }
+
+            // Check for critical alerts trend
+            long criticalCount = recentAlerts.stream()
+                    .filter(a -> Alert.AlertSeverity.CRITICAL.equals(a.getSeverity()))
+                    .count();
+
+            if (criticalCount >= 3) {
+                predictions.add(PredictiveAlertDTO.builder()
+                        .predictedType("Escalating Critical Events")
+                        .patternDescription(String.format("%d critical events in past 7 days. Pattern suggests acute condition.", criticalCount))
+                        .predictedSeverity("HIGH")
+                        .confidenceScore(80.0)
+                        .recommendedActions("Consider advanced medical workup or hospitalization assessment")
+                        .build());
+            }
+
+            return predictions;
+        } catch (Exception ex) {
+            log.error("[alerts] Error generating predictive alerts for patientId={}: {}", patientId, ex.getMessage());
+            return predictions;
+        }
+    }
+
+    /**
+     * Mark alert as read
+     */
+    @Transactional
+    public AlertDTO markAlertAsRead(Long alertId) {
+        Alert alert = alertRepository.findById(alertId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Alert not found"));
+
+        if (!alert.isRead()) {
+            alert.setRead(true);
+            alertRepository.save(alert);
+            log.info("[alerts] Marked alert id={} as read", alertId);
+        }
+
+        return mapAlertToDto(alert);
+    }
+
+    /**
+     * Take alert in charge - assign to current user and mark IN_PROGRESS
+     */
+    @Transactional
+    public AlertDTO takeAlertInCharge(Long alertId, Long userId) {
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID required");
+        }
+
+        Alert alert = alertRepository.findById(alertId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Alert not found"));
+
+        User assignee = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        alert.setAssignedToUser(assignee);
+        alert.setStatus(Alert.AlertStatus.IN_PROGRESS);
+        alert.setAssignedAt(LocalDateTime.now());
+        alert.setRead(true);
+        alertRepository.save(alert);
+
+        log.info("[alerts] Alert id={} taken in charge by userId={}", alertId, userId);
+        return mapAlertToDto(alert);
+    }
+
+    /**
+     * Resolve alert with optional clinical note
+     */
+    @Transactional
+    public AlertDTO resolveAlertWithNote(Long alertId, Long userId, String clinicalNote) {
+        if (alertId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert ID required");
+        }
+
+        Alert alert = alertRepository.findById(alertId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Alert not found"));
+
+        User resolver = null;
+        if (userId != null) {
+            resolver = userRepository.findById(userId).orElse(null);
+        }
+
+        alert.setStatus(Alert.AlertStatus.RESOLVED);
+        alert.setRead(true);
+        alert.setResolvedAt(LocalDateTime.now());
+        alert.setResolvedByUser(resolver);
+
+        if (clinicalNote != null && !clinicalNote.trim().isEmpty()) {
+            alert.setClinicalNote(clinicalNote);
+        }
+
+        Alert saved = alertRepository.save(alert);
+        log.info("[alerts] Alert id={} resolved by userId={}", alertId, userId);
+        return mapAlertToDto(saved);
+    }
+
+    /**
+     * Add clinical note to alert
+     */
+    @Transactional
+    public AlertDTO addClinicalNoteToAlert(Long alertId, String clinicalNote) {
+        if (alertId == null || clinicalNote == null || clinicalNote.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert ID and clinical note are required");
+        }
+
+        Alert alert = alertRepository.findById(alertId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Alert not found"));
+
+        alert.setClinicalNote(clinicalNote);
+        Alert saved = alertRepository.save(alert);
+        log.info("[alerts] Clinical note added to alert id={}", alertId);
+        return mapAlertToDto(saved);
+    }
+
+    /**
+     * Map Alert entity to AlertDTO with calculated fields
+     * This is called when returning alerts to ensure gravityScore is calculated
+     */
+    private AlertDTO mapAlertToDto(Alert alert) {
+        if (alert == null) {
+            return null;
+        }
+
+        Integer gravityScore = calculateGravityScore(alert);
+        String gravityExplanation = generateGravityExplanation(alert, gravityScore);
+        String color = getColorFromGravityScore(gravityScore);
+        boolean isCritical = gravityScore >= 70 || Alert.AlertSeverity.CRITICAL.equals(alert.getSeverity());
+
+        String patientName = null;
+        Long patientId = null;
+        if (alert.getPatient() != null) {
+            patientId = alert.getPatient().getId();
+            patientName = toDisplayName(alert.getPatient().getUser());
+        }
+
+        return new AlertDTO(
+                alert.getId(),
+                patientId,
+                patientName,
+                alert.getTitle(),
+                alert.getDescription(),
+                alert.getType(),
+                alert.getStatus(),
+                alert.getSeverity(),
+                alert.getCreatedAt(),
+                alert.getUpdatedAt(),
+                alert.getAssignedAt(),
+                alert.getResolvedAt(),
+                alert.isRead(),
+                alert.getCreatedBy() != null ? alert.getCreatedBy().getId() : null,
+                toDisplayName(alert.getCreatedBy()),
+                alert.getAssignedToUser() != null ? alert.getAssignedToUser().getId() : null,
+                toDisplayName(alert.getAssignedToUser()),
+                alert.getResolvedByUser() != null ? alert.getResolvedByUser().getId() : null,
+                toDisplayName(alert.getResolvedByUser()),
+                alert.getReminderId(),
+                alert.isAutoGenerated(),
+                gravityScore,
+                gravityExplanation,
+                color,
+                isCritical,
+                alert.getClinicalNote()
+        );
+    }
+
+    // ==================== CAREGIVER ALERT METHODS ====================
+
+    /**
+     * Get all alerts for all patients linked to a caregiver
+     */
+    @Transactional(readOnly = true)
+    public List<CaregiverAlertDTO> getAlertsForCaregiver(Long caregiverId) {
+        if (caregiverId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Caregiver ID required");
+        }
+
+        log.info("[caregiver-alerts] fetching alerts for caregiverId={}", caregiverId);
+
+        try {
+            // Get all patient IDs linked to this caregiver
+            Set<Long> patientIds = getAssignedPatientIds(caregiverId);
+
+            if (patientIds.isEmpty()) {
+                log.debug("[caregiver-alerts] No linked patients for caregiverId={}", caregiverId);
+                return List.of();
+            }
+
+            // Get all alerts for these patients
+            List<Alert> alerts = safeFindByPatientIds(patientIds, caregiverId);
+            
+            return alerts.stream()
+                    .map(this::mapAlertToCaregiverDto)
+                    .toList();
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("[caregiver-alerts] Error fetching alerts for caregiverId={}: {}", caregiverId, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to load caregiver alerts");
+        }
+    }
+
+    /**
+     * Get all alerts for a specific patient (with caregiver access verification)
+     */
+    @Transactional(readOnly = true)
+    public List<CaregiverAlertDTO> getPatientAlertsForCaregiver(Long caregiverId, Long patientId) {
+        if (caregiverId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Caregiver ID required");
+        }
+        if (patientId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Patient ID required");
+        }
+
+        log.info("[caregiver-alerts] fetching alerts for caregiverId={} patientId={}", caregiverId, patientId);
+
+        try {
+            // Verify caregiver has access to this patient
+            verifyCaregiveAccessToPatient(caregiverId, patientId);
+
+            // Get all alerts for this patient
+            List<Alert> alerts = safeFindByPatientId(patientId, caregiverId);
+            
+            return alerts.stream()
+                    .map(this::mapAlertToCaregiverDto)
+                    .toList();
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("[caregiver-alerts] Error fetching alerts for caregiverId={} patientId={}: {}",
+                    caregiverId, patientId, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to load patient alerts");
+        }
+    }
+
+    /**
+     * Create a manual alert by caregiver or doctor
+     */
+    @Transactional
+    public CaregiverAlertDTO createManualAlert(ManualAlertRequestDTO request, Long caregiverId) {
+        return createManualAlert(request, caregiverId, "CAREGIVER");
+    }
+
+    /**
+     * Create a manual alert by caregiver or doctor with role awareness
+     * 
+     * @param request Alert request details
+     * @param userId ID of the user creating the alert
+     * @param userRole Role of the user (CAREGIVER, DOCTOR, SOIGNANT)
+     * @return CaregiverAlertDTO with the created alert
+     */
+    @Transactional
+    public CaregiverAlertDTO createManualAlert(ManualAlertRequestDTO request, Long userId, String userRole) {
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID required");
+        }
+        if (request == null || request.patientId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Patient ID is required");
+        }
+        if (request.type() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert type is required");
+        }
+        if (request.severity() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert severity is required");
+        }
+
+        log.info("[caregiver-alerts] Creating manual alert by userId={} role={} for patientId={} type={}",
+                userId, userRole, request.patientId(), request.type());
+
+        try {
+            // Verify access to this patient (skip for DOCTOR)
+            if (userRole == null || (!userRole.equals("DOCTOR") && !userRole.equals("MEDECIN"))) {
+                verifyCaregiveAccessToPatient(userId, request.patientId());
+            }
+
+            // Get user and patient
+            User creator = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+            Patient patient = patientRepository.findById(request.patientId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found"));
+
+            // Create alert
+            Alert alert = new Alert();
+            alert.setPatient(patient);
+            alert.setCreatedBy(creator);
+            alert.setType(request.type());
+            alert.setTitle(request.title() != null ? request.title() : "Manual alert from caregiver");
+            alert.setDescription(request.description() != null ? request.description() : "");
+            alert.setSeverity(request.severity());
+            alert.setStatus(Alert.AlertStatus.UNREAD);
+            alert.setRead(false);
+            alert.setAutoGenerated(false);
+
+            // Set creation date if provided, otherwise use now
+            LocalDateTime createdAt = request.createdAt() != null ? request.createdAt() : LocalDateTime.now();
+            alert.setCreatedAt(createdAt);
+            alert.setUpdatedAt(LocalDateTime.now());
+
+            Alert saved = alertRepository.save(alert);
+
+            // Create recipients for alert
+            try {
+                createRecipientsForAlert(saved, creator, patient);
+            } catch (Exception recipientError) {
+                log.error("[caregiver-alerts] Alert {} created but recipient distribution failed: {}",
+                        saved.getId(), recipientError.getMessage(), recipientError);
+            }
+
+            log.info("[caregiver-alerts] Manual alert {} created for patientId={} by userId={} role={}",
+                    saved.getId(), patient.getId(), userId, userRole);
+
+            return mapAlertToCaregiverDto(saved);
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("[caregiver-alerts] Error creating manual alert by userId={} role={}: {}",
+                    userId, userRole, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create alert");
+        }
+    }
+
+    /**
+     * Create a manual alert by caregiver - legacy overload for backward compatibility
+     * 
+     * @deprecated Use createManualAlert(ManualAlertRequestDTO, Long, String) instead
+     */
+    @Transactional
+    @Deprecated
+    public CaregiverAlertDTO createManualAlertLegacy(ManualAlertRequestDTO request, Long caregiverId) {
+        if (caregiverId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Caregiver ID required");
+        }
+        if (request == null || request.patientId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Patient ID is required");
+        }
+        if (request.type() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert type is required");
+        }
+        if (request.severity() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Alert severity is required");
+        }
+
+        log.info("[caregiver-alerts] Creating manual alert by caregiverId={} for patientId={} type={}",
+                caregiverId, request.patientId(), request.type());
+
+        try {
+            // Verify caregiver has access to this patient
+            verifyCaregiveAccessToPatient(caregiverId, request.patientId());
+
+            // Get caregiver user and patient
+            User caregiver = userRepository.findById(caregiverId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Caregiver not found"));
+
+            Patient patient = patientRepository.findById(request.patientId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found"));
+
+            // Create alert
+            Alert alert = new Alert();
+            alert.setPatient(patient);
+            alert.setCreatedBy(caregiver);
+            alert.setType(request.type());
+            alert.setTitle(request.title() != null ? request.title() : "Manual alert from caregiver");
+            alert.setDescription(request.description() != null ? request.description() : "");
+            alert.setSeverity(request.severity());
+            alert.setStatus(Alert.AlertStatus.UNREAD);
+            alert.setRead(false);
+            alert.setAutoGenerated(false);
+
+            // Set creation date if provided, otherwise use now
+            LocalDateTime createdAt = request.createdAt() != null ? request.createdAt() : LocalDateTime.now();
+            alert.setCreatedAt(createdAt);
+            alert.setUpdatedAt(LocalDateTime.now());
+
+            Alert saved = alertRepository.save(alert);
+
+            // Create recipients for alert
+            try {
+                createRecipientsForAlert(saved, caregiver, patient);
+            } catch (Exception recipientError) {
+                log.error("[caregiver-alerts] Alert {} created but recipient distribution failed: {}",
+                        saved.getId(), recipientError.getMessage(), recipientError);
+            }
+
+            log.info("[caregiver-alerts] Manual alert {} created for patientId={} by caregiverId={}",
+                    saved.getId(), patient.getId(), caregiverId);
+
+            return mapAlertToCaregiverDto(saved);
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("[caregiver-alerts] Error creating manual alert by caregiverId={}: {}",
+                    caregiverId, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create alert");
+        }
+    }
+
+    /**
+     * Map Alert to CaregiverAlertDTO with calculated fields
+     */
+    private CaregiverAlertDTO mapAlertToCaregiverDto(Alert alert) {
+        if (alert == null) {
+            return null;
+        }
+
+        Integer gravityScore = calculateGravityScore(alert);
+        String gravityExplanation = generateGravityExplanation(alert, gravityScore);
+        String color = getColorFromGravityScore(gravityScore);
+        boolean isCritical = gravityScore >= 70 || Alert.AlertSeverity.CRITICAL.equals(alert.getSeverity());
+
+        String patientName = null;
+        Long patientId = null;
+        if (alert.getPatient() != null) {
+            patientId = alert.getPatient().getId();
+            patientName = toDisplayName(alert.getPatient().getUser());
+        }
+
+        String createdByRole = null;
+        if (alert.getCreatedBy() != null) {
+            createdByRole = normalizeRole(alert.getCreatedBy().getRole());
+        }
+
+        return new CaregiverAlertDTO(
+                alert.getId(),
+                patientId,
+                patientName,
+                alert.getType(),
+                alert.getTitle(),
+                alert.getDescription(),
+                alert.getSeverity(),
+                alert.getStatus(),
+                alert.isRead(),
+                alert.getCreatedAt(),
+                createdByRole,
+                gravityScore,
+                gravityExplanation,
+                color,
+                isCritical,
+                alert.isAutoGenerated()
+        );
+    }
+
+    /**
+     * Create weather-related alerts based on current weather conditions
+     * Called by WeatherAlertScheduler (daily at 7 AM) or manually via WeatherController
+     *
+     * @param patientId Patient to generate weather alerts for
+     * @param weatherService Service providing weather data
+     * @return Generated alert DTO
+     */
+    @Transactional
+    public AlertDTO generateWeatherAlert(Long patientId, WeatherDTO weatherData) {
+        if (patientId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Patient ID is required");
+        }
+
+        if (weatherData == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Weather data is required");
+        }
+
+        log.info("[weather-alerts] Generating weather alert for patientId={} condition={}", 
+                patientId, weatherData.getCondition());
+
+        try {
+            Patient patient = patientRepository.findById(patientId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient not found"));
+
+            // Check if weather conditions warrant an alert
+            if (!shouldCreateWeatherAlert(weatherData)) {
+                log.debug("[weather-alerts] Weather conditions not severe enough for alert patientId={}", patientId);
+                return null;
+            }
+
+            // Generate alert content based on weather
+            Map<String, String> alertContent = generateWeatherAlertContent(weatherData);
+            String severity = determineWeatherAlertSeverity(weatherData);
+
+            // Create the alert
+            Alert alert = new Alert();
+            alert.setPatient(patient);
+            alert.setType(AlertType.WEATHER);
+            alert.setTitle(alertContent.get("title"));
+            alert.setDescription(alertContent.get("description"));
+            alert.setSeverity(Alert.AlertSeverity.valueOf(severity));
+            alert.setStatus(Alert.AlertStatus.UNREAD);
+            alert.setRead(false);
+            alert.setAutoGenerated(true);
+            alert.setClinicalNote("Weather condition: " + weatherData.getCondition() + 
+                    ", Temperature: " + weatherData.getTemperature() + "°C, " +
+                    "Wind: " + weatherData.getWindSpeed() + " km/h");
+
+            // Set source key to prevent duplicates
+            String sourceKey = "WEATHER:" + patientId + ":" + LocalDateTime.now().toLocalDate();
+            alert.setSourceKey(sourceKey);
+
+            // Calculate gravity score for weather alerts
+            int gravityScore = calculateWeatherAlertGravityScore(weatherData);
+            alert.setGravityScore(gravityScore);
+            alert.setCritical(gravityScore >= 70 || Alert.AlertSeverity.CRITICAL.equals(alert.getSeverity()));
+
+            Alert saved = alertRepository.save(alert);
+
+            // Create alert recipients (caregiver, doctor, patient)
+            try {
+                createRecipientsForAlert(saved, null, patient);
+            } catch (Exception recipientError) {
+                log.error("[weather-alerts] Alert {} created but recipient distribution failed: {}",
+                        saved.getId(), recipientError.getMessage());
+            }
+
+            log.info("[weather-alerts] Weather alert {} created for patientId={} severity={} gravityScore={}",
+                    saved.getId(), patientId, severity, gravityScore);
+
+            return toDto(saved);
+
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("[weather-alerts] Error generating weather alert for patientId={}: {}",
+                    patientId, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
+                    "Failed to generate weather alert");
+        }
+    }
+
+    /**
+     * Generate weather alerts for all patients (typically called by scheduler at 7 AM)
+     *
+     * @param weatherService Service providing weather data  
+     * @return Number of alerts generated
+     */
+    @Transactional
+    public int generateWeatherAlertsForAllPatients(WeatherService weatherService) {
+        if (weatherService == null) {
+            log.warn("[weather-alerts] WeatherService is null, cannot generate weather alerts");
+            return 0;
+        }
+
+        log.info("[weather-alerts] Started daily weather alert generation for all patients");
+
+        try {
+            List<Patient> allPatients = patientRepository.findAll();
+            int alertsGenerated = 0;
+
+            for (Patient patient : allPatients) {
+                try {
+                    // Get patient's city (default to Tunis if not set)
+                    String patientCity = (patient.getVille() != null && !patient.getVille().trim().isEmpty()) 
+                            ? patient.getVille() 
+                            : "Tunis";
+
+                    // Fetch weather for patient's location
+                    WeatherDTO weatherData = weatherService.getWeatherForPatient(patientCity);
+                    
+                    if (weatherData != null) {
+                        // Assess risks and generate alert if needed
+                        weatherData = weatherService.assessWeatherRisks(weatherData);
+                        
+                        if (weatherService.shouldGenerateAlert(weatherData)) {
+                            AlertDTO result = generateWeatherAlert(patient.getId(), weatherData);
+                            if (result != null) {
+                                alertsGenerated++;
+                            }
+                        }
+                    }
+                } catch (Exception patientError) {
+                    log.error("[weather-alerts] Error processing weather alert for patientId={}: {}",
+                            patient.getId(), patientError.getMessage());
+                    // Continue with next patient
+                }
+            }
+
+            log.info("[weather-alerts] Completed daily weather alert generation. Generated {} alerts", 
+                    alertsGenerated);
+            return alertsGenerated;
+
+        } catch (Exception ex) {
+            log.error("[weather-alerts] Error in daily weather alert generation: {}",
+                    ex.getMessage(), ex);
+            return 0;
+        }
+    }
+
+    /**
+     * Get all weather-related alerts for a patient
+     */
+    @Transactional(readOnly = true)
+    public List<WeatherAlertResponseDTO> getWeatherAlertsForPatient(Long patientId) {
+        if (patientId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Patient ID is required");
+        }
+
+        log.debug("[weather-alerts] Fetching weather alerts for patientId={}", patientId);
+
+        try {
+            List<Alert> weatherAlerts = alertRepository.findByPatientIdAndTypeOrderByCreatedAtDesc(
+                    patientId, AlertType.WEATHER);
+
+            return weatherAlerts.stream()
+                    .map(this::mapAlertToWeatherDTO)
+                    .toList();
+
+        } catch (Exception ex) {
+            log.error("[weather-alerts] Error fetching weather alerts for patientId={}: {}",
+                    patientId, ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
+                    "Failed to fetch weather alerts");
+        }
+    }
+
+    // ===== PRIVATE HELPER METHODS FOR WEATHER ALERTS =====
+
+    private boolean shouldCreateWeatherAlert(WeatherDTO weatherData) {
+        if (weatherData == null) {
+            return false;
+        }
+
+        // Create alert if any risk is HIGH or if storm risk exists
+        return "HIGH".equals(weatherData.getRainRisk()) ||
+               "HIGH".equals(weatherData.getStormRisk()) ||
+               "HIGH".equals(weatherData.getTemperatureRisk()) ||
+               "HIGH".equals(weatherData.getWindRisk());
+    }
+
+    private Map<String, String> generateWeatherAlertContent(WeatherDTO weatherData) {
+        // Use WeatherService's method to generate alert content
+        // Since we don't have access to WeatherService here, we'll duplicate the logic
+        StringBuilder title = new StringBuilder("Weather Alert");
+        StringBuilder description = new StringBuilder();
+        String recommendation = "Stay safe and monitor the situation.";
+
+        if (weatherData.getTemperature() != null && weatherData.getRainRisk() != null) {
+            if ("HIGH".equals(weatherData.getRainRisk())) {
+                title.append(": Heavy Rain");
+                description.append("Heavy rain is expected in your area. ");
+                recommendation = "Avoid going outside if possible. Ensure you have an umbrella if you must go out.";
+            }
+
+            if ("HIGH".equals(weatherData.getStormRisk())) {
+                if (description.length() > 0) title.append(" / ");
+                title.append("Thunderstorm Alert");
+                description.append("A storm or thunderstorm is expected. ");
+                recommendation = "Do not go outside. Stay indoors and away from windows.";
+            }
+
+            if ("HIGH".equals(weatherData.getTemperatureRisk())) {
+                if (description.length() > 0) title.append(" / ");
+                if (weatherData.getTemperature() < 0) {
+                    title.append("Extreme Cold");
+                    description.append(String.format("Extreme cold expected (%.1f°C). ", weatherData.getTemperature()));
+                    recommendation = "Dress warmly. Limit outdoor exposure to prevent frostbite.";
+                } else {
+                    title.append("Extreme Heat");
+                    description.append(String.format("Extreme heat expected (%.1f°C). ", weatherData.getTemperature()));
+                    recommendation = "Stay hydrated and avoid prolonged sun exposure.";
+                }
+            }
+
+            if ("HIGH".equals(weatherData.getWindRisk())) {
+                if (description.length() > 0) title.append(" / ");
+                title.append("Strong Wind");
+                description.append(String.format("Strong winds expected (%.1f km/h). ", weatherData.getWindSpeed()));
+                recommendation = "Be cautious when going outside. Avoid open areas.";
+            }
+        }
+
+        description.append("\n\nCurrent Temperature: ").append(String.format("%.1f°C", weatherData.getTemperature()));
+        description.append("\nCondition: ").append(weatherData.getCondition());
+        description.append("\nWind Speed: ").append(String.format("%.1f km/h", weatherData.getWindSpeed()));
+        description.append("\n\nRecommendation: ").append(recommendation);
+
+        return Map.of(
+                "title", title.toString(),
+                "description", description.toString(),
+                "recommendation", recommendation
+        );
+    }
+
+    private String determineWeatherAlertSeverity(WeatherDTO weatherData) {
+        if (weatherData == null) {
+            return "LOW";
+        }
+
+        // Storm or multiple HIGH risks = CRITICAL
+        if ("HIGH".equals(weatherData.getStormRisk())) {
+            return "CRITICAL";
+        }
+
+        int highRiskCount = 0;
+        if ("HIGH".equals(weatherData.getRainRisk())) highRiskCount++;
+        if ("HIGH".equals(weatherData.getTemperatureRisk())) highRiskCount++;
+        if ("HIGH".equals(weatherData.getWindRisk())) highRiskCount++;
+
+        if (highRiskCount >= 2) {
+            return "CRITICAL";
+        }
+        if (highRiskCount > 0) {
+            return "HIGH";
+        }
+
+        // Check for MEDIUM risks
+        int mediumRiskCount = 0;
+        if ("MEDIUM".equals(weatherData.getRainRisk())) mediumRiskCount++;
+        if ("MEDIUM".equals(weatherData.getTemperatureRisk())) mediumRiskCount++;
+        if ("MEDIUM".equals(weatherData.getWindRisk())) mediumRiskCount++;
+
+        if (mediumRiskCount >= 2) {
+            return "HIGH";
+        }
+        if (mediumRiskCount > 0) {
+            return "MEDIUM";
+        }
+
+        return "LOW";
+    }
+
+    private int calculateWeatherAlertGravityScore(WeatherDTO weatherData) {
+        if (weatherData == null) {
+            return 0;
+        }
+
+        int score = 0;
+
+        // Storm = +50
+        if ("HIGH".equals(weatherData.getStormRisk())) {
+            score += 50;
+        }
+
+        // Extreme temperature = +30
+        if ("HIGH".equals(weatherData.getTemperatureRisk())) {
+            score += 30;
+        }
+
+        // Heavy rain = +20
+        if ("HIGH".equals(weatherData.getRainRisk())) {
+            score += 20;
+        }
+
+        // Strong wind = +15
+        if ("HIGH".equals(weatherData.getWindRisk())) {
+            score += 15;
+        }
+
+        // MEDIUM risks add 10 each
+        if ("MEDIUM".equals(weatherData.getStormRisk())) score += 10;
+        if ("MEDIUM".equals(weatherData.getTemperatureRisk())) score += 10;
+        if ("MEDIUM".equals(weatherData.getRainRisk())) score += 10;
+        if ("MEDIUM".equals(weatherData.getWindRisk())) score += 10;
+
+        return Math.min(score, 100);
+    }
+
+    private WeatherAlertResponseDTO mapAlertToWeatherDTO(Alert alert) {
+        String patientName = null;
+        Long patientId = null;
+
+        if (alert.getPatient() != null) {
+            patientId = alert.getPatient().getId();
+            patientName = toDisplayName(alert.getPatient().getUser());
+        }
+
+        // Extract weather metadata from clinical note
+        String weatherCondition = "Unknown";
+        Double temperature = null;
+        Double windSpeed = null;
+        Double precipitation = null;
+        String recommendation = "";
+
+        if (alert.getClinicalNote() != null) {
+            // Parse clinical note to extract weather data
+            String[] parts = alert.getClinicalNote().split(", ");
+            for (String part : parts) {
+                if (part.contains("Weather condition:")) {
+                    weatherCondition = part.replace("Weather condition: ", "").trim();
+                } else if (part.contains("Temperature:")) {
+                    try {
+                        String temp = part.replace("Temperature: ", "").replace("°C", "").trim();
+                        temperature = Double.parseDouble(temp);
+                    } catch (NumberFormatException e) {
+                        log.debug("Could not parse temperature from clinical note");
+                    }
+                } else if (part.contains("Wind:")) {
+                    try {
+                        String wind = part.replace("Wind: ", "").replace(" km/h", "").trim();
+                        windSpeed = Double.parseDouble(wind);
+                    } catch (NumberFormatException e) {
+                        log.debug("Could not parse wind speed from clinical note");
+                    }
+                }
+            }
+        }
+
+        return WeatherAlertResponseDTO.builder()
+                .id(alert.getId())
+                .patientId(patientId)
+                .patientName(patientName)
+                .title(alert.getTitle())
+                .description(alert.getDescription())
+                .severity(alert.getSeverity() != null ? alert.getSeverity().toString() : "MEDIUM")
+                .status(alert.getStatus() != null ? alert.getStatus().toString() : "UNREAD")
+                .type("WEATHER")
+                .weatherCondition(weatherCondition)
+                .temperature(temperature)
+                .windSpeed(windSpeed)
+                .precipitation(precipitation)
+                .recommendation(recommendation)
+                .isRead(alert.isRead())
+                .isCritical(alert.isCritical())
+                .gravityScore(alert.getGravityScore())
+                .autoGenerated(alert.isAutoGenerated())
+                .createdAt(alert.getCreatedAt())
+                .updatedAt(alert.getUpdatedAt())
+                .build();
+    }
+}
