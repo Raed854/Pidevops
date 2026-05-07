@@ -33,8 +33,14 @@ pipeline {
 
     stage('3 — Tests') {
       steps {
-        dir("${MS_NAME}") {
-          sh './mvnw -B test || true'
+        // Spring Boot @SpringBootTest can hang trying to reach MySQL/JDBC.
+        // Hard-cap the stage at 5 min and let the pipeline continue regardless.
+        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+          timeout(time: 5, unit: 'MINUTES') {
+            dir("${MS_NAME}") {
+              sh './mvnw -B test || true'
+            }
+          }
         }
       }
       post {
