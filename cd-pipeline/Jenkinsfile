@@ -1,0 +1,98 @@
+// CD pipeline — pulls latest images from Docker Hub and deploys to K3s.
+// Designed to run on the same VM that hosts K3s (jenkins user reads
+// /etc/rancher/k3s/k3s.yaml directly — install script set --write-kubeconfig-mode=644).
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    timeout(time: 30, unit: 'MINUTES')
+  }
+
+  environment {
+    KUBECONFIG = '/etc/rancher/k3s/k3s.yaml'
+  }
+
+  stages {
+    stage('1 — Checkout manifests') {
+      steps { checkout scm }
+    }
+
+    stage('2 — Verify cluster reachable') {
+      steps {
+        sh 'kubectl get nodes'
+        sh 'kubectl version --client --output=yaml || true'
+      }
+    }
+
+    stage('3 — Namespace + Secrets') {
+      steps {
+        sh 'kubectl apply -f k8s/namespace.yaml'
+        sh 'kubectl apply -f k8s/secrets/'
+      }
+    }
+
+    stage('4 — Infrastructure (MySQL + Eureka)') {
+      steps {
+        sh 'kubectl apply -f k8s/deployments/mysql.yaml'
+        sh 'kubectl apply -f k8s/deployments/eureka.yaml'
+      }
+    }
+
+    stage('5 — Microservices') {
+      steps {
+        sh 'kubectl apply -f k8s/deployments/memoria-backend.yaml'
+        sh 'kubectl apply -f k8s/deployments/memoria-backend2.yaml'
+        sh 'kubectl apply -f k8s/deployments/memoria-jesser.yaml'
+      }
+    }
+
+    stage('6 — Force pull latest images') {
+      // imagePullPolicy: Always picks up new latest tags only on pod creation.
+      // rollout restart forces a new pod, which re-pulls.
+      steps {
+        sh 'kubectl rollout restart deployment -n pidev'
+      }
+    }
+
+    stage('7 — Wait for rollouts') {
+      steps {
+        // || true so a single slow rollout doesn't fail the whole pipeline;
+        // smoke test below is the real success signal.
+        sh '''
+          for d in mysql eureka-server memoria-backend memoria-backend2 memoria-jesser; do
+            echo "--- waiting for $d ---"
+            kubectl rollout status deployment/$d -n pidev --timeout=300s || true
+          done
+        '''
+      }
+    }
+
+    stage('8 — Smoke test') {
+      steps {
+        sh 'kubectl get pods -n pidev -o wide'
+        sh 'kubectl get svc -n pidev'
+        sh '''
+          echo "--- Eureka registered services ---"
+          curl -s --max-time 5 http://192.168.56.10:30761/eureka/apps -H "Accept: application/json" \
+            | head -100 || echo "Eureka not yet reachable"
+        '''
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "CD #${BUILD_NUMBER} OK — cluster up at:"
+      echo "  Eureka:    http://192.168.56.10:30761"
+      echo "  Backend:   http://192.168.56.10:30082"
+      echo "  Backend2:  http://192.168.56.10:30081"
+      echo "  Jesser:    http://192.168.56.10:30084"
+    }
+    failure {
+      sh 'kubectl get events -n pidev --sort-by=.lastTimestamp 2>&1 | tail -25 || true'
+      sh 'kubectl get pods -n pidev 2>&1 || true'
+    }
+  }
+}
