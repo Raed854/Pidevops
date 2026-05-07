@@ -51,3 +51,6 @@ application-local.yml
 *.env
 *.env.local
 secrets/
+# Exception: k8s manifests with demo-only credentials
+!k8s/secrets/
+!k8s/secrets/**
