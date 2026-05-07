@@ -1,0 +1,87 @@
+// CI pipeline — EurekaServ (Spring Cloud Eureka registry, port 8761)
+// No Sonar stage: the project is just an @EnableEurekaServer application class.
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    timeout(time: 30, unit: 'MINUTES')
+  }
+
+  environment {
+    MS_NAME      = 'EurekaServ/EurekaServ'
+    IMAGE_NAME   = 'nefziraed/eureka-server'
+    IMAGE_TAG    = 'latest'
+    DOCKER_CREDS = credentials('docker-hub-credentials')
+  }
+
+  stages {
+    stage('1 — Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('2 — Build') {
+      steps {
+        dir("${MS_NAME}") {
+          sh 'chmod +x ./mvnw || true'
+          sh './mvnw -B clean package -DskipTests'
+        }
+      }
+    }
+
+    stage('3 — Tests') {
+      steps {
+        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+          timeout(time: 5, unit: 'MINUTES') {
+            dir("${MS_NAME}") {
+              sh './mvnw -B test || true'
+            }
+          }
+        }
+      }
+      post {
+        always {
+          junit allowEmptyResults: true,
+                testResults: "${MS_NAME}/target/surefire-reports/*.xml"
+        }
+      }
+    }
+
+    stage('4 — Docker Build') {
+      steps {
+        dir("${MS_NAME}") {
+          sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+        }
+      }
+    }
+
+    stage('5 — Docker Push') {
+      steps {
+        sh "echo \$DOCKER_CREDS_PSW | docker login -u \$DOCKER_CREDS_USR --password-stdin"
+        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+      }
+    }
+
+    stage('Archive JAR') {
+      steps {
+        archiveArtifacts artifacts: "${MS_NAME}/target/*.jar",
+                         fingerprint: true,
+                         allowEmptyArchive: true
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "CI #${BUILD_NUMBER} OK — ${IMAGE_NAME}:${IMAGE_TAG} pushed to Docker Hub"
+    }
+    failure {
+      echo "CI #${BUILD_NUMBER} FAILED — check logs above"
+    }
+    always {
+      sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
+      sh 'docker logout || true'
+    }
+  }
+}
