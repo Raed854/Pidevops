@@ -45,23 +45,24 @@ pipeline {
       }
     }
 
-    // Phase 6 will re-enable SonarQube + Quality Gate stages here.
-    // stage('SonarQube Analysis') {
-    //   steps {
-    //     dir("${MS_NAME}") {
-    //       withSonarQubeEnv('SonarQube') {
-    //         sh './mvnw -B sonar:sonar'
-    //       }
-    //     }
-    //   }
-    // }
-    // stage('Quality Gate') {
-    //   steps {
-    //     timeout(time: 5, unit: 'MINUTES') {
-    //       waitForQualityGate abortPipeline: true
-    //     }
-    //   }
-    // }
+    stage('SonarQube Analysis') {
+      steps {
+        dir("${MS_NAME}") {
+          withSonarQubeEnv('SonarQube') {
+            sh './mvnw -B sonar:sonar'
+          }
+        }
+      }
+    }
+
+    stage('Quality Gate') {
+      steps {
+        // abortPipeline:false until the Sonar webhook is configured (Step 7).
+        timeout(time: 5, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: false
+        }
+      }
+    }
 
     stage('4 — Docker Build') {
       steps {
