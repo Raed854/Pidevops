@@ -1,0 +1,60 @@
+# MemorIA_Backend — user/auth service (signin / signout). Port 8082.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memoria-backend
+  namespace: pidev
+  labels: { app: memoria-backend }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: memoria-backend }
+  template:
+    metadata:
+      labels: { app: memoria-backend }
+    spec:
+      containers:
+        - name: memoria-backend
+          image: nefziraed/memoria-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8082
+          env:
+            # MySQL — connects to the in-cluster `mysql` service
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql:3306/Memoria_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom: { secretKeyRef: { name: mysql-secret, key: username } }
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom: { secretKeyRef: { name: mysql-secret, key: password } }
+            # Eureka — register and discover services via in-cluster DNS
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: http://eureka-server:8761/eureka/
+            - name: EUREKA_CLIENT_REGISTERWITHEUREKA
+              value: "true"
+            - name: EUREKA_CLIENT_FETCHREGISTRY
+              value: "true"
+            - name: EUREKA_INSTANCE_PREFERIPADDRESS
+              value: "true"
+          readinessProbe:
+            tcpSocket: { port: 8082 }
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket: { port: 8082 }
+            initialDelaySeconds: 120
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memoria-backend
+  namespace: pidev
+spec:
+  selector: { app: memoria-backend }
+  ports:
+    - port: 8082
+      targetPort: 8082
+      nodePort: 30082          # signin/signout test: http://192.168.56.10:30082/...
+  type: NodePort

@@ -1,0 +1,58 @@
+# MemorIA_Backend2 — GPS / geofencing / location tracking. Port 8081.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memoria-backend2
+  namespace: pidev
+  labels: { app: memoria-backend2 }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: memoria-backend2 }
+  template:
+    metadata:
+      labels: { app: memoria-backend2 }
+    spec:
+      containers:
+        - name: memoria-backend2
+          image: nefziraed/memoria-backend2:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql:3306/Memoria_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom: { secretKeyRef: { name: mysql-secret, key: username } }
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom: { secretKeyRef: { name: mysql-secret, key: password } }
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: http://eureka-server:8761/eureka/
+            - name: EUREKA_CLIENT_REGISTERWITHEUREKA
+              value: "true"
+            - name: EUREKA_CLIENT_FETCHREGISTRY
+              value: "true"
+            - name: EUREKA_INSTANCE_PREFERIPADDRESS
+              value: "true"
+          readinessProbe:
+            tcpSocket: { port: 8081 }
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket: { port: 8081 }
+            initialDelaySeconds: 120
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memoria-backend2
+  namespace: pidev
+spec:
+  selector: { app: memoria-backend2 }
+  ports:
+    - port: 8081
+      targetPort: 8081
+      nodePort: 30081
+  type: NodePort

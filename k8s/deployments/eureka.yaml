@@ -1,0 +1,49 @@
+# Eureka service registry — must come up BEFORE the backends try to register.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eureka-server
+  namespace: pidev
+  labels: { app: eureka-server }
+spec:
+  replicas: 1                  # single instance — Eureka registry is leader-leaderless
+  selector:
+    matchLabels: { app: eureka-server }
+  template:
+    metadata:
+      labels: { app: eureka-server }
+    spec:
+      containers:
+        - name: eureka-server
+          image: nefziraed/eureka-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8761
+          env:
+            # Eureka must NOT register itself in itself
+            - name: EUREKA_CLIENT_REGISTERWITHEUREKA
+              value: "false"
+            - name: EUREKA_CLIENT_FETCHREGISTRY
+              value: "false"
+          readinessProbe:
+            tcpSocket: { port: 8761 }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8761 }
+            initialDelaySeconds: 90
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eureka-server
+  namespace: pidev
+spec:
+  selector: { app: eureka-server }
+  ports:
+    - port: 8761
+      targetPort: 8761
+      nodePort: 30761          # Eureka dashboard reachable at http://192.168.56.10:30761
+  type: NodePort

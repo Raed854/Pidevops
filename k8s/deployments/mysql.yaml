@@ -1,0 +1,67 @@
+# Single shared MySQL pod for the 3 Spring Boot services.
+# All three connect to database `Memoria_db` (matches their application.properties).
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: pidev
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: pidev
+  labels: { app: mysql }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate          # PVC ReadWriteOnce can't be shared across pods
+  selector:
+    matchLabels: { app: mysql }
+  template:
+    metadata:
+      labels: { app: mysql }
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom: { secretKeyRef: { name: mysql-secret, key: root-password } }
+            - name: MYSQL_DATABASE
+              value: Memoria_db
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+          readinessProbe:
+            tcpSocket: { port: 3306 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 3306 }
+            initialDelaySeconds: 60
+            periodSeconds: 20
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: pidev
+spec:
+  selector: { app: mysql }
+  ports:
+    - port: 3306
+      targetPort: 3306
+  type: ClusterIP            # internal only — backends connect via DNS name `mysql`
