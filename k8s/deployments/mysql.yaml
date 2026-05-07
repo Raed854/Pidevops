@@ -41,14 +41,19 @@ spec:
           volumeMounts:
             - name: mysql-storage
               mountPath: /var/lib/mysql
+          # startupProbe runs FIRST and disables liveness/readiness until it passes.
+          # MySQL 8 first-run init can take 60-120s on slow disk — this gives it 5 min.
+          startupProbe:
+            tcpSocket: { port: 3306 }
+            failureThreshold: 30        # 30 * 10s = 5 min runway
+            periodSeconds: 10
           readinessProbe:
             tcpSocket: { port: 3306 }
-            initialDelaySeconds: 20
             periodSeconds: 10
           livenessProbe:
             tcpSocket: { port: 3306 }
-            initialDelaySeconds: 60
-            periodSeconds: 20
+            periodSeconds: 30
+            failureThreshold: 5
       volumes:
         - name: mysql-storage
           persistentVolumeClaim:
